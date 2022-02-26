@@ -18,6 +18,9 @@
     <ClCompile Include="src\Peanut\Application.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="src\Peanut\Log.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Peanut\Application.h">
@@ -30,6 +33,9 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="src\Peanut\Entrypoint.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Peanut\Log.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

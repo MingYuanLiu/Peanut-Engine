@@ -1,4 +1,5 @@
 #include "Application.h"
+#include "Log.h"
 
 namespace Peanut_Engine {
 
@@ -11,6 +12,9 @@ namespace Peanut_Engine {
 	}
 
 	void Application::Run() {
+
+		PE_CORE_WARN("Application Running ...");
+
 		while (true) {
 
 		}

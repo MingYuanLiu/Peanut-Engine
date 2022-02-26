@@ -11,9 +11,11 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\Peanut\Log.cpp" />
     <ClCompile Include="src\Peanut\Application.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\Peanut\Log.h" />
     <ClInclude Include="src\Peanut\Application.h" />
     <ClInclude Include="src\Peanut\Core.h" />
     <ClInclude Include="src\Peanut\Entrypoint.h" />
@@ -69,12 +71,16 @@
       <PreprocessorDefinitions>_DEBUG;PEANUTENGINE_EXPORTS;PE_PLATFORM_WINDOWS;PE_BUILD_DLL;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <AdditionalIncludeDirectories>$(SolutionDir)Peanut_Engine\vendor\spdlog\include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
     </Link>
+    <PostBuildEvent>
+      <Command>copy $(SolutionDir)bin\x64-Debug\Peanut_Engine\Peanut_Engine.dll $(SolutionDir)bin\x64-Debug\Sandbox\</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -84,9 +90,10 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;PEANUTENGINE_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;PEANUTENGINE_EXPORTS;PE_PLATFORM_WINDOWS;PE_BUILD_DLL;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <AdditionalIncludeDirectories>$(SolutionDir)Peanut_Engine\vendor\spdlog\include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -95,6 +102,9 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
     </Link>
+    <PostBuildEvent>
+      <Command>copy $(SolutionDir)bin\x64-Debug\Peanut_Engine\Peanut_Engine.dll $(SolutionDir)bin\x64-Debug\Sandbox\</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

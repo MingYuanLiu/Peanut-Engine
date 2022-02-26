@@ -6,7 +6,10 @@ extern Peanut_Engine::Application* Peanut_Engine::CreateApplication();
 
 int main(int argc, char** argv) 
 {
-	printf("Welcom to Peanut Engine !");
+	Peanut_Engine::Log::Init();
+	PE_CORE_INFO("Welcom to Peanut Engine core logger!");
+	PE_INFO("This is Client logger.");
+
 	auto app = Peanut_Engine::CreateApplication();
 	app->Run();
 	delete app;
