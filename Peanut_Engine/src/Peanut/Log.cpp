@@ -1,6 +1,7 @@
 #include "Log.h"
 
-namespace Peanut_Engine {
+namespace Peanut_Engine
+{
 
 	std::shared_ptr<spdlog::logger> Log::s_CoreLogger;
 	std::shared_ptr<spdlog::logger> Log::s_ClientLogger;

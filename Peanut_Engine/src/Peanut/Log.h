@@ -3,8 +3,10 @@
 #include <memory>
 #include "spdlog/spdlog.h"
 #include "spdlog/sinks/stdout_color_sinks.h"
+#include "spdlog/fmt/ostr.h"
 
-namespace Peanut_Engine {
+namespace Peanut_Engine
+{
 	class PE_API Log
 	{
 	public:
