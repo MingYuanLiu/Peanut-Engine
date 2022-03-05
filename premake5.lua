@@ -13,6 +13,9 @@ project "Peanut_Engine"
     targetdir ("bin/" .. outputdir .. "/%{prj.name}")
     objdir ("bin-int/" .. outputdir .. "/%{prj.name}")
 
+    pchheader "pepch.h"
+    pchsource "%{prj.name}/src/pepch.cpp"
+
     files 
     {
         "%{prj.name}/src/**.h",

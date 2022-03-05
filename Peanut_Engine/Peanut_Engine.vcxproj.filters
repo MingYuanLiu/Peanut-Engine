@@ -40,6 +40,7 @@
       <Filter>Peanut</Filter>
     </ClInclude>
     <ClInclude Include="src\Peanut_Engine.h" />
+    <ClInclude Include="src\pepch.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Peanut\Application.cpp">
@@ -48,5 +49,6 @@
     <ClCompile Include="src\Peanut\Log.cpp">
       <Filter>Peanut</Filter>
     </ClCompile>
+    <ClCompile Include="src\pepch.cpp" />
   </ItemGroup>
 </Project>
