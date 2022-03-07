@@ -7,7 +7,7 @@ namespace Peanut_Engine
 {
 
 	Application::Application() {
-
+		m_window_ = std::unique_ptr<Window>(Window::Create());
 	}
 
 	Application::~Application() {
@@ -15,20 +15,8 @@ namespace Peanut_Engine
 	}
 
 	void Application::Run() {
-
-		KeyPressedEvent e(Key::A, 10);
-		if (e.GetEventCategoryFlags() & EventCategoryKeyboard) {
-			PE_INFO(e);
-		}
-		else {
-			PE_CORE_WARN("Event category is not match.");
-		}
-
-
-		PE_CORE_WARN("Application Running ...");
-
-		while (true) {
-
+		while (m_running) {
+			m_window_->Update();
 		}
 	}
 }

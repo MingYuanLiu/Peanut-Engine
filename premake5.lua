@@ -5,6 +5,13 @@ workspace "Peanut_Engine"
 
 outputdir = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}"
 
+-- Include directories relative to root folder
+IncludeDirs={}
+IncludeDirs["GLFW"] = "Peanut_Engine/vendor/GLFW/include"
+
+-- Include premake lua file
+include "Peanut_Engine/vendor/GLFW"
+
 project "Peanut_Engine"
     location "Peanut_Engine"
     kind "SharedLib"
@@ -25,7 +32,14 @@ project "Peanut_Engine"
     includedirs
     {
         "%{prj.name}/src",
-        "%{prj.name}/vendor/spdlog/include"
+        "%{prj.name}/vendor/spdlog/include",
+        "%{IncludeDirs.GLFW}"
+    }
+
+    links
+    {
+        "GLFW",
+        "opengl32.lib"
     }
 
     filter "system:windows"

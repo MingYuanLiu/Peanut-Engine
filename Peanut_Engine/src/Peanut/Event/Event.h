@@ -2,10 +2,6 @@
 
 #include "Peanut/Core.h"
 
-#include <string>
-#include <functional>
-#include <sstream>
-
 namespace Peanut_Engine
 {
     // The current implementation mode is to process the event immediately after receiving it,

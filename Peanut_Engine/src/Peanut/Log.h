@@ -33,3 +33,11 @@ namespace Peanut_Engine
 #define PE_INFO(...)				::Peanut_Engine::Log::GetClientLogger()->info(__VA_ARGS__)
 #define PE_WARN(...)				::Peanut_Engine::Log::GetClientLogger()->warn(__VA_ARGS__)
 #define PE_ERROR(...)				::Peanut_Engine::Log::GetClientLogger()->error(__VA_ARGS__)
+
+#ifdef PE_ENABLE_ASSERT
+#define PE_CORE_ASSERT(x, ...) { if (!(x)) { HZ_CORE_ERROR("ASSERT FAILED: {0}", __VA_ARGS__); __debugbreak(); } }
+#define PE_ASSERT(x, ...) { if(!(x)) { HZ_ERROR("ASSERT FAILED: {0}", __VA_ARGS__); __debugbreak(); } }
+#else
+#define PE_CORE_ASSERT(x, ...)
+#define PE_ASSERT(x, ...)
+#endif

@@ -1,5 +1,6 @@
 #pragma once
-#include "Core.h"
+#include "Peanut/Core.h"
+#include "Peanut/Window.h"
 
 namespace Peanut_Engine
 {
@@ -10,7 +11,9 @@ namespace Peanut_Engine
 		virtual ~Application();
 
 		void Run();
-
+	private:
+		std::unique_ptr<Window> m_window_;
+		bool m_running = true;
 	};
 
 	Application* CreateApplication();

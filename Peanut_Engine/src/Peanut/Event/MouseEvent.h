@@ -5,7 +5,6 @@
 
 namespace Peanut_Engine
 {
-
     class PE_API MouseMovedEvent : public Event
     {
     public:
