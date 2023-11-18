@@ -1,9 +1,18 @@
 #include "pepch.h"
 #include "WindowsWindow.h"
 
+#include "Peanut/Event/ApplicationEvent.h"
+#include "Peanut/Event/KeyEvent.h"
+#include "Peanut/Event/MouseEvent.h"
+
 namespace Peanut_Engine
 {
     static bool s_GLFWInitialized = false;
+
+    static void GLFWErrorCallBack(int error, const char* description)
+    {
+        PE_CORE_ERROR("GLFW Error ({0}) : {1}", error, description);
+    }
 
     Window* Window::Create(const WindowProps& window_props)
     {
@@ -32,6 +41,7 @@ namespace Peanut_Engine
             int success = glfwInit();
             PE_CORE_ASSERT(x, "Could not intialize GLFW.");
 
+            glfwSetErrorCallback(GLFWErrorCallBack);
             s_GLFWInitialized = true;
         }
 
@@ -39,6 +49,93 @@ namespace Peanut_Engine
         glfwMakeContextCurrent(window_);
         glfwSetWindowUserPointer(window_, &data_);
         SetVSync(true);
+
+        // Set GLFW callbacks
+        glfwSetWindowSizeCallback(window_, [](GLFWwindow* window, int width, int height)
+        {
+            WindowData& data = *(WindowData*)glfwGetWindowUserPointer(window);
+            data.width_ = width;
+            data.height_ = height;
+
+            WindowResizeEvent event(width, height);
+            data.callback_func_(event);
+
+        });
+
+        glfwSetWindowCloseCallback(window_, [](GLFWwindow* window)
+        {
+            WindowData& data = *(WindowData*)glfwGetWindowUserPointer(window);
+            WindowCloseEvent event;
+            data.callback_func_(event);
+        });
+
+        glfwSetKeyCallback(window_, [](GLFWwindow* window, int key, int scancode, int action, int mods)
+        {
+            WindowData& data = *(WindowData*)glfwGetWindowUserPointer(window);
+
+            switch (action)
+            {
+                case GLFW_PRESS:
+                {
+                    KeyPressedEvent event((KeyCode)key, 0);
+                    data.callback_func_(event);
+                    break;
+                }
+                case GLFW_RELEASE:
+                {
+                    KeyReleasedEvent event((KeyCode)key);
+                    data.callback_func_(event);
+                    break;
+                }
+                case GLFW_REPEAT:
+                {
+                    KeyPressedEvent event((KeyCode)key, 1);
+                    data.callback_func_(event);
+                    break;
+                }
+                default:
+                    break;
+            }
+        });
+
+        glfwSetMouseButtonCallback(window_, [](GLFWwindow* window, int button, int action, int mods)
+        {
+            WindowData& data = *(WindowData*)glfwGetWindowUserPointer(window);
+
+            switch (action)
+            {
+                case GLFW_PRESS:
+                {
+                    MouseButtonPressedEvent event(button, 0);
+                    data.callback_func_(event);
+                    break;
+                }
+                case GLFW_RELEASE:
+                {
+                    MouseButtonReleasedEvent event(button);
+                    data.callback_func_(event);
+                    break;
+                }
+                default:
+                    break;
+                }
+        });
+
+        glfwSetScrollCallback(window_, [](GLFWwindow* window, double offset_x, double offset_y)
+        {
+            WindowData& data = *(WindowData*)glfwGetWindowUserPointer(window);
+
+            MouseScrolledEvent event((float)offset_x, (float)offset_y);
+            data.callback_func_(event);
+        });
+
+        glfwSetCursorPosCallback(window_, [](GLFWwindow* window, double pos_x, double pos_y)
+        {
+            WindowData& data = *(WindowData*)glfwGetWindowUserPointer(window);
+
+            MouseMovedEvent event((float)pos_x, (float)pos_y);
+            data.callback_func_(event);
+        });
     }
 
     void WindowsWindow::ShutDown()

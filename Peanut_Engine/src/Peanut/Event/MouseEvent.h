@@ -71,7 +71,7 @@ namespace Peanut_Engine
         
         std::string ToString() const override {
             std::stringstream ss;
-            ss << "Mouse button pressed: " << m_mouse_code_  << "repeat conut: " << m_repeat_count_;
+            ss << "Mouse button pressed: " << m_mouse_code_  << ", repeat conut: " << m_repeat_count_;
             return ss.str();
         }
 

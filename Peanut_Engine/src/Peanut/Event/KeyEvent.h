@@ -22,7 +22,7 @@ namespace Peanut_Engine
     class PE_API KeyPressedEvent : public KeyEvent
     {
     public:
-        KeyPressedEvent(int key_code, int repeat_count) 
+        KeyPressedEvent(KeyCode key_code, int repeat_count) 
             : KeyEvent(key_code), m_repeat_count(repeat_count) {}
         
         inline uint16_t GetRepeatCount() const { return m_repeat_count; }

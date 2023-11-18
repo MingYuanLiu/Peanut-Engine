@@ -44,7 +44,7 @@ namespace Peanut_Engine
         inline bool IsInCategory(EventCategory& category) {
             return GetEventCategoryFlags() & category;
         }
-    protected:
+
         bool m_handled = false;
     private:
         friend class EventDispatcher;
@@ -57,8 +57,8 @@ namespace Peanut_Engine
             : m_event(event) {}
 
         template<typename T, typename F>
-        bool Dispatcher(F& func) {
-            if (m_event.GetEventType == T::GetStaticType()) {
+        bool Dispatch(const F& func) {
+            if (m_event.GetEventType() == T::GetStaticType()) {
                 m_event.m_handled |= func(static_cast<T&>(m_event));
 
                 return true;

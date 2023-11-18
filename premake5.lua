@@ -61,14 +61,17 @@ project "Peanut_Engine"
     
     filter "configurations:Debug"
         defines "PE_DEBUG"
+        buildoptions "/MDd"
         symbols "On"
 
     filter "configurations:Release"
         defines "PE_RELEASE"
+        buildoptions "/MD"
         optimize "On"
 
     filter "configurations:Dist"
         defines "PE_RELEASE"
+        buildoptions "/MD"
         optimize "On"    
 
 
@@ -109,12 +112,15 @@ project "Sandbox"
 
     filter "configurations:Debug"
         defines "PE_DEBUG"
+        buildoptions "/MDd"
         symbols "On"
 
     filter "configurations:Release"
         defines "PE_RELEASE"
+        buildoptions "/MD"
         optimize "On"
 
     filter "configurations:Dist"
         defines "PE_RELEASE"
+        buildoptions "/MD"
         optimize "On"    
