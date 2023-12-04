@@ -1,13 +1,14 @@
 set(TARGET_NAME PeanutTests)
 
-file(GLOB TEST_SOURCES CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp)
+file(GLOB TEST_SOURCES CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/*.cc)
 
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES ${TEST_SOURCES})
+add_compile_definitions("PEANUT_ROOT_DIR=${PEANUT_ROOT_DIR}")
 
 enable_testing()
 
 add_executable(${TARGET_NAME} ${TEST_SOURCES})
-# add_compile_definitions("PEANUT_ROOT_DIR=${PEANUT_ROOT_DIR}")
+
 set_target_properties(${TARGET_NAME} PROPERTIES CXX_STANDARD 17 OUTPUT_NAME "PeanutTests")
 set_target_properties(${TARGET_NAME} PROPERTIES FOLDER "Engine")
 

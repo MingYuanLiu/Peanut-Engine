@@ -9,7 +9,7 @@ add_library(json11 ${JSON_INCLUDE}/json11.cpp)
 set_target_properties(json11 PROPERTIES FOLDER "ThirdParty/json11")
 
 file(GLOB_RECURSE HEADER_FILES "*.h")
-file(GLOB_RECURSE SOURCE_FILES "*.cpp")
+file(GLOB_RECURSE SOURCE_FILES "*.cc")
 
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES ${HEADER_FILES} ${SOURCE_FILES})
 

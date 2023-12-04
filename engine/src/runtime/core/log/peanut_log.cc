@@ -4,8 +4,8 @@
 #include <spdlog/sinks/basic_file_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 
-namespace Peanut {
-std::shared_ptr<spdlog::logger> m_global_logger;
+namespace peanut {
+std::shared_ptr<spdlog::logger> LogSystem::m_global_logger_;
 
 bool LogSystem::init(const std::string& log_path, bool out_console) {
   std::vector<spdlog::sink_ptr> log_sinks;
@@ -25,16 +25,16 @@ bool LogSystem::init(const std::string& log_path, bool out_console) {
 
   spdlog::init_thread_pool(8192, 1);
 
-  m_global_logger = std::make_shared<spdlog::async_logger>(
+  m_global_logger_ = std::make_shared<spdlog::async_logger>(
       "Peanut_Logger", log_sinks.begin(), log_sinks.end(),
       spdlog::thread_pool(), spdlog::async_overflow_policy::block);
 
-  m_global_logger->set_level(spdlog::level::trace);
+  m_global_logger_->set_level(spdlog::level::trace);
   spdlog::register_logger(m_global_logger);
 }
 
 void LogSystem::deinit() {
-  m_global_logger->flush();
+  m_global_logger_->flush();
   spdlog::drop_all();
 }
-}  // namespace Peanut
+}  // namespace peanut
