@@ -1,5 +1,8 @@
 #pragma once
 
+#include <sstream>
+#include <string>
+
 #include "runtime/core/base/mouse_code.h"
 #include "runtime/core/event/event.h"
 
@@ -42,7 +45,7 @@ class MouseButtonReleasedEvent : public MouseButtonEvent {
 
 class MouseMovedEvent : public Event {
  public:
-  MouseButtonEvent(double x_pos, double y_pos) : x_pos_(x_pos), y_pos_(y_pos) {}
+  MouseMovedEvent(double x_pos, double y_pos) : x_pos_(x_pos), y_pos_(y_pos) {}
 
   double GetX() { return x_pos_; }
   double GetY() { return y_pos_; }

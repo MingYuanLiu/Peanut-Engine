@@ -30,7 +30,9 @@ bool LogSystem::init(const std::string& log_path, bool out_console) {
       spdlog::thread_pool(), spdlog::async_overflow_policy::block);
 
   m_global_logger_->set_level(spdlog::level::trace);
-  spdlog::register_logger(m_global_logger);
+  spdlog::register_logger(m_global_logger_);
+
+  return true;
 }
 
 void LogSystem::deinit() {

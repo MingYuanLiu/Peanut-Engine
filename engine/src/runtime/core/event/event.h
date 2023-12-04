@@ -25,6 +25,11 @@ enum EventType {
   virtual EventType GetEventType() const override { return GetStaticType(); } \
   virtual const char* GetName() const override { return #type; }
 
+#define BIND_EVENT_FN(fn)                                   \
+  [this](auto&&... args) -> decltype(auto) {                \
+    return this->fn(std::forward<decltype(args)>(args)...); \
+  }
+
 class Event {
  public:
   Event() : handled_(false) {}
@@ -53,7 +58,5 @@ class EventDispatcher {
 
  private:
   Event& event_;
-}
-
-class EventDis
+};
 }  // namespace peanut

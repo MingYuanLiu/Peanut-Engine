@@ -6,15 +6,18 @@
 #include "runtime/core/event/event.h"
 namespace peanut {
 
-typedef struct {
+struct WindowCreateInfo {
   uint32_t width;
   uint32_t height;
   std::string title;
 
-  WindowCreateInfo(uint32_t width = 1280, uint32_t height = 720,
+  WindowCreateInfo() : width(1280), height(720), title("Peanut Engine") {}
+  WindowCreateInfo(uint32_t width, uint32_t height,
                    const std::string& title = "Peanut Engine")
       : width(width), height(height), title(title) {}
-} WindowCreateInfo;
+
+  WindowCreateInfo(const WindowCreateInfo& create_info) = default;
+};
 
 /**
  * @brief Abstract window class
@@ -31,7 +34,7 @@ class Window {
   virtual uint32_t GetHeight() = 0;
 
   virtual void PushEventCallback(const EventCallbackFunc& callback) = 0;
-  virtual const EventCallbackFunc& PopEventCallback() = 0;
+  virtual void PopEventCallback() = 0;
 
   virtual void SetVsync(bool enabled) = 0;
   virtual bool IsVsync() = 0;

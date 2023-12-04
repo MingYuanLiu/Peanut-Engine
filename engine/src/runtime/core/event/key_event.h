@@ -1,5 +1,8 @@
 #pragma once
 
+#include <sstream>
+#include <string>
+
 #include "runtime/core/base/keycode.h"
 #include "runtime/core/event/event.h"
 
