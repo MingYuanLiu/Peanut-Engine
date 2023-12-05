@@ -12,6 +12,6 @@ TEST(HelloTest, BasicAssertions) {
 }
 
 TEST(LogTest, BasicAssertions) {
-  Peanut::LogSystem::init("./logs/log.txt", true);
+  peanut::LogSystem::init("./logs/log.txt", true);
   PEANUT_LOG_INFO("hello world!");
 }

@@ -1,4 +1,4 @@
-#include "window_system.h"
+#include "runtime/functions/window/window_system.h"
 
 #include "runtime/core/base/logger.h"
 #include "runtime/core/event/key_event.h"
@@ -17,14 +17,6 @@ WindowSystem::~WindowSystem() {}
 
 void WindowSystem::OnUpdate() { glfwPollEvents(); }
 
-void WindowSystem::PushEventCallback(const EventCallbackFunc& callback) {
-  window_data_.event_callback.push_back(callback);
-}
-
-const EventCallbackFunc& WindowSystem::PopEventCallback() {
-  return window_data_.event_callback.pop_back();
-}
-
 void WindowSystem::Shutdown() {
   if (m_glf_window_) glfwDestroyWindow(m_glf_window_);
 
@@ -42,7 +34,7 @@ void WindowSystem::SetVsync(bool enabled) {
 
 void WindowSystem::SetMouseCapture(bool enabled) {
   window_data_.mouse_capture = enabled;
-  glfwSetInputMode(m_glf_window_,
+  glfwSetInputMode(m_glf_window_, GLFW_CURSOR,
                    enabled ? GLFW_CURSOR_DISABLED : GLFW_CURSOR_NORMAL);
 }
 
@@ -63,7 +55,7 @@ void WindowSystem::Initialize(const WindowCreateInfo& create_info) {
   // create glf window
   glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
   m_glf_window_ = glfwCreateWindow(create_info.width, create_info.height,
-                                   create_info.title, nullptr, nullptr);
+                                   create_info.title.c_str(), nullptr, nullptr);
   if (!m_glf_window_) {
     PEANUT_LOG_FATAL("Failed to create glf window");
     glfwTerminate();
@@ -106,21 +98,21 @@ void WindowSystem::Initialize(const WindowCreateInfo& create_info) {
     switch (action) {
       case GLFW_PRESS: {
         // key press event
-        KeyPressedEvent evnt(key);
+        KeyPressedEvent event(key);
         for (auto callback : data.event_callback) {
           callback(event);
         }
       }
       case GLFW_RELEASE: {
         // key release event
-        KeyReleasedEvent evnt(key);
+        KeyReleasedEvent event(key);
         for (auto callback : data.event_callback) {
           callback(event);
         }
       }
       case GLFW_REPEAT: {
         // key repeat event
-        KeyPressedEvent evnt(key, true);
+        KeyPressedEvent event(key, true);
         for (auto callback : data.event_callback) {
           callback(event);
         }
@@ -130,11 +122,11 @@ void WindowSystem::Initialize(const WindowCreateInfo& create_info) {
 
   // register char callback
   glfwSetCharModsCallback(
-      m_glf_window_, [](GLFWwindow* window, uint16_t keycode) {
+      m_glf_window_, [](GLFWwindow* window, uint32_t code_point, int mods) {
         WindowData* data = (WindowData*)glfwGetWindowUserPointer(window);
 
         // key char event
-        KeyTypedEvent event(keycode);
+        KeyTypedEvent event(code_point);
         for (auto callback : data->event_callback) {
           callback(event);
         }

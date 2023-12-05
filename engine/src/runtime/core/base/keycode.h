@@ -1,7 +1,7 @@
 #pragma once
 
 namespace peanut {
-using KeyCode = uint16_t;
+using KeyCode = uint32_t;
 
 namespace Key {
 enum : KeyCode {

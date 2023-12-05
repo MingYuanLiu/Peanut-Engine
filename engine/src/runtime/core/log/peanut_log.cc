@@ -20,7 +20,7 @@ bool LogSystem::init(const std::string& log_path, bool out_console) {
 
   for (auto& sink : log_sinks) {
     sink->set_level(spdlog::level::trace);
-    sink->set_pattern("%^[%M-%d-%H-%M-%S.%e][%P-%t][%l] %v%$");
+    sink->set_pattern("%^[%Y-%m-%d-%H-%M-%S.%e][%P-%t][%l] %v%$");
   }
 
   spdlog::init_thread_pool(8192, 1);
@@ -30,7 +30,9 @@ bool LogSystem::init(const std::string& log_path, bool out_console) {
       spdlog::thread_pool(), spdlog::async_overflow_policy::block);
 
   m_global_logger_->set_level(spdlog::level::trace);
-  spdlog::register_logger(m_global_logger);
+  spdlog::register_logger(m_global_logger_);
+
+  return true;
 }
 
 void LogSystem::deinit() {

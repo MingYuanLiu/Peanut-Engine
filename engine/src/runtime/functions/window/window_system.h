@@ -7,7 +7,7 @@
 
 #include "runtime/core/base/logger.h"
 #include "runtime/core/event/event.h"
-#include "runtime/core/event/window.h"
+#include "runtime/functions/window/window.h"
 
 namespace peanut {
 /**
@@ -20,11 +20,19 @@ class WindowSystem : public Window {
   virtual ~WindowSystem();
 
   virtual void OnUpdate() override;
-  virtual uint32_t GetWidth() override { return create_info_.width; }
-  virtual uint32_t GetHeight() override { return create_info_.height; }
+  virtual uint32_t GetWidth() override {
+    return window_data_.create_info.width;
+  }
+  virtual uint32_t GetHeight() override {
+    return window_data_.create_info.height;
+  }
 
-  virtual void PushEventCallback(const EventCallbackFunc& callback) override;
-  virtual const EventCallbackFunc& PopEventCallback() override;
+  virtual void PushEventCallback(const EventCallbackFunc& callback) override {
+    window_data_.event_callback.push_back(callback);
+  }
+  virtual void PopEventCallback() override {
+    window_data_.event_callback.pop_back();
+  }
 
   virtual void* GetNativeWindow() override { return m_glf_window_; };
   virtual void SetVsync(bool enabled) override;

@@ -1,5 +1,8 @@
 #pragma once
 
+#include <sstream>
+#include <string>
+
 #include "runtime/core/event/event.h"
 
 namespace peanut {
@@ -15,7 +18,7 @@ class WindowResizeEvent : public Event {
     std::stringstream ss;
     ss << "WindowResizeEvent: " << new_width_ << "," << new_height_;
     return ss.str();
-  };
+  }
 
   EVENT_CLASS_TYPE(WindowResize)
 
@@ -27,6 +30,11 @@ class WindowResizeEvent : public Event {
 class WindowCloseEvent : public Event {
  public:
   WindowCloseEvent() = default;
+  std::string ToString() const override {
+    std::stringstream ss;
+    ss << "WindowCloseEvent ";
+    return ss.str();
+  }
   EVENT_CLASS_TYPE(WindowClose)
 };
 }  // namespace peanut
