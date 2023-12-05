@@ -20,7 +20,7 @@ bool LogSystem::init(const std::string& log_path, bool out_console) {
 
   for (auto& sink : log_sinks) {
     sink->set_level(spdlog::level::trace);
-    sink->set_pattern("%^[%M-%d-%H-%M-%S.%e][%P-%t][%l] %v%$");
+    sink->set_pattern("%^[%Y-%m-%d-%H-%M-%S.%e][%P-%t][%l] %v%$");
   }
 
   spdlog::init_thread_pool(8192, 1);
