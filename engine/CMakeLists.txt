@@ -22,6 +22,8 @@ else()
     message(FATAL_ERROR "Unknow Platform")
 endif()
 
+set(CMAKE_BUILD_TYPE "Debug")
+
 add_subdirectory(3rdparty)
 add_subdirectory(src/runtime)
 add_subdirectory(src/test)
