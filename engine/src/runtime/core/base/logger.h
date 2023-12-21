@@ -14,3 +14,5 @@
 
 #define PEANUT_LOG_FATAL(...) \
   ::peanut::LogSystem::GetLogger()->critical(__VA_ARGS__)
+
+// TODO: add format log input

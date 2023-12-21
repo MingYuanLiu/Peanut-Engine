@@ -5,6 +5,7 @@
 
 #include "runtime/functions/window/window.h"
 #include "runtime/functions/window/window_system.h"
+#include "runtime/functions/render/render_system.h"
 
 namespace peanut {
 
@@ -29,8 +30,11 @@ class GlobalRuntimeContext {
   }
   void DestorySubSystems() { window_system_->Shutdown(); }
 
+  std::shared_ptr<RenderSystem> GetRenderSystem() { return render_system_; }
+
  public:
   std::shared_ptr<WindowSystem> window_system_;
+  std::shared_ptr<RenderSystem> render_system_;
 
  private:
   GlobalRuntimeContext() = default;
