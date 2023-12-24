@@ -69,25 +69,30 @@ Resource<VkImage> VulkanRHI::CreateImage(uint32_t width, uint32_t height,
   create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
   create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
-  if (VKFAILED(vkCreateImage(vk_device_, &create_info, nullptr, &vkImage.resource))) {
-      PEANUT_LOG_ERROR("Failed to create vulkan image");
-      return vkImage;
+  if (VKFAILED(vkCreateImage(vk_device_, &create_info, nullptr,
+                             &vkImage.resource))) {
+    PEANUT_LOG_ERROR("Failed to create vulkan image");
+    return vkImage;
   }
 
   VkMemoryRequirements requirements;
   vkGetImageMemoryRequirements(vk_device_, vkImage.resource, &requirements);
 
-  VkMemoryAllocateInfo mem_alloc_info = { VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
+  VkMemoryAllocateInfo mem_alloc_info = {
+      VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO};
   mem_alloc_info.allocationSize = requirements.size;
-  mem_alloc_info.memoryTypeIndex = 0; // TODO: ChooseMemoryType
-  if (VKFAILED(vkAllocateMemory(vk_device_, &mem_alloc_info, nullptr, &vkImage.memory))) {
-      vkDestroyImage(vk_device_, vkImage.resource, nullptr);
-      PEANUT_LOG_FATAL("Failed to allocate memory to image");
+  mem_alloc_info.memoryTypeIndex =
+      FindMemoryType(requirements, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+  if (VKFAILED(vkAllocateMemory(vk_device_, &mem_alloc_info, nullptr,
+                                &vkImage.memory))) {
+    vkDestroyImage(vk_device_, vkImage.resource, nullptr);
+    PEANUT_LOG_FATAL("Failed to allocate memory to image");
   }
-  if (VKFAILED(vkBindImageMemory(vk_device_, vkImage.resource, vkImage.memory, 0))) {
-      vkDestroyImage(vk_device_, vkImage.resource, nullptr);
-      vkFreeMemory(vk_device_, vkImage.memory, nullptr);
-      PEANUT_LOG_FATAL("Failed to bind memory to vulkan image");
+  if (VKFAILED(
+          vkBindImageMemory(vk_device_, vkImage.resource, vkImage.memory, 0))) {
+    vkDestroyImage(vk_device_, vkImage.resource, nullptr);
+    vkFreeMemory(vk_device_, vkImage.memory, nullptr);
+    PEANUT_LOG_FATAL("Failed to bind memory to vulkan image");
   }
   vkImage.allocation_size = mem_alloc_info.allocationSize;
   vkImage.memory_type_index = mem_alloc_info.memoryTypeIndex;
@@ -98,23 +103,192 @@ Resource<VkImage> VulkanRHI::CreateImage(uint32_t width, uint32_t height,
 VkImageView VulkanRHI::CreateImageView(VkImage image, VkFormat format,
                                        VkImageAspectFlags aspect_mask,
                                        uint32_t base_mip_level,
-                                       uint32_t num_mip_levels, uint32_t layers) {
-    VkImageViewCreateInfo view_info = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
-    view_info.image = image;
-    view_info.viewType = (layers == 6) ? VK_IMAGE_VIEW_TYPE_CUBE : VK_IMAGE_VIEW_TYPE_2D;
-    view_info.format = format;
-    view_info.subresourceRange.aspectMask = aspect_mask;
-    view_info.subresourceRange.baseMipLevel = base_mip_level;
-    view_info.subresourceRange.levelCount = num_mip_levels;
-    view_info.subresourceRange.baseArrayLayer = 0;
-    view_info.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
+                                       uint32_t num_mip_levels,
+                                       uint32_t layers) {
+  VkImageViewCreateInfo view_info = {VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO};
+  view_info.image = image;
+  view_info.viewType =
+      (layers == 6) ? VK_IMAGE_VIEW_TYPE_CUBE : VK_IMAGE_VIEW_TYPE_2D;
+  view_info.format = format;
+  view_info.subresourceRange.aspectMask = aspect_mask;
+  view_info.subresourceRange.baseMipLevel = base_mip_level;
+  view_info.subresourceRange.levelCount = num_mip_levels;
+  view_info.subresourceRange.baseArrayLayer = 0;
+  view_info.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
 
-    VkImageView view;
-    if (VKFAILED(vkCreateImageView(vk_device_, &view_info, nullptr, &view))) {
-        PEANUT_LOG_FATAL("Failed to create texture image view");
-    }
+  VkImageView view;
+  if (VKFAILED(vkCreateImageView(vk_device_, &view_info, nullptr, &view))) {
+    PEANUT_LOG_FATAL("Failed to create texture image view");
+  }
 
-    return view;
+  return view;
+}
+
+Resource<VkBuffer> VulkanRHI::CreateBuffer(VkDeviceSize size,
+                                           VkBufferUsageFlags usage,
+                                           VkMemoryPropertyFlags memoryFlags) {
+  Resource<VkBuffer> buffer;
+
+  VkBufferCreateInfo create_info = {VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
+  create_info.size = size;
+  create_info.usage = usage;
+  create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+  if (VKFAILED(vkCreateBuffer(vk_device_, &create_info, nullptr,
+                              &buffer.resource))) {
+    PEANUT_LOG_FATAL("Failed to create buffer");
+  }
+
+  VkMemoryRequirements memory_requirements;
+  vkGetBufferMemoryRequirements(vk_device_, buffer.resource,
+                                &memory_requirements);
+
+  VkMemoryAllocateInfo allocate_info = {VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO};
+  allocate_info.allocationSize = memory_requirements.size;
+  allocate_info.memoryTypeIndex =
+      FindMemoryType(memory_requirements, memoryFlags);
+  if (VKFAILED(vkAllocateMemory(vk_device_, &allocate_info, nullptr,
+                                &buffer.memory))) {
+    PEANUT_LOG_FATAL("Failed to allocate device memory for buffer");
+  }
+  if (VKFAILED(
+          vkBindBufferMemory(vk_device_, buffer.resource, buffer.memory, 0))) {
+    PEANUT_LOG_FATAL("Failed to bind device memory to buffer");
+  }
+
+  buffer.allocation_size = allocate_info.allocationSize;
+  buffer.memory_type_index = allocate_info.memoryTypeIndex;
+  return buffer;
+}
+
+void VulkanRHI::DestoryBuffer(Resource<VkBuffer> buffer) {
+  if (buffer.resource != VK_NULL_HANDLE) {
+    vkDestroyBuffer(vk_device_, buffer.resource, nullptr);
+  }
+  if (buffer.memory != VK_NULL_HANDLE) {
+    vkFreeMemory(vk_device_, buffer.memory, nullptr);
+  }
+}
+
+void VulkanRHI::CopyMemToDevice(VkDeviceMemory memory, const void* data,
+                                size_t size) {
+  const VkMappedMemoryRange flush_range = {
+      VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE, nullptr, memory, 0, VK_WHOLE_SIZE};
+
+  void* mapped_device_memory;
+  if (VKFAILED(vkMapMemory(vk_device_, memory, 0, VK_WHOLE_SIZE, 0,
+                           &mapped_device_memory))) {
+    PEANUT_LOG_FATAL("Failed to map device memory to host address space");
+  }
+
+  std::memcpy(mapped_device_memory, data, size);
+  vkFlushMappedMemoryRanges(vk_device_, 1, &flush_range);
+  vkUnmapMemory(vk_device_, memory);
+}
+
+VkCommandBuffer VulkanRHI::BeginImmediateCommandBuffer() {
+  VkCommandBufferBeginInfo begin_info = {
+      VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
+  begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+  if (VKFAILED(vkBeginCommandBuffer(command_buffers_[current_frame_index_],
+                                    &begin_info))) {
+    PEANUT_LOG_FATAL(
+        "Failed to begin immediate command buffer (still in recording state?)");
+  }
+  return command_buffers_[current_frame_index_];
+}
+
+void VulkanRHI::CmdPipelineBarrier(
+    VkCommandBuffer command_buffer, VkPipelineStageFlags src_stage_mask,
+    VkPipelineStageFlags dst_stage_mask,
+    const std::vector<TextureMemoryBarrier>& barriers) {
+  vkCmdPipelineBarrier(
+      command_buffer, src_stage_mask, dst_stage_mask, 0, 0, nullptr, 0, nullptr,
+      (uint32_t)barriers.size(),
+      reinterpret_cast<const VkImageMemoryBarrier*>(barriers.data()));
+}
+
+void VulkanRHI::CmdCopyBufferToImage(VkCommandBuffer command_buffer,
+                                     Resource<VkBuffer> buffer,
+                                     Resource<VkImage> image,
+                                     uint32_t image_width,
+                                     uint32_t image_height,
+                                     VkImageLayout layout) {
+  VkBufferImageCopy copy_region = {};
+  copy_region.bufferOffset = 0;
+  copy_region.imageSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1};
+  copy_region.imageExtent = {image_width, image_height, 1};
+  vkCmdCopyBufferToImage(command_buffer, buffer.resource, image.resource,
+                         layout, 1, &copy_region);
+}
+
+void VulkanRHI::ExecImmediateCommandBuffer(VkCommandBuffer command_buffer) {
+  if (VKFAILED(vkEndCommandBuffer(command_buffer))) {
+    PEANUT_LOG_FATAL("Failed to end immediate command buffer");
+  }
+
+  VkSubmitInfo submit_info = {VK_STRUCTURE_TYPE_SUBMIT_INFO};
+  submit_info.commandBufferCount = 1;
+  submit_info.pCommandBuffers = &command_buffer;
+  vkQueueSubmit(compute_queue_, 1, &submit_info, VK_NULL_HANDLE);
+  vkQueueWaitIdle(compute_queue_);
+
+  if (VKFAILED(vkResetCommandBuffer(
+          command_buffer, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT))) {
+    PEANUT_LOG_FATAL("Failed to reset immediate command buffer");
+  }
+}
+
+void VulkanRHI::GenerateMipmaps(const TextureData& texture) {
+  assert(texture.levels > 1);
+
+  auto command_buffer = BeginImmediateCommandBuffer();
+
+  // Iterate through mip chain and consecutively blit from previous level to
+  // next level with linear filtering.
+  for (uint32_t level = 1, prev_level_width = texture.width,
+                prev_level_height = texture.height;
+       level < texture.levels;
+       ++level, prev_level_width /= 2, prev_level_height /= 2) {
+    const auto& pre_blit_barrier =
+        TextureMemoryBarrier(texture, 0, VK_ACCESS_TRANSFER_WRITE_BIT,
+                             VK_IMAGE_LAYOUT_UNDEFINED,
+                             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
+            .MipLevels(0, 1);
+    CmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
+                       VK_PIPELINE_STAGE_TRANSFER_BIT, {pre_blit_barrier});
+
+    VkImageBlit region = {};
+    region.srcSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, level - 1, 0,
+                             texture.layers};
+    region.dstSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, level, 0,
+                             texture.layers};
+    region.srcOffsets[1] = {(int32_t)prev_level_width,
+                            (int32_t)prev_level_height, 1};
+    region.dstOffsets[1] = {(int32_t)(prev_level_width / 2),
+                            (int32_t)(prev_level_height / 2), 1};
+    vkCmdBlitImage(command_buffer, texture.image.resource,
+                   VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, texture.image.resource,
+                   VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region,
+                   VK_FILTER_LINEAR);
+
+    const auto& post_blit_barrier = TextureMemoryBarrier(
+        texture, VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT,
+        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+    CmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
+                       VK_PIPELINE_STAGE_TRANSFER_BIT, {post_blit_barrier});
+  }
+  // Transition whole mip chain to shader read only layout.
+  {
+    const auto barrier =
+        TextureMemoryBarrier(texture, VK_ACCESS_TRANSFER_WRITE_BIT, 0,
+                             VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    CmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
+                       VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, {barrier});
+  }
+
+  ExecImmediateCommandBuffer(command_buffer);
 }
 
 void VulkanRHI::SetupInstance() {
@@ -664,6 +838,22 @@ void VulkanRHI::InitializeFrameIndex() {
   vkWaitForFences(vk_device_, 1, &acquire_next_image_fence_, VK_TRUE,
                   UINT64_MAX);
   vkResetFences(vk_device_, 1, &acquire_next_image_fence_);
+}
+
+uint32_t VulkanRHI::FindMemoryType(
+    const VkMemoryRequirements& memory_requirements,
+    VkMemoryPropertyFlags required_flag) {
+  for (uint32_t i = 0; i < VK_MAX_MEMORY_TYPES; ++i) {
+    if (memory_requirements.memoryTypeBits & (1 << i)) {
+      const auto& memory_type =
+          physical_device_.memory_properties.memoryTypes[i];
+      if ((memory_type.propertyFlags & required_flag) == required_flag) {
+        return i;
+      }
+    }
+  }
+
+  return -1;
 }
 
 }  // namespace peanut

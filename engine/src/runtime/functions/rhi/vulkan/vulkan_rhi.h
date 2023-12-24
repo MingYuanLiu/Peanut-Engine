@@ -1,7 +1,7 @@
 #pragma once
 #include <GLFW/glfw3.h>
-#include <volk.h>
 #include <vulkan/vulkan.h>
+#include <volk.h>
 
 #include <optional>
 #include <vector>
@@ -44,7 +44,35 @@ class VulkanRHI : public RHI {
   virtual VkImageView CreateImageView(VkImage image, VkFormat format,
                                       VkImageAspectFlags aspect_mask,
                                       uint32_t base_mip_level,
-                                      uint32_t num_mip_levels, uint32_t layers) override;
+                                      uint32_t num_mip_levels,
+                                      uint32_t layers) override;
+
+  virtual Resource<VkBuffer> CreateBuffer(
+      VkDeviceSize size, VkBufferUsageFlags usage,
+      VkMemoryPropertyFlags memoryFlags) override;
+
+  virtual void CopyMemToDevice(VkDeviceMemory memory, const void* data,
+                               size_t size) override;
+
+  virtual VkCommandBuffer BeginImmediateCommandBuffer() override;
+
+  void CmdPipelineBarrier(
+      VkCommandBuffer command_buffer, VkPipelineStageFlags src_stage_mask,
+      VkPipelineStageFlags dst_stage_mask,
+      const std::vector<TextureMemoryBarrier>& barriers) override;
+
+  virtual void CmdCopyBufferToImage(VkCommandBuffer command_buffer,
+                                    Resource<VkBuffer> buffer,
+                                    Resource<VkImage> image,
+                                    uint32_t image_width, uint32_t image_height,
+                                    VkImageLayout layout);
+
+  virtual void ExecImmediateCommandBuffer(
+      VkCommandBuffer command_buffer) override;
+
+  virtual void DestoryBuffer(Resource<VkBuffer> buffer) override;
+
+  virtual void GenerateMipmaps(const TextureData& texture) override;
 
   uint32_t GetCurrentFrameIndex() { return current_frame_index_; }
 
@@ -57,6 +85,8 @@ class VulkanRHI : public RHI {
   void CreateDescriptorPool();
   void CreateSyncPrimitives();
   void InitializeFrameIndex();
+  uint32_t FindMemoryType(const VkMemoryRequirements& memory_requirements,
+                          VkMemoryPropertyFlags required_flag);
 
   // fixme: do create render target in render pipeline or render pass
   void CreateRenderTarget();

@@ -1,12 +1,11 @@
 #pragma once
 
-#include <vulkan/vulkan.h>
 #include <volk.h>
+#include <vulkan/vulkan.h>
 
 namespace peanut {
-	class RenderPass {
-	public:
-		virtual void Initialize();
-
-	};
-}
+class RenderPass {
+ public:
+  virtual void Initialize();
+};
+}  // namespace peanut
