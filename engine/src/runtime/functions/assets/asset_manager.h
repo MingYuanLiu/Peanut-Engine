@@ -6,16 +6,20 @@
 #include "runtime/functions/render/render_data.h"
 
 namespace peanut {
+
 class AssetsManager {
  public:
-  AssetsManager& GetInstance() {
+  static AssetsManager& GetInstance() {
     static AssetsManager AssetManager;
     return AssetManager;
   }
 
   std::shared_ptr<TextureData> LoadTextureData(
       const std::string& texture_filepath,
-      VkFormat format /*TODO: set a wapper format*/);
+      VkFormat format /*TODO: set a wapper format*/, int channels = 4,
+      uint32_t levels = 0);
+
+  std::shared_ptr<MeshBuffer> LoadMeshBuffer(const std::string& mesh_filepath);
 
   AssetsManager(const AssetsManager&&) = delete;
   AssetsManager(const AssetsManager&) = delete;
@@ -24,7 +28,5 @@ class AssetsManager {
  private:
   AssetsManager() = default;
   virtual ~AssetsManager() = default;
-
-  const int kDefaultDesiredChannels = 4;
 };
 }  // namespace peanut

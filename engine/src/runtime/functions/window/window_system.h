@@ -15,8 +15,7 @@ namespace peanut {
  */
 class WindowSystem : public Window {
  public:
-  WindowSystem() : m_glf_window_(nullptr), intialized_(false) {}
-  explicit WindowSystem(const WindowCreateInfo& create_info);
+  WindowSystem();
   virtual ~WindowSystem();
 
   virtual void OnUpdate() override;

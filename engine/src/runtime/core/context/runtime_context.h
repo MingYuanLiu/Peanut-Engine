@@ -6,12 +6,10 @@
 #include "runtime/functions/window/window.h"
 #include "runtime/functions/window/window_system.h"
 #include "runtime/functions/render/render_system.h"
+#include "runtime/core/log/peanut_log.h"
 
 namespace peanut {
-
-class LogSystem;
-class WindowSystem;
-
+    class RenderSystem;
 /**
  * @brief manage the global states of the game engine runtime
  *
@@ -23,14 +21,11 @@ class GlobalRuntimeContext {
     return &global_context;
   }
 
-  void SetupSubSystems() {
-    WindowCreateInfo create_info(default_window_width_, default_window_height_,
-                                 default_window_title_);
-    window_system_ = std::make_shared<WindowSystem>(create_info);
-  }
-  void DestorySubSystems() { window_system_->Shutdown(); }
+  void SetupSubSystems();
+  void DestroySubSystems();
 
   std::shared_ptr<RenderSystem> GetRenderSystem() { return render_system_; }
+  std::shared_ptr<WindowSystem> GetWindowSystem() { return window_system_; }
 
  public:
   std::shared_ptr<WindowSystem> window_system_;

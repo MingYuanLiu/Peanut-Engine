@@ -10,37 +10,24 @@ namespace peanut {
 
 class MouseButtonEvent : public Event {
  public:
+  MouseButtonEvent(const MouseCode button, bool pressed) : mouse_button_(button), pressed_(pressed) {}
   MouseCode GetMouseButton() const { return mouse_button_; }
+  bool IsPressed() { return pressed_; }
 
+  std::string ToString() const override {
+      std::stringstream ss;
+      ss << "MouseButtonEvent: " << mouse_button_;
+      if (pressed_)
+          ss << ", pressed";
+      else
+          ss << ", release";
+      return ss.str();
+  }
+
+  EVENT_CLASS_TYPE(MouseButton)
  protected:
-  MouseButtonEvent(const MouseCode button) : mouse_button_(button) {}
   MouseCode mouse_button_;
-};
-
-class MouseButtonPressedEvent : public MouseButtonEvent {
- public:
-  MouseButtonPressedEvent(const MouseCode button) : MouseButtonEvent(button) {}
-
-  std::string ToString() const override {
-    std::stringstream ss;
-    ss << "MouseButtonPressedEvent: " << mouse_button_;
-    return ss.str();
-  }
-
-  EVENT_CLASS_TYPE(MouseButtonPressed)
-};
-
-class MouseButtonReleasedEvent : public MouseButtonEvent {
- public:
-  MouseButtonReleasedEvent(const MouseCode button) : MouseButtonEvent(button) {}
-
-  std::string ToString() const override {
-    std::stringstream ss;
-    ss << "MouseButtonReleaseEvent: " << mouse_button_;
-    return ss.str();
-  }
-
-  EVENT_CLASS_TYPE(MouseButtonReleased)
+  bool pressed_;
 };
 
 class MouseMovedEvent : public Event {

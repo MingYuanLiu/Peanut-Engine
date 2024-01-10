@@ -34,3 +34,8 @@ if(NOT TARGET stb)
     include(stb.cmake)
     set_target_properties(stb PROPERTIES FOLDER ${third_party_folder}/stb)
 endif()
+
+if (NOT TARGET assimp)
+    add_subdirectory(assimp)
+    set_target_properties(assimp PROPERTIES FOLDER ${third_party_folder}/assimp)
+endif()

@@ -1,39 +1,18 @@
 #pragma once
-#include <GLFW/glfw3.h>
-#include <vulkan/vulkan.h>
-#include <volk.h>
+// #include <volk.h>
 
-#include <optional>
+#include <vulkan/vulkan.h>
+#include <GLFW/glfw3.h>
 #include <vector>
 
 #include "runtime/functions/rhi/rhi.h"
 
 namespace peanut {
-struct QueueFamilyIndices {
-  std::optional<uint32_t> graphics_family;
-  std::optional<uint32_t> present_family;
-  std::optional<uint32_t> compute_family;
-
-  bool isComplete() {
-    return graphics_family.has_value() && present_family.has_value() &&
-           compute_family.has_value();
-    ;
-  }
-};
-
-struct VulkanPhysicalDevice {
-  VkPhysicalDevice physic_device_handle;
-  VkPhysicalDeviceProperties properties;
-  VkPhysicalDeviceMemoryProperties memory_properties;
-  VkPhysicalDeviceFeatures features;
-  VkSurfaceCapabilitiesKHR surface_capabilities;
-  std::vector<VkSurfaceFormatKHR> surface_formats;
-  std::vector<VkPresentModeKHR> present_modes;
-  QueueFamilyIndices queue_family_indices;
-};
 
 class VulkanRHI : public RHI {
  public:
+  VulkanRHI() = default;
+  virtual ~VulkanRHI() {}
   virtual void Init(
       const std::shared_ptr<WindowSystem>& window_system) override;
   virtual void Shutdown() override;
@@ -46,10 +25,39 @@ class VulkanRHI : public RHI {
                                       uint32_t base_mip_level,
                                       uint32_t num_mip_levels,
                                       uint32_t layers) override;
+  virtual void DestroyImage(Resource<VkImage> image) {
+    if (image.resource != VK_NULL_HANDLE)
+      vkDestroyImage(vk_device_, image.resource, nullptr);
+
+    if (image.memory != VK_NULL_HANDLE)
+      vkFreeMemory(vk_device_, image.memory, nullptr);
+  }
+
+  virtual void DestroyImageView(VkImageView image_view) {
+    if (image_view != VK_NULL_HANDLE)
+      vkDestroyImageView(vk_device_, image_view, nullptr);
+  }
 
   virtual Resource<VkBuffer> CreateBuffer(
       VkDeviceSize size, VkBufferUsageFlags usage,
       VkMemoryPropertyFlags memoryFlags) override;
+
+  virtual void DestroyBuffer(Resource<VkBuffer> buffer) override;
+
+  virtual std::shared_ptr<TextureData> CreateTexture(
+      uint32_t width, uint32_t height, uint32_t layers, uint32_t levels,
+      VkFormat format, VkImageUsageFlags additional_usage);
+
+  VkImageView CreateTextureView(const std::shared_ptr<TextureData>& texture,
+                                VkFormat format, VkImageAspectFlags aspect_mask,
+                                uint32_t base_mip_level,
+                                uint32_t num_mip_levels);
+
+  virtual void DestroyTexture(std::shared_ptr<TextureData>& texture) override {
+    if (texture->image_view != VK_NULL_HANDLE)
+      vkDestroyImageView(vk_device_, texture->image_view, nullptr);
+    DestroyImage(texture->image);
+  }
 
   virtual void CopyMemToDevice(VkDeviceMemory memory, const void* data,
                                size_t size) override;
@@ -70,12 +78,115 @@ class VulkanRHI : public RHI {
   virtual void ExecImmediateCommandBuffer(
       VkCommandBuffer command_buffer) override;
 
-  virtual void DestoryBuffer(Resource<VkBuffer> buffer) override;
-
   virtual void GenerateMipmaps(const TextureData& texture) override;
 
-  uint32_t GetCurrentFrameIndex() { return current_frame_index_; }
+  virtual void CreateSampler(VkSamplerCreateInfo* create_info,
+                             VkSampler* out_sampler) override;
 
+  // fixme: do not copy whole structure
+  virtual VulkanPhysicalDevice GetPhysicalDevice() override;
+
+  virtual void CreateDescriptorPool(VkDescriptorPoolCreateInfo* create_info,
+                                    VkDescriptorPool* out_pool);
+
+  virtual VkDevice GetDevice();
+
+  virtual VkDescriptorSet AllocateDescriptor(
+      VkDescriptorPool pool, VkDescriptorSetLayout layout) override;
+
+  virtual VkDescriptorSet AllocateDescriptor(
+      VkDescriptorSetLayout layout) override;
+
+  virtual VkDescriptorSetLayout CreateDescriptorSetLayout(
+      const std::vector<VkDescriptorSetLayoutBinding>& bindings) override;
+
+  virtual VkPipelineLayout CreatePipelineLayout(
+      const std::vector<VkDescriptorSetLayout>& set_layout,
+      const std::vector<VkPushConstantRange>& push_constants) override;
+
+  virtual uint32_t GetNumberFrames() override {
+    return frame_in_flight_numbers_;
+  }
+  virtual void MapMemory(VkDeviceMemory memory, VkDeviceSize offset,
+                         VkDeviceSize size, VkMemoryMapFlags flags,
+                         void** ppdata) override {
+    if (VKFAILED(
+            vkMapMemory(vk_device_, memory, offset, size, flags, ppdata))) {
+      PEANUT_LOG_FATAL("Failed to Map memory");
+    }
+  }
+  virtual void UpdateImageDescriptorSet(
+      VkDescriptorSet descriptor_set, uint32_t dst_binding,
+      VkDescriptorType descriptor_type,
+      const std::vector<VkDescriptorImageInfo>& descriptors) override;
+  virtual void UpdateBufferDescriptorSet(
+      VkDescriptorSet descriptor_set, uint32_t dst_binding,
+      VkDescriptorType descriptor_type,
+      const std::vector<VkDescriptorBufferInfo>& descriptors) override;
+  virtual void CreateRenderPass(VkRenderPassCreateInfo* create_info,
+                                VkRenderPass* out_renderpass) override;
+
+  virtual void GetPhysicalDeviceImageFormatProperties(
+      VkFormat format, VkImageType type, VkImageTiling tiling,
+      VkImageUsageFlags usage, VkImageCreateFlags flags,
+      VkImageFormatProperties* out_properties) override;
+
+  virtual void CreateFrameBuffer(VkFramebufferCreateInfo* create_info,
+                                 VkFramebuffer* out_framebuffer) override;
+
+  virtual bool MemoryTypeNeedsStaging(uint32_t memory_type_index) override;
+
+  virtual VkPipeline CreateGraphicsPipeline(
+      VkRenderPass renderpass, uint32_t subpass,
+      VkShaderModule vs_shader_module, VkShaderModule fs_shader_module,
+      VkPipelineLayout pipeline_layout,
+      const std::vector<VkVertexInputBindingDescription>* vertex_input_bindings,
+      const std::vector<VkVertexInputAttributeDescription>* vertex_attributes,
+      const VkPipelineMultisampleStateCreateInfo* multisample_state,
+      const VkPipelineDepthStencilStateCreateInfo* depth_stencil_stat) override;
+
+  virtual VkPipeline CreateComputePipeline(
+      VkShaderModule cs_shader, VkPipelineLayout layout,
+      const VkSpecializationInfo* specialize_info = nullptr);
+
+  virtual void DestroyPipeline(VkPipeline pipeline) override {
+    vkDestroyPipeline(vk_device_, pipeline, nullptr);
+  }
+
+  virtual VkShaderModule CreateShaderModule(
+      const std::string& shader_file_path) override;
+
+  virtual void DestroyShaderModule(VkShaderModule shader_module) override;
+
+  virtual void QueueSubmit(uint32_t submit_count, uint32_t current_frame_index,
+                           VkSubmitInfo* submit_info) override {
+    vkQueueSubmit(present_queue_, submit_count, submit_info,
+                  frame_submit_fences_[current_frame_index]);
+  }
+
+  virtual void PresentFrame() override;
+
+  virtual void AcquireNextImage() {
+      if (VKFAILED(vkAcquireNextImageKHR(vk_device_, swapchain_, UINT64_MAX,
+          VK_NULL_HANDLE, acquire_next_image_fence_,
+          &current_frame_index_))) {
+          PEANUT_LOG_FATAL("Failed to acquire next swapchain image");
+      }
+  }
+
+  uint32_t GetCurrentFrameIndex() { return current_frame_index_; }
+  uint32_t GetRenderSamples() { return render_samples_; }
+  const std::vector<VkImageView>& GetSwapchainImageView() {
+    return swapchain_image_views_;
+  }
+  VkImage GetCurrentSwapchainImage() {
+    return swapchain_images_[current_frame_index_];
+  }
+  uint32_t GetDisplayWidth() { return window_width_; }
+  uint32_t GetDisplayHeight() { return window_height_; }
+
+ protected:
+  void PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& create_info);
   void CreateWindowSurface();
   void SetupInstance();
   void SetupPhysicalDevice();
@@ -87,9 +198,6 @@ class VulkanRHI : public RHI {
   void InitializeFrameIndex();
   uint32_t FindMemoryType(const VkMemoryRequirements& memory_requirements,
                           VkMemoryPropertyFlags required_flag);
-
-  // fixme: do create render target in render pipeline or render pass
-  void CreateRenderTarget();
 
   template <class T>
   void DestroyResource(Resource<T>& resource);
@@ -129,6 +237,7 @@ class VulkanRHI : public RHI {
   uint32_t window_width_;
   uint32_t window_height_;
   uint32_t current_frame_index_;
+  uint64_t totle_frame_count_;
 
   VulkanPhysicalDevice physical_device_;
 
@@ -147,7 +256,9 @@ class VulkanRHI : public RHI {
 
   VkCommandPool command_pool_;
   std::vector<VkCommandBuffer> command_buffers_;
-  std::vector<RenderTarget> render_targets_;
+
+  std::vector<VkSemaphore> image_available_render_semaphores_;
+  std::vector<VkSemaphore> image_finish_render_semaphores_;
 
   VkFence acquire_next_image_fence_;
   std::vector<VkFence> frame_submit_fences_;

@@ -1,5 +1,13 @@
 #pragma once
+// #include <volk.h>
 #include <vulkan/vulkan.h>
+#include <optional>
+#include <vector>
+
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtx/euler_angles.hpp>
 
 namespace peanut {
 
@@ -11,6 +19,29 @@ struct Resource {
   uint32_t memory_type_index;
 };
 
+struct QueueFamilyIndices {
+    std::optional<uint32_t> graphics_family;
+    std::optional<uint32_t> present_family;
+    std::optional<uint32_t> compute_family;
+
+    bool isComplete() {
+        return graphics_family.has_value() && present_family.has_value() &&
+            compute_family.has_value();
+        ;
+    }
+};
+
+struct VulkanPhysicalDevice {
+    VkPhysicalDevice physic_device_handle;
+    VkPhysicalDeviceProperties properties;
+    VkPhysicalDeviceMemoryProperties memory_properties;
+    VkPhysicalDeviceFeatures features;
+    VkSurfaceCapabilitiesKHR surface_capabilities;
+    std::vector<VkSurfaceFormatKHR> surface_formats;
+    std::vector<VkPresentModeKHR> present_modes;
+    QueueFamilyIndices queue_family_indices;
+};
+
 struct RenderTarget {
   Resource<VkImage> color_image;
   Resource<VkImage> depth_image;
@@ -20,6 +51,12 @@ struct RenderTarget {
   VkFormat depth_format;
   uint32_t width, height;
   uint32_t samples;
+};
+
+struct MeshBuffer {
+  Resource<VkBuffer> vertex_buffer;
+  Resource<VkBuffer> index_buffer;
+  uint32_t num_elements;
 };
 
 struct TextureData {
@@ -69,4 +106,61 @@ struct TextureMemoryBarrier {
     return *this;
   }
 };
+
+struct UniformBuffer {
+  Resource<VkBuffer> buffer;
+  VkDeviceSize capacity;
+  VkDeviceSize cursor;
+  void* host_mem_ptr;
+};
+
+struct UniformBufferAllocation {
+  VkDescriptorBufferInfo descriptor_info;
+  void* host_mem_ptr;
+
+  template <typename T>
+  T* as() const {
+    return reinterpret_cast<T*>(host_mem_ptr);
+  }
+};
+
+struct SpecularFilterPushConstants {
+  uint32_t level;
+  float roughness;
+};
+
+struct TransformUniforms {
+  glm::mat4 viewProjectionMatrix;
+  glm::mat4 skyProjectionMatrix;
+  glm::mat4 sceneRotationMatrix;
+};
+
+struct ViewSettings
+{
+    float pitch = 0.0f;
+    float yaw = 0.0f;
+    float distance = 0.0f;
+    float fov = 0.0f;
+};
+
+struct SceneSettings {
+  float pitch = 0.0f;
+  float yaw = 0.0f;
+
+  static const int kNumLights = 3;
+  struct Light {
+    glm::vec3 direction;
+    glm::vec3 radiance;
+    bool enabled = false;
+  } lights[kNumLights];
+};
+
+struct ShadingUniforms {
+  struct {
+    glm::vec4 direction;
+    glm::vec4 radiance;
+  } lights[SceneSettings::kNumLights];
+  glm::vec4 eye_position;
+};
+
 }  // namespace peanut

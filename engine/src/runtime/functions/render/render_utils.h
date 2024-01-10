@@ -1,4 +1,7 @@
 #pragma once
+#include <fstream>
+#include <string>
+#include <vector>
 
 namespace peanut {
 class RenderUtils {
@@ -20,6 +23,37 @@ class RenderUtils {
       ++levels;
     }
     return levels;
+  }
+
+  template<typename T>
+  static bool CheckDoubleNearZero(T value) {
+      PEANUT_LOG_ERROR("Only support double and float");
+  }
+
+  template<>
+  static bool CheckDoubleNearZero<double>(double value) {
+      return std::abs(value - 0.0f) <= std::numeric_limits<double>::epsilon();
+  }
+
+  template<>
+  static bool CheckDoubleNearZero<float>(float value) {
+      return std::abs(value - 0.0f) <= std::numeric_limits<float>::epsilon();
+  }
+
+  static bool ReadBinaryFile(const std::string& path,
+                             std::vector<char>& output) {
+    std::ifstream file{path, std::ios::binary | std::ios::ate};
+    if (!file.is_open()) {
+      return false;
+    }
+
+    std::streamsize size = file.tellg();
+    file.seekg(0, std::ios::beg);
+
+    std::vector<char> buffer(size);
+    output.resize(size);
+    file.read(output.data(), size);
+    return true;
   }
 };
 }  // namespace peanut
