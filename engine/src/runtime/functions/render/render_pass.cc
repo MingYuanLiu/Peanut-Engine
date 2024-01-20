@@ -11,8 +11,8 @@ void MainRenderPass::Initialize() {
   g_descriptor_layouts_.resize(kNumDescriptorType);
   g_pipeline_layouts_.resize(kNumDescriptorType);
 
-  display_width_ = static_cast<VulkanRHI*>(rhi_.get())->GetDisplayWidth();
-  display_height_ = static_cast<VulkanRHI*>(rhi_.get())->GetDisplayHeight();
+  display_width_ = static_cast<VulkanRHI *>(rhi_.get())->GetDisplayWidth();
+  display_height_ = static_cast<VulkanRHI *>(rhi_.get())->GetDisplayHeight();
 
   CreateRenderTarget();
 
@@ -46,34 +46,56 @@ void MainRenderPass::Initialize() {
 }
 
 void MainRenderPass::DeInitialize() {
-  // destroy descriptor set
+  PEANUT_LOG_INFO("DeInitialize main render pass");
 
-  // destroy compute pipeline layout
+  rhi_->DestroyTexture(environment_map_);
+  rhi_->DestroyTexture(irradiance_map_);
+  rhi_->DestroyTexture(brdf_lut_);
+  rhi_->DestroyTexture(albedo_texture_);
+  rhi_->DestroyTexture(normal_texture_);
+  rhi_->DestroyTexture(metalness_texture_);
+  rhi_->DestroyTexture(roughness_texture_);
+
+  AssetsManager::GetInstance().DestroyMeshBuffer(*pbr_mesh_);
+  AssetsManager::GetInstance().DestroyMeshBuffer(*skybox_mesh_);
+
+  DestroyUniformBuffer(uniform_buffer_);
 
   // destroy sampler
+  rhi_->DestroySampler(&default_sampler_);
+  rhi_->DestroySampler(&brdf_sampler_);
 
-  // destroy descriptor pool
+  rhi_->DestroyPipelineLayout(g_pipeline_layouts_[Pbr]);
+  rhi_->DestroyPipeline(pbr_pipeline_);
 
-  // destroy textures and mesh
+  rhi_->DestroyPipelineLayout(g_pipeline_layouts_[Skybox]);
+  rhi_->DestroyPipeline(skybox_pipeline_);
 
-  // destroy uniform buffer
+  rhi_->DestroyPipelineLayout(g_pipeline_layouts_[ToneMap]);
+  rhi_->DestroyPipeline(tonemap_pipeline_);
 
-  // destroy sampler
-
-  // destroy pipeline layout
-
-  // destroy pipeline
+  rhi_->DestroyRenderPass(g_render_pass_);
 
   // destroy render target
+  int32_t num_frames = rhi_->GetNumberFrames();
+  for (int32_t i = 0; i < num_frames; ++i) {
+    DestroyRenderTarget(g_render_targets_[i]);
+
+    rhi_->DestroyFrameBuffer(g_frame_buffers_[i]);
+  }
 }
 
-void MainRenderPass::RenderTick(const ViewSettings& view,
-                                const SceneSettings& scene) {
+void MainRenderPass::RenderTick(const ViewSettings &view,
+                                const SceneSettings &scene) {
   const VkDeviceSize zero_offset = 0;
   glm::mat4 projection_mat =
       glm::perspectiveFov(view.fov, (float)(display_width_),
                           (float)(display_height_), 1.0f, 1000.0f);
-  projection_mat[1][1] += -1.0f;
+  projection_mat[1][1] *= -1.0f;  // Vulkan uses right handed NDC with Y axis
+                                  // pointing down, compensate for that.
+
+  // PEANUT_LOG_INFO("pitch of view {0}, yaw of view {1}", view.pitch,
+  // view.yaw);
 
   const glm::mat4 view_rotation_mat =
       glm::eulerAngleXY(glm::radians(view.pitch), glm::radians(view.yaw));
@@ -85,10 +107,10 @@ void MainRenderPass::RenderTick(const ViewSettings& view,
   const glm::vec3 eye_position = glm::inverse(view_mat)[3];
 
   uint32_t current_frame_index =
-      static_cast<VulkanRHI*>(rhi_.get())->GetCurrentFrameIndex();
+      static_cast<VulkanRHI *>(rhi_.get())->GetCurrentFrameIndex();
   // update transform uniform buffer
   {
-    TransformUniforms* const transfer_uniform =
+    TransformUniforms *const transfer_uniform =
         transform_uniform_buffer_[current_frame_index].as<TransformUniforms>();
     transfer_uniform->viewProjectionMatrix = projection_mat * view_mat;
     transfer_uniform->skyProjectionMatrix = projection_mat * view_rotation_mat;
@@ -96,11 +118,11 @@ void MainRenderPass::RenderTick(const ViewSettings& view,
   }
   // update shading uniform buffer
   {
-    ShadingUniforms* const shading_uniform =
+    ShadingUniforms *const shading_uniform =
         shading_uniform_buffer_[current_frame_index].as<ShadingUniforms>();
     shading_uniform->eye_position = glm::vec4{eye_position, 0.0f};
     for (int i = 0; i < SceneSettings::kNumLights; ++i) {
-      const SceneSettings::Light& light = scene.lights[i];
+      const SceneSettings::Light &light = scene.lights[i];
       shading_uniform->lights[i].direction = glm::vec4{light.direction, 0.0f};
       if (light.enabled)
         shading_uniform->lights[i].radiance = glm::vec4{light.radiance, 0.0f};
@@ -108,8 +130,6 @@ void MainRenderPass::RenderTick(const ViewSettings& view,
         shading_uniform->lights[i].radiance = glm::vec4{};
     }
   }
-
-  rhi_->AcquireNextImage();
 
   // Begin recording current frame command buffer.
   VkCommandBuffer command_buffer = rhi_->BeginImmediateCommandBuffer();
@@ -144,14 +164,13 @@ void MainRenderPass::RenderTick(const ViewSettings& view,
   vkCmdDrawIndexed(command_buffer, skybox_mesh_->num_elements, 1, 0, 0, 0);
 
   // draw pbr model
-  const std::array<VkDescriptorSet, 2> pbr_descriptorsets = {
-      uniforms_descriptorset,
+  const std::array<VkDescriptorSet, 1> pbr_descriptorsets = {
       pbr_descriptor_set_};
   vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                     pbr_pipeline_);
   vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                          g_pipeline_layouts_[DescriptorSetType::Pbr], 0,
-                          static_cast<uint32_t>(pbr_descriptorsets.size()), 
+                          g_pipeline_layouts_[DescriptorSetType::Pbr], 1,
+                          static_cast<uint32_t>(pbr_descriptorsets.size()),
                           pbr_descriptorsets.data(), 0, nullptr);
   vkCmdBindVertexBuffers(command_buffer, 0, 1,
                          &pbr_mesh_->vertex_buffer.resource, &zero_offset);
@@ -190,7 +209,7 @@ void MainRenderPass::RenderTick(const ViewSettings& view,
 
 void MainRenderPass::preparePassData() {
   // load pbr model's assets
-  auto& asset_manager = AssetsManager::GetInstance();
+  auto &asset_manager = AssetsManager::GetInstance();
 
   pbr_mesh_ = asset_manager.LoadMeshBuffer(kPBRModelFile);
   skybox_mesh_ = asset_manager.LoadMeshBuffer(kSkyBoxModelFile);
@@ -226,6 +245,15 @@ void MainRenderPass::CreateUniformBuffer() {
                   &uniform_buffer_.host_mem_ptr);
 }
 
+void MainRenderPass::DestroyUniformBuffer(UniformBuffer uniform_buffer) {
+  if (uniform_buffer.host_mem_ptr != nullptr &&
+      uniform_buffer.buffer.memory != VK_NULL_HANDLE) {
+    rhi_->UnMapMemory(uniform_buffer.buffer.memory);
+  }
+
+  rhi_->DestroyBuffer(uniform_buffer.buffer);
+}
+
 void MainRenderPass::SetupSamplers() {
   VkSamplerCreateInfo create_info = {VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO};
   create_info.minFilter = VK_FILTER_LINEAR;
@@ -244,7 +272,8 @@ void MainRenderPass::SetupSamplers() {
 
   // Linear, non-anisotropic sampler, clamp address mode (sampling BRDF LUT)
   create_info.anisotropyEnable = VK_FALSE;
-  create_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+  create_info.addressModeU =
+      VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;  // TODO: what mean of addressModeU
   create_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
   rhi_->CreateSampler(&create_info, &brdf_sampler_);
 }
@@ -278,14 +307,15 @@ void MainRenderPass::SetupComputDescriptorSets() {
   compute_descriptor_set_ = rhi_->AllocateDescriptor(
       compute_descriptor_pool_,
       g_descriptor_layouts_[DescriptorSetType::Compute]);
-  const std::vector<VkDescriptorSetLayout> descriptor_set_layouts = {
+  const std::vector<VkDescriptorSetLayout> pipeline_descriptor_layouts = {
       g_descriptor_layouts_[DescriptorSetType::Compute]};
   const std::vector<VkPushConstantRange> pipeline_push_const = {
       {VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(SpecularFilterPushConstants)}};
-  g_pipeline_layouts_[DescriptorSetType::Compute] =
-      rhi_->CreatePipelineLayout(descriptor_set_layouts, pipeline_push_const);
+  g_pipeline_layouts_[DescriptorSetType::Compute] = rhi_->CreatePipelineLayout(
+      pipeline_descriptor_layouts, pipeline_push_const);
 }
 
+// uniform buffer for rendering viewport and light input
 void MainRenderPass::SetupUniformDescriptorSets() {
   const std::vector<VkDescriptorSetLayoutBinding>
       descriptorset_layout_bindings = {
@@ -323,8 +353,8 @@ void MainRenderPass::SetupUniformDescriptorSets() {
 }
 
 UniformBufferAllocation MainRenderPass::AllocateSubStorageFromUniformBuffer(
-    UniformBuffer& buffer, VkDeviceSize size) {
-  const auto& properties = rhi_->GetPhysicalDevice().properties;
+    UniformBuffer &buffer, VkDeviceSize size) {
+  const auto &properties = rhi_->GetPhysicalDevice().properties;
   const VkDeviceSize min_alignment =
       properties.limits.minUniformBufferOffsetAlignment;
   const VkDeviceSize align_size =
@@ -344,7 +374,7 @@ UniformBufferAllocation MainRenderPass::AllocateSubStorageFromUniformBuffer(
   allocation.descriptor_info.offset = buffer.cursor;
   allocation.descriptor_info.range = align_size;
   allocation.host_mem_ptr =
-      reinterpret_cast<uint8_t*>(buffer.host_mem_ptr) + buffer.cursor;
+      reinterpret_cast<uint8_t *>(buffer.host_mem_ptr) + buffer.cursor;
 
   buffer.cursor += align_size;
 
@@ -404,7 +434,7 @@ void MainRenderPass::SetupRenderpass() {
       {ResolveColorAttachment, VK_IMAGE_LAYOUT_GENERAL}};
   const VkAttachmentReference mainpass_depth_stencil_refs = {
       MainDepthStencilAttachment,
-      VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL};
+      VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL};
 
   // main pass
   VkSubpassDescription main_pass = {};
@@ -420,9 +450,7 @@ void MainRenderPass::SetupRenderpass() {
   const std::array<VkAttachmentReference, 1> tonemap_subpass_input_refs = {
       {MainColorAttachment, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL}};
   const std::array<VkAttachmentReference, 1> tonemap_subpass_multisample_refs =
-      {
-          {ResolveColorAttachment, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL}
-      };
+      {{ResolveColorAttachment, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL}};
   const std::array<VkAttachmentReference, 1> tonemap_subpass_color_refs = {
       {SwapchainColorAttachment, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL}};
   VkSubpassDescription tonemap_subpass = {};
@@ -510,53 +538,70 @@ void MainRenderPass::CreateRenderTarget() {
     if (render_samples_ > 1) {
       CreateRenderTargetInternal(g_resolve_render_targets_[i], display_width_,
                                  display_height_, 1, color_format,
-                                 depth_format);
+                                 VK_FORMAT_UNDEFINED);
     }
   }
 }
 
-void MainRenderPass::CreateRenderTargetInternal(RenderTarget& target,
+void MainRenderPass::CreateRenderTargetInternal(RenderTarget &target,
                                                 uint32_t width, uint32_t height,
                                                 uint32_t samples,
                                                 VkFormat color_format,
                                                 VkFormat depth_format) {
-  target.width = width;
-  target.height = height;
-  target.color_format = color_format;
-  target.depth_format = depth_format;
-  target.samples = samples;
+  RenderTarget render_target = {};
+  render_target.width = width;
+  render_target.height = height;
+  render_target.color_format = color_format;
+  render_target.depth_format = depth_format;
+  render_target.samples = samples;
 
-  VkImageUsageFlags color_image_usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT;
-  //if (samples == 1) {
-  //  color_image_usage |= VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT;
-  //}
+  VkImageUsageFlags color_image_usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+  if (samples == 1) {
+    color_image_usage |= VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT;
+  }
 
   if (color_format != VK_FORMAT_UNDEFINED) {
-    target.color_image = rhi_->CreateImage(width, height, 1, 1, samples,
-                                           color_format, color_image_usage);
+    render_target.color_image = rhi_->CreateImage(
+        width, height, 1, 1, samples, color_format, color_image_usage);
   }
 
   if (depth_format != VK_FORMAT_UNDEFINED) {
-    target.depth_image =
+    render_target.depth_image =
         rhi_->CreateImage(width, height, 1, 1, samples, depth_format,
                           VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
   }
 
-  if (target.color_image.resource != VK_NULL_HANDLE) {
-    target.color_view =
-        rhi_->CreateImageView(target.color_image.resource, color_format,
+  if (render_target.color_image.resource != VK_NULL_HANDLE) {
+    render_target.color_view =
+        rhi_->CreateImageView(render_target.color_image.resource, color_format,
                               VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 1);
   }
-  if (target.depth_image.resource != VK_NULL_HANDLE) {
-    target.depth_view =
-        rhi_->CreateImageView(target.depth_image.resource, depth_format,
+  if (render_target.depth_image.resource != VK_NULL_HANDLE) {
+    render_target.depth_view =
+        rhi_->CreateImageView(render_target.depth_image.resource, depth_format,
                               VK_IMAGE_ASPECT_DEPTH_BIT, 0, 1, 1);
   }
+  target = render_target;
+}
+
+void MainRenderPass::DestroyRenderTarget(RenderTarget &render_target) {
+  rhi_->DestroyImage(render_target.color_image);
+  rhi_->DestroyImage(render_target.depth_image);
+
+  if (render_target.color_view != VK_NULL_HANDLE) {
+    rhi_->DestroyImageView(render_target.color_view);
+  }
+
+  if (render_target.depth_view != VK_NULL_HANDLE) {
+    rhi_->DestroyImageView(render_target.depth_view);
+  }
+
+  render_target = {};
 }
 
 void MainRenderPass::CreateFrameBuffer() {
-  const std::vector<VkImageView>& swapchain_image_view =
-      static_cast<VulkanRHI*>(rhi_.get())->GetSwapchainImageView();
+  const std::vector<VkImageView> &swapchain_image_view =
+      static_cast<VulkanRHI *>(rhi_.get())->GetSwapchainImageView();
   uint32_t num_frames = rhi_->GetNumberFrames();
   g_frame_buffers_.resize(num_frames);
   for (uint32_t i = 0; i < num_frames; ++i) {
@@ -773,7 +818,7 @@ void MainRenderPass::LoadAndProcessEnvironmentMap() {
   VkPipeline pipeline = rhi_->CreateComputePipeline(
       envmap_cs, g_pipeline_layouts_[DescriptorSetType::Compute]);
 
-  auto& asset_manager = AssetsManager::GetInstance();
+  auto &asset_manager = AssetsManager::GetInstance();
   std::shared_ptr<TextureData> env_texture_equirect =
       asset_manager.LoadTextureData(kEnvMapTextureFile,
                                     VK_FORMAT_R32G32B32A32_SFLOAT, 4, 1);
@@ -791,26 +836,28 @@ void MainRenderPass::LoadAndProcessEnvironmentMap() {
                                  {output_texture});
   VkCommandBuffer command_buffer = rhi_->BeginImmediateCommandBuffer();
   {
-        const auto prev_dispatch_barrier =
-            TextureMemoryBarrier(*env_texture_unfiltered, 0,
-                VK_ACCESS_SHADER_WRITE_BIT,
-                VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL)
+    const auto prev_dispatch_barrier =
+        TextureMemoryBarrier(*env_texture_unfiltered, 0,
+                             VK_ACCESS_SHADER_WRITE_BIT,
+                             VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL)
             .MipLevels(0, env_texture_unfiltered->levels);
-        rhi_->CmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-            VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-            { prev_dispatch_barrier });
-        vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline);
-        vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE,
-            g_pipeline_layouts_[DescriptorSetType::Compute], 0,
-            1, &compute_descriptor_set_, 0, nullptr);
-        vkCmdDispatch(command_buffer, kEnvMapSize / 32, kEnvMapSize / 32, 6);
+    rhi_->CmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                             VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                             {prev_dispatch_barrier});
+    vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline);
+    vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE,
+                            g_pipeline_layouts_[DescriptorSetType::Compute], 0,
+                            1, &compute_descriptor_set_, 0, nullptr);
+    vkCmdDispatch(command_buffer, kEnvMapSize / 32, kEnvMapSize / 32, 6);
 
-        const auto post_dispatch_barrier = TextureMemoryBarrier(
+    const auto post_dispatch_barrier =
+        TextureMemoryBarrier(
             *env_texture_unfiltered, VK_ACCESS_SHADER_WRITE_BIT, 0,
-            VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL).MipLevels(0, env_texture_unfiltered->levels);
-        rhi_->CmdPipelineBarrier(
-            command_buffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-            VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, { post_dispatch_barrier });
+            VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL)
+            .MipLevels(0, env_texture_unfiltered->levels);
+    rhi_->CmdPipelineBarrier(
+        command_buffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+        VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, {post_dispatch_barrier});
   }
   rhi_->ExecImmediateCommandBuffer(command_buffer);
   rhi_->DestroyPipeline(pipeline);
@@ -836,87 +883,89 @@ void MainRenderPass::LoadAndProcessEnvironmentMap() {
     std::vector<VkImageView> env_map_tail_views;
     std::vector<VkDescriptorImageInfo> env_map_tail_descriptor;
     {
-        const std::vector<TextureMemoryBarrier> prev_copy_barriers = {
-            TextureMemoryBarrier(*env_texture_unfiltered, 0,
-                                 VK_ACCESS_TRANSFER_READ_BIT,
-                                 VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                                 VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL)
-                .MipLevels(0, env_texture_unfiltered->levels),
-            TextureMemoryBarrier(*environment_map_, 0, VK_ACCESS_TRANSFER_WRITE_BIT,
-                                 VK_IMAGE_LAYOUT_UNDEFINED,
-                                 VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
-                .MipLevels(0, environment_map_->levels),
-        };
-        rhi_->CmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-            VK_PIPELINE_STAGE_TRANSFER_BIT,
-            prev_copy_barriers);
+      const std::vector<TextureMemoryBarrier> prev_copy_barriers = {
+          TextureMemoryBarrier(*env_texture_unfiltered, 0,
+                               VK_ACCESS_TRANSFER_READ_BIT,
+                               VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                               VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL)
+              .MipLevels(0, env_texture_unfiltered->levels),
+          TextureMemoryBarrier(
+              *environment_map_, 0, VK_ACCESS_TRANSFER_WRITE_BIT,
+              VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
+              .MipLevels(0, environment_map_->levels)};
+      rhi_->CmdPipelineBarrier(
+          command_buffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+          VK_PIPELINE_STAGE_TRANSFER_BIT, prev_copy_barriers);
 
-        VkImageCopy copy_region = {};
-        copy_region.extent = { environment_map_->width, environment_map_->height, 1 };
-        copy_region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        copy_region.srcSubresource.layerCount = environment_map_->layers;
-        copy_region.dstSubresource = copy_region.srcSubresource;
-        vkCmdCopyImage(command_buffer, env_texture_unfiltered->image.resource,
-            VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-            environment_map_->image.resource,
-            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy_region);
+      VkImageCopy copy_region = {};
+      copy_region.extent = {environment_map_->width, environment_map_->height,
+                            1};
+      copy_region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+      copy_region.srcSubresource.layerCount = environment_map_->layers;
+      copy_region.dstSubresource = copy_region.srcSubresource;
+      vkCmdCopyImage(command_buffer, env_texture_unfiltered->image.resource,
+                     VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                     environment_map_->image.resource,
+                     VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy_region);
 
-        const std::vector<TextureMemoryBarrier> post_copy_barriers = {
-            TextureMemoryBarrier(
-                *env_texture_unfiltered, VK_ACCESS_TRANSFER_READ_BIT,
-                VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
-                .MipLevels(0, env_texture_unfiltered->levels),
-            TextureMemoryBarrier(*environment_map_, VK_ACCESS_TRANSFER_WRITE_BIT,
-                                 VK_ACCESS_SHADER_WRITE_BIT,
-                                 VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                                 VK_IMAGE_LAYOUT_GENERAL).MipLevels(0, environment_map_->levels),
-        };
-        rhi_->CmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
-            VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-            post_copy_barriers);
+      const std::vector<TextureMemoryBarrier> post_copy_barriers = {
+          TextureMemoryBarrier(
+              *env_texture_unfiltered, VK_ACCESS_TRANSFER_READ_BIT,
+              VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+              VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+              .MipLevels(0, env_texture_unfiltered->levels),
+          TextureMemoryBarrier(*environment_map_, VK_ACCESS_TRANSFER_WRITE_BIT,
+                               VK_ACCESS_SHADER_WRITE_BIT,
+                               VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                               VK_IMAGE_LAYOUT_GENERAL)
+              .MipLevels(0, environment_map_->levels),
+      };
+      rhi_->CmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
+                               VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                               post_copy_barriers);
 
-        const VkDescriptorImageInfo input_texture = {
-            VK_NULL_HANDLE, env_texture_unfiltered->image_view,
-            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
-        rhi_->UpdateImageDescriptorSet(
-            compute_descriptor_set_, BindingsInputTexture,
-            VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, { input_texture });
-        for (uint32_t level = 1; level < env_map_levels_; ++level) {
-            env_map_tail_views.push_back(rhi_->CreateTextureView(
-                environment_map_, VK_FORMAT_R16G16B16A16_SFLOAT,
-                VK_IMAGE_ASPECT_COLOR_BIT, level, 1));
-            env_map_tail_descriptor.push_back(
-                VkDescriptorImageInfo{ VK_NULL_HANDLE, env_map_tail_views[level - 1],
-                                      VK_IMAGE_LAYOUT_GENERAL });
-        }
-        rhi_->UpdateImageDescriptorSet(
-            compute_descriptor_set_, BindingsOutputMipTail,
-            VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, env_map_tail_descriptor);
-        vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline);
-        vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE,
-            g_pipeline_layouts_[DescriptorSetType::Compute], 0,
-            1, &compute_descriptor_set_, 0, nullptr);
+      const VkDescriptorImageInfo input_texture = {
+          VK_NULL_HANDLE, env_texture_unfiltered->image_view,
+          VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL};
+      rhi_->UpdateImageDescriptorSet(
+          compute_descriptor_set_, BindingsInputTexture,
+          VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, {input_texture});
+      for (uint32_t level = 1; level < env_map_levels_; ++level) {
+        env_map_tail_views.push_back(rhi_->CreateTextureView(
+            environment_map_, VK_FORMAT_R16G16B16A16_SFLOAT,
+            VK_IMAGE_ASPECT_COLOR_BIT, level, 1));
+        env_map_tail_descriptor.push_back(
+            VkDescriptorImageInfo{VK_NULL_HANDLE, env_map_tail_views[level - 1],
+                                  VK_IMAGE_LAYOUT_GENERAL});
+      }
+      rhi_->UpdateImageDescriptorSet(
+          compute_descriptor_set_, BindingsOutputMipTail,
+          VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, env_map_tail_descriptor);
+      vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE,
+                        pipeline);
+      vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE,
+                              g_pipeline_layouts_[DescriptorSetType::Compute],
+                              0, 1, &compute_descriptor_set_, 0, nullptr);
 
-        const float delta_roughness =
-            1.0f / std::max((float)num_mip_tail_levels, 1.0f);
-        for (uint32_t level = 1, size = kEnvMapSize / 2; level < kEnvMapSize;
-            ++level, size /= 2) {
-            const uint32_t num_groups = std::max<uint32_t>(1, size / 32);
-            const SpecularFilterPushConstants push_consts = { level - 1,
-                                                             level * delta_roughness };
-            vkCmdPushConstants(command_buffer,
-                g_pipeline_layouts_[DescriptorSetType::Compute],
-                VK_SHADER_STAGE_COMPUTE_BIT, 0,
-                sizeof(SpecularFilterPushConstants), &push_consts);
-            vkCmdDispatch(command_buffer, num_groups, num_groups, 6);
-        }
-        const auto barrier = TextureMemoryBarrier(
-            *environment_map_, VK_ACCESS_SHADER_WRITE_BIT, 0,
-            VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-        rhi_->CmdPipelineBarrier(command_buffer,
-            VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-            VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, { barrier });
+      const float delta_roughness =
+          1.0f / std::max((float)num_mip_tail_levels, 1.0f);
+      for (uint32_t level = 1, size = kEnvMapSize / 2; level < env_map_levels_;
+           ++level, size /= 2) {
+        const uint32_t num_groups = std::max<uint32_t>(1, size / 32);
+        const SpecularFilterPushConstants push_consts = {
+            level - 1, level * delta_roughness};
+        vkCmdPushConstants(command_buffer,
+                           g_pipeline_layouts_[DescriptorSetType::Compute],
+                           VK_SHADER_STAGE_COMPUTE_BIT, 0,
+                           sizeof(SpecularFilterPushConstants), &push_consts);
+        vkCmdDispatch(command_buffer, num_groups, num_groups, 6);
+      }
+      const auto barrier = TextureMemoryBarrier(
+          *environment_map_, VK_ACCESS_SHADER_WRITE_BIT, 0,
+          VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+      rhi_->CmdPipelineBarrier(command_buffer,
+                               VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                               VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, {barrier});
     }
     rhi_->ExecImmediateCommandBuffer(command_buffer);
 

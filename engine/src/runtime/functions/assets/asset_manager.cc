@@ -56,7 +56,7 @@ std::shared_ptr<TextureData> AssetsManager::LoadTextureData(
 
   texture_data->image_view = rhi->CreateImageView(
       texture_data->image.resource, format, VK_IMAGE_ASPECT_COLOR_BIT, 0,
-      VK_REMAINING_MIP_LEVELS, 1);
+      VK_REMAINING_MIP_LEVELS, VK_REMAINING_ARRAY_LAYERS);
 
   size_t texture_pixel_size =
       texture_data->width * texture_data->height * texture_data->channels;
@@ -179,5 +179,14 @@ std::shared_ptr<MeshBuffer> AssetsManager::LoadMeshBuffer(
   }
 
   return mesh_buffer;
+}
+
+void AssetsManager::DestroyMeshBuffer(MeshBuffer& mesh_buffer)
+{
+    const auto& rhi =
+        GlobalRuntimeContext::GetContext()->GetRenderSystem()->GetRHI();
+    rhi->DestroyBuffer(mesh_buffer.vertex_buffer);
+    rhi->DestroyBuffer(mesh_buffer.index_buffer);
+    mesh_buffer = {};
 }
 }  // namespace peanut

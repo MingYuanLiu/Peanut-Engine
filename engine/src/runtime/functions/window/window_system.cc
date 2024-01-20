@@ -6,9 +6,7 @@
 #include "runtime/core/event/window_event.h"
 
 namespace peanut {
-WindowSystem::WindowSystem()
-    : m_glf_window_(nullptr), intialized_(false) {
-}
+WindowSystem::WindowSystem() : m_glf_window_(nullptr), intialized_(false) {}
 
 WindowSystem::~WindowSystem() {}
 
@@ -96,8 +94,8 @@ void WindowSystem::Initialize(const WindowCreateInfo& create_info) {
 
     KeyEvent event(key, pressed, repeat);
     for (auto callback : data.event_callback) {
-        callback(event);
-     }
+      callback(event);
+    }
   });
 
   // register char callback
@@ -118,7 +116,7 @@ void WindowSystem::Initialize(const WindowCreateInfo& create_info) {
         WindowData* data = (WindowData*)glfwGetWindowUserPointer(window);
         MouseButtonEvent event((MouseCode)button, action);
         for (auto callback : data->event_callback) {
-            callback(event);
+          callback(event);
         }
       });
 

@@ -5,12 +5,14 @@
 namespace peanut {
 RenderSystem::RenderSystem()
     : rhi_(std::make_shared<VulkanRHI>()),
-      main_render_pass_(std::make_unique<MainRenderPass>()) {
-}
+      main_render_pass_(std::make_unique<MainRenderPass>()),
+      last_mouse_pos_x_(0.0f),
+      last_mouse_pos_y_(0.0f),
+      input_mode_(InputMode::None) {}
 
 void RenderSystem::Initialize(
     const std::shared_ptr<WindowSystem>& window_system) {
-    PEANUT_LOG_INFO("Intialize Render system");
+  PEANUT_LOG_INFO("Intialize Render system");
   rhi_->Init(window_system);
   main_render_pass_->Initialize();
   InitViewSettingAndSceneSetting();
@@ -71,7 +73,11 @@ bool RenderSystem::HandleMousePositionEvent(MouseMovedEvent& e) {
       default:
         break;
     }
+
+    last_mouse_pos_x_ = e.GetX();
+    last_mouse_pos_y_ = e.GetY();
   }
+
   return true;
 }
 
@@ -106,6 +112,9 @@ bool RenderSystem::HandleMouseButtonEvent(MouseButtonEvent& e) {
       window_system->SetMouseCapture(true);
     }
   }
+
+  input_mode_ = new_input_mode;
+
   return true;
 }
 

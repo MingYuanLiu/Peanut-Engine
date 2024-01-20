@@ -83,6 +83,10 @@ class VulkanRHI : public RHI {
   virtual void CreateSampler(VkSamplerCreateInfo* create_info,
                              VkSampler* out_sampler) override;
 
+  virtual void DestroySampler(VkSampler* sampler) override {
+    vkDestroySampler(vk_device_, *sampler, nullptr);
+  }
+
   // fixme: do not copy whole structure
   virtual VulkanPhysicalDevice GetPhysicalDevice() override;
 
@@ -115,6 +119,9 @@ class VulkanRHI : public RHI {
       PEANUT_LOG_FATAL("Failed to Map memory");
     }
   }
+  virtual void UnMapMemory(VkDeviceMemory memory) override {
+    vkUnmapMemory(vk_device_, memory);
+  }
   virtual void UpdateImageDescriptorSet(
       VkDescriptorSet descriptor_set, uint32_t dst_binding,
       VkDescriptorType descriptor_type,
@@ -123,8 +130,13 @@ class VulkanRHI : public RHI {
       VkDescriptorSet descriptor_set, uint32_t dst_binding,
       VkDescriptorType descriptor_type,
       const std::vector<VkDescriptorBufferInfo>& descriptors) override;
+
   virtual void CreateRenderPass(VkRenderPassCreateInfo* create_info,
                                 VkRenderPass* out_renderpass) override;
+
+  virtual void DestroyRenderPass(VkRenderPass& renderpass) override {
+    vkDestroyRenderPass(vk_device_, renderpass, nullptr);
+  }
 
   virtual void GetPhysicalDeviceImageFormatProperties(
       VkFormat format, VkImageType type, VkImageTiling tiling,
@@ -133,6 +145,10 @@ class VulkanRHI : public RHI {
 
   virtual void CreateFrameBuffer(VkFramebufferCreateInfo* create_info,
                                  VkFramebuffer* out_framebuffer) override;
+
+  virtual void DestroyFrameBuffer(VkFramebuffer& framebuffer) override {
+    vkDestroyFramebuffer(vk_device_, framebuffer, nullptr);
+  }
 
   virtual bool MemoryTypeNeedsStaging(uint32_t memory_type_index) override;
 
@@ -148,6 +164,10 @@ class VulkanRHI : public RHI {
   virtual VkPipeline CreateComputePipeline(
       VkShaderModule cs_shader, VkPipelineLayout layout,
       const VkSpecializationInfo* specialize_info = nullptr);
+  virtual void DestroyPipelineLayout(
+      VkPipelineLayout& pipeline_layout) override {
+    vkDestroyPipelineLayout(vk_device_, pipeline_layout, nullptr);
+  }
 
   virtual void DestroyPipeline(VkPipeline pipeline) override {
     vkDestroyPipeline(vk_device_, pipeline, nullptr);
@@ -167,11 +187,11 @@ class VulkanRHI : public RHI {
   virtual void PresentFrame() override;
 
   virtual void AcquireNextImage() {
-      if (VKFAILED(vkAcquireNextImageKHR(vk_device_, swapchain_, UINT64_MAX,
-          VK_NULL_HANDLE, acquire_next_image_fence_,
-          &current_frame_index_))) {
-          PEANUT_LOG_FATAL("Failed to acquire next swapchain image");
-      }
+    // if (VKFAILED(vkAcquireNextImageKHR(vk_device_, swapchain_, UINT64_MAX,
+    //     image_available_render_semaphores_[current_frame_index_],
+    //     acquire_next_image_fence_, &current_frame_index_))) {
+    //     PEANUT_LOG_FATAL("Failed to acquire next swapchain image");
+    // }
   }
 
   uint32_t GetCurrentFrameIndex() { return current_frame_index_; }
@@ -186,7 +206,8 @@ class VulkanRHI : public RHI {
   uint32_t GetDisplayHeight() { return window_height_; }
 
  protected:
-  void PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& create_info);
+  void PopulateDebugMessengerCreateInfo(
+      VkDebugUtilsMessengerCreateInfoEXT& create_info);
   void CreateWindowSurface();
   void SetupInstance();
   void SetupPhysicalDevice();
@@ -257,8 +278,8 @@ class VulkanRHI : public RHI {
   VkCommandPool command_pool_;
   std::vector<VkCommandBuffer> command_buffers_;
 
-  std::vector<VkSemaphore> image_available_render_semaphores_;
-  std::vector<VkSemaphore> image_finish_render_semaphores_;
+  // std::vector<VkSemaphore> image_available_render_semaphores_;
+  // std::vector<VkSemaphore> image_finish_render_semaphores_;
 
   VkFence acquire_next_image_fence_;
   std::vector<VkFence> frame_submit_fences_;

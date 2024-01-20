@@ -58,6 +58,7 @@ class RHI {
   virtual void GenerateMipmaps(const TextureData& texture) = 0;
   virtual void CreateSampler(VkSamplerCreateInfo* create_info,
                              VkSampler* out_sampler) = 0;
+  virtual void DestroySampler(VkSampler* sampler) = 0;
   virtual VulkanPhysicalDevice GetPhysicalDevice() = 0;
   virtual void CreateDescriptorPool(VkDescriptorPoolCreateInfo* create_info,
                                     VkDescriptorPool* out_pool) = 0;
@@ -80,14 +81,18 @@ class RHI {
   virtual VkPipelineLayout CreatePipelineLayout(
       const std::vector<VkDescriptorSetLayout>& set_layout,
       const std::vector<VkPushConstantRange>& push_constants) = 0;
+  virtual void DestroyPipelineLayout(VkPipelineLayout& pipeline_layout) = 0;
+
   virtual uint32_t GetNumberFrames() = 0;
   virtual void MapMemory(VkDeviceMemory memory, VkDeviceSize offset,
                          VkDeviceSize size, VkMemoryMapFlags flags,
                          void** ppdata) = 0;
-
+  virtual void UnMapMemory(VkDeviceMemory memory) = 0;
   // render pass
   virtual void CreateRenderPass(VkRenderPassCreateInfo* create_info,
                                 VkRenderPass* out_renderpass) = 0;
+
+  virtual void DestroyRenderPass(VkRenderPass& renderpass) = 0;
 
   // pipeline
   virtual VkPipeline CreateGraphicsPipeline(
@@ -112,6 +117,7 @@ class RHI {
       VkImageFormatProperties* out_properties) = 0;
   virtual void CreateFrameBuffer(VkFramebufferCreateInfo* create_info,
                                  VkFramebuffer* out_framebuffer) = 0;
+  virtual void DestroyFrameBuffer(VkFramebuffer& framebuffer) = 0;
   // memory whether or not can support host visible type
   virtual bool MemoryTypeNeedsStaging(uint32_t memory_type_index) = 0;
 

@@ -38,8 +38,8 @@ class GlobalRuntimeContext {
  private:
   // TODO: use config system to config this values
   const std::string default_log_path_ = "./logs/runtime_log.txt";
-  const uint32_t default_window_width_ = 1280;
-  const uint32_t default_window_height_ = 720;
+  const uint32_t default_window_width_ = 1024;
+  const uint32_t default_window_height_ = 1024;
   const std::string default_window_title_ = "Peanut";
 };
 

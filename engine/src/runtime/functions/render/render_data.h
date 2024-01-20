@@ -20,26 +20,26 @@ struct Resource {
 };
 
 struct QueueFamilyIndices {
-    std::optional<uint32_t> graphics_family;
-    std::optional<uint32_t> present_family;
-    std::optional<uint32_t> compute_family;
+  std::optional<uint32_t> graphics_family;
+  std::optional<uint32_t> present_family;
+  std::optional<uint32_t> compute_family;
 
-    bool isComplete() {
-        return graphics_family.has_value() && present_family.has_value() &&
-            compute_family.has_value();
-        ;
-    }
+  bool isComplete() {
+    return graphics_family.has_value() && present_family.has_value() &&
+           compute_family.has_value();
+    ;
+  }
 };
 
 struct VulkanPhysicalDevice {
-    VkPhysicalDevice physic_device_handle;
-    VkPhysicalDeviceProperties properties;
-    VkPhysicalDeviceMemoryProperties memory_properties;
-    VkPhysicalDeviceFeatures features;
-    VkSurfaceCapabilitiesKHR surface_capabilities;
-    std::vector<VkSurfaceFormatKHR> surface_formats;
-    std::vector<VkPresentModeKHR> present_modes;
-    QueueFamilyIndices queue_family_indices;
+  VkPhysicalDevice physic_device_handle;
+  VkPhysicalDeviceProperties properties;
+  VkPhysicalDeviceMemoryProperties memory_properties;
+  VkPhysicalDeviceFeatures features;
+  VkSurfaceCapabilitiesKHR surface_capabilities;
+  std::vector<VkSurfaceFormatKHR> surface_formats;
+  std::vector<VkPresentModeKHR> present_modes;
+  QueueFamilyIndices queue_family_indices;
 };
 
 struct RenderTarget {
@@ -67,11 +67,11 @@ struct TextureData {
   uint32_t channels;
   uint32_t levels;
   uint32_t layers;
-  void* pixels;
+  void *pixels;
 };
 
 struct TextureMemoryBarrier {
-  TextureMemoryBarrier(const TextureData& texture, VkAccessFlags srcAccessMask,
+  TextureMemoryBarrier(const TextureData &texture, VkAccessFlags srcAccessMask,
                        VkAccessFlags dstAccessMask, VkImageLayout oldLayout,
                        VkImageLayout newLayout) {
     barrier.srcAccessMask = srcAccessMask;
@@ -88,17 +88,17 @@ struct TextureMemoryBarrier {
   operator VkImageMemoryBarrier() const { return barrier; }
   VkImageMemoryBarrier barrier = {VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
 
-  TextureMemoryBarrier& AspectMask(VkImageAspectFlags aspectMask) {
+  TextureMemoryBarrier &AspectMask(VkImageAspectFlags aspectMask) {
     barrier.subresourceRange.aspectMask = aspectMask;
     return *this;
   }
-  TextureMemoryBarrier& MipLevels(
+  TextureMemoryBarrier &MipLevels(
       uint32_t baseMipLevel, uint32_t levelCount = VK_REMAINING_MIP_LEVELS) {
     barrier.subresourceRange.baseMipLevel = baseMipLevel;
     barrier.subresourceRange.levelCount = levelCount;
     return *this;
   }
-  TextureMemoryBarrier& ArrayLayers(
+  TextureMemoryBarrier &ArrayLayers(
       uint32_t baseArrayLayer,
       uint32_t layerCount = VK_REMAINING_ARRAY_LAYERS) {
     barrier.subresourceRange.baseArrayLayer = baseArrayLayer;
@@ -111,16 +111,16 @@ struct UniformBuffer {
   Resource<VkBuffer> buffer;
   VkDeviceSize capacity;
   VkDeviceSize cursor;
-  void* host_mem_ptr;
+  void *host_mem_ptr;
 };
 
 struct UniformBufferAllocation {
   VkDescriptorBufferInfo descriptor_info;
-  void* host_mem_ptr;
+  void *host_mem_ptr;
 
   template <typename T>
-  T* as() const {
-    return reinterpret_cast<T*>(host_mem_ptr);
+  T *as() const {
+    return reinterpret_cast<T *>(host_mem_ptr);
   }
 };
 
@@ -135,12 +135,11 @@ struct TransformUniforms {
   glm::mat4 sceneRotationMatrix;
 };
 
-struct ViewSettings
-{
-    float pitch = 0.0f;
-    float yaw = 0.0f;
-    float distance = 0.0f;
-    float fov = 0.0f;
+struct ViewSettings {
+  float pitch = 0.0f;
+  float yaw = 0.0f;
+  float distance = 0.0f;
+  float fov = 0.0f;
 };
 
 struct SceneSettings {

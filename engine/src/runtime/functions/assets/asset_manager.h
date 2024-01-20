@@ -21,6 +21,8 @@ class AssetsManager {
 
   std::shared_ptr<MeshBuffer> LoadMeshBuffer(const std::string& mesh_filepath);
 
+  void DestroyMeshBuffer(MeshBuffer& mesh_buffer);
+
   AssetsManager(const AssetsManager&&) = delete;
   AssetsManager(const AssetsManager&) = delete;
   void operator=(const AssetsManager&) = delete;

@@ -40,19 +40,21 @@ enum AttachmentName : uint32_t {
 
 class MainRenderPass : public RenderPassBase {
  public:
-  MainRenderPass(){}
+  MainRenderPass() {}
   virtual ~MainRenderPass() {}
   virtual void Initialize() override;
   virtual void DeInitialize() override;
-  virtual void RenderTick(const ViewSettings& view,
-                          const SceneSettings& scene) override;
+  virtual void RenderTick(const ViewSettings &view,
+                          const SceneSettings &scene) override;
   virtual void preparePassData() override;
 
  protected:
   void CreateUniformBuffer();
+  void DestroyUniformBuffer(UniformBuffer uniform_buffer);
   void CreateFrameBuffer();
   void CreateRenderTarget();
-  void CreateRenderTargetInternal(RenderTarget& target, uint32_t width,
+  void DestroyRenderTarget(RenderTarget &render_target);
+  void CreateRenderTargetInternal(RenderTarget &target, uint32_t width,
                                   uint32_t height, uint32_t samples,
                                   VkFormat color_format, VkFormat depth_format);
 
@@ -72,11 +74,11 @@ class MainRenderPass : public RenderPassBase {
 
   template <typename T>
   UniformBufferAllocation AllocateSubStorageFromUniformBuffer(
-      UniformBuffer& buffer) {
+      UniformBuffer &buffer) {
     return AllocateSubStorageFromUniformBuffer(buffer, sizeof(T));
   }
   UniformBufferAllocation AllocateSubStorageFromUniformBuffer(
-      UniformBuffer& buffer, VkDeviceSize size);
+      UniformBuffer &buffer, VkDeviceSize size);
 
  private:
   std::vector<VkDescriptorSetLayout> g_descriptor_layouts_;
@@ -157,14 +159,12 @@ class MainRenderPass : public RenderPassBase {
   const std::string kPbrVertexShaderFile = "assets/spirv/pbr_vs.spv";
   const std::string kPbrFragmentShaderFile = "assets/spirv/pbr_fs.spv";
   const std::string kTonemapVertexShaderFile = "assets/spirv/tonemap_vs.spv";
-  const std::string kTonemapFragmentShaderFile =
-      "assets/spirv/tonemap_fs.spv";
+  const std::string kTonemapFragmentShaderFile = "assets/spirv/tonemap_fs.spv";
   const std::string kSkyboxVertexShaderFile = "assets/spirv/skybox_vs.spv";
   const std::string kSkyboxFragmentShaderFile = "assets/spirv/skybox_fs.spv";
   const std::string kEnvMapEquirectShaderFile =
       "assets/spirv/equirect2cube_cs.spv";
-  const std::string kSpecularEnvMapShaderFile =
-      "assets/spirv/spmap_cs.spv";
+  const std::string kSpecularEnvMapShaderFile = "assets/spirv/spmap_cs.spv";
   const std::string kDiffuseIrradianceMapShaderFile =
       "assets/spirv/irmap_cs.spv";
   const std::string kBrdfLutShaderFile = "assets/spirv/spbrdf_cs.spv";

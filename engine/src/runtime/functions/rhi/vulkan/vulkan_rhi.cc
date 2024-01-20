@@ -5,6 +5,7 @@
 #include <map>
 #include <iostream>
 #include <set>
+#include <glm/glm.hpp>
 
 #include "runtime/core/base/logger.h"
 #include "runtime/functions/render/render_utils.h"
@@ -25,10 +26,6 @@ void VulkanRHI::Init(const std::shared_ptr<WindowSystem>& window_system) {
   window_width_ = window_system->GetWidth();
   window_height_ = window_system->GetHeight();
 
-  char const* vk_layer_path = PEANUT_XSTR(PEANUT_VK_LAYER_PATH);
-  SetEnvironmentVariableA("VK_LAYER_PATH", vk_layer_path);
-  SetEnvironmentVariableA("DISABLE_LAYER_AMD_SWITCHABLE_GRAPHICS_1", "1");
-
   SetupInstance();
 
   CreateWindowSurface();
@@ -45,10 +42,13 @@ void VulkanRHI::Init(const std::shared_ptr<WindowSystem>& window_system) {
 
   CreateSyncPrimitives();
 
-  // InitializeFrameIndex();
+  InitializeFrameIndex();
 
   totle_frame_count_ = 0;
-  current_frame_index_ = 0;
+  // current_frame_index_ = 0;
+
+  PEANUT_LOG_INFO("Vulkan init finished [{0}]",
+                  physical_device_.properties.deviceName);
 }
 
 void VulkanRHI::Shutdown() {
@@ -57,11 +57,17 @@ void VulkanRHI::Shutdown() {
 
   vkDestroyDescriptorPool(vk_device_, descriptor_pool_, nullptr);
   vkDestroyCommandPool(vk_device_, command_pool_, nullptr);
-  vkDestroyFence(vk_device_, acquire_next_image_fence_, nullptr);
   vkDestroySwapchainKHR(vk_device_, swapchain_, nullptr);
   vkDestroySurfaceKHR(vk_instance_, window_surface_, nullptr);
 
+  vkDestroyFence(vk_device_, acquire_next_image_fence_, nullptr);
+  for (int i = 0; i < frame_in_flight_numbers_; ++i) {
+    vkDestroyFence(vk_device_, frame_submit_fences_[i], nullptr);
+    vkDestroyImageView(vk_device_, swapchain_image_views_[i], nullptr);
+  }
+
   vkDestroyDevice(vk_device_, nullptr);
+  vkDestroyInstance(vk_instance_, nullptr);
 }
 
 Resource<VkImage> VulkanRHI::CreateImage(uint32_t width, uint32_t height,
@@ -132,7 +138,7 @@ VkImageView VulkanRHI::CreateImageView(VkImage image, VkFormat format,
   view_info.subresourceRange.baseMipLevel = base_mip_level;
   view_info.subresourceRange.levelCount = num_mip_levels;
   view_info.subresourceRange.baseArrayLayer = 0;
-  view_info.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
+  view_info.subresourceRange.layerCount = layers;
 
   VkImageView view;
   if (VKFAILED(vkCreateImageView(vk_device_, &view_info, nullptr, &view))) {
@@ -289,10 +295,12 @@ void VulkanRHI::GenerateMipmaps(const TextureData& texture) {
                    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region,
                    VK_FILTER_LINEAR);
 
-    const auto& post_blit_barrier = TextureMemoryBarrier(
-        texture, VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT,
-        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-        VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL).MipLevels(level, 1);
+    const auto& post_blit_barrier =
+        TextureMemoryBarrier(texture, VK_ACCESS_TRANSFER_WRITE_BIT,
+                             VK_ACCESS_TRANSFER_READ_BIT,
+                             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                             VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL)
+            .MipLevels(level, 1);
     CmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
                        VK_PIPELINE_STAGE_TRANSFER_BIT, {post_blit_barrier});
   }
@@ -317,9 +325,7 @@ void VulkanRHI::CreateSampler(VkSamplerCreateInfo* create_info,
   }
 }
 
-VulkanPhysicalDevice VulkanRHI::GetPhysicalDevice() {
-  return physical_device_;
-}
+VulkanPhysicalDevice VulkanRHI::GetPhysicalDevice() { return physical_device_; }
 
 void VulkanRHI::CreateDescriptorPool(VkDescriptorPoolCreateInfo* create_info,
                                      VkDescriptorPool* out_pool) {
@@ -372,8 +378,10 @@ VkPipelineLayout VulkanRHI::CreatePipelineLayout(
       VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO};
   create_info.setLayoutCount = set_layout.size();
   create_info.pSetLayouts = set_layout.data();
-  create_info.pushConstantRangeCount = push_constants.size();
-  create_info.pPushConstantRanges = push_constants.data();
+  if (push_constants.size() > 0) {
+    create_info.pushConstantRangeCount = push_constants.size();
+    create_info.pPushConstantRanges = push_constants.data();
+  }
 
   if (VKFAILED(
           vkCreatePipelineLayout(vk_device_, &create_info, nullptr, &layout))) {
@@ -467,7 +475,7 @@ VkPipeline VulkanRHI::CreateGraphicsPipeline(
   };
 
   VkPipelineColorBlendAttachmentState default_color_blend_attachment_state = {};
-  default_color_blend_attachment_state.blendEnable = VK_TRUE;
+  default_color_blend_attachment_state.blendEnable = VK_FALSE;
   default_color_blend_attachment_state.colorWriteMask =
       VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
       VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
@@ -523,7 +531,7 @@ VkPipeline VulkanRHI::CreateGraphicsPipeline(
 
   VkGraphicsPipelineCreateInfo graphics_pipeline_create_info = {
       VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO};
-  graphics_pipeline_create_info.stageCount = 1;
+  graphics_pipeline_create_info.stageCount = 2;
   graphics_pipeline_create_info.pStages = shader_stage_create_info;
   graphics_pipeline_create_info.pVertexInputState =
       &vertex_input_state_create_info;
@@ -556,7 +564,8 @@ VkShaderModule VulkanRHI::CreateShaderModule(
     const std::string& shader_file_path) {
   std::vector<char> shader_code;
   if (!RenderUtils::ReadBinaryFile(shader_file_path, shader_code)) {
-    PEANUT_LOG_FATAL("Failed to read shader file {0}", shader_file_path.c_str());
+    PEANUT_LOG_FATAL("Failed to read shader file {0}",
+                     shader_file_path.c_str());
   }
 
   VkShaderModuleCreateInfo create_info = {
@@ -597,7 +606,8 @@ std::shared_ptr<TextureData> VulkanRHI::CreateTexture(
     usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;  // For mipmap generation
   }
 
-  texture->image = CreateImage(width, height, layers, texture->levels, 1, format, usage);
+  texture->image =
+      CreateImage(width, height, layers, texture->levels, 1, format, usage);
   texture->image_view = CreateImageView(texture->image.resource, format,
                                         VK_IMAGE_ASPECT_COLOR_BIT, 0,
                                         VK_REMAINING_MIP_LEVELS, layers);
@@ -630,24 +640,22 @@ VkPipeline VulkanRHI::CreateComputePipeline(
   return pipeline;
 }
 
-static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT,
-    VkDebugUtilsMessageTypeFlagsEXT,
-    const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
-    void*)
-{
-    std::cerr << "validation layer: " << pCallbackData->pMessage << std::endl;
-    return VK_FALSE;
+static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(
+    VkDebugUtilsMessageSeverityFlagBitsEXT, VkDebugUtilsMessageTypeFlagsEXT,
+    const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void*) {
+  std::cerr << "validation layer: " << pCallbackData->pMessage << std::endl;
+  return VK_FALSE;
 }
 
-void VulkanRHI::PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo)
-{
-    createInfo = {};
-    createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
-    createInfo.messageSeverity =
-        VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
-    createInfo.messageType =
-        VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
-    createInfo.pfnUserCallback = DebugCallback;
+void VulkanRHI::PopulateDebugMessengerCreateInfo(
+    VkDebugUtilsMessengerCreateInfoEXT& createInfo) {
+  createInfo = {};
+  createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
+  createInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
+                               VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+  createInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
+                           VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+  createInfo.pfnUserCallback = DebugCallback;
 }
 
 void VulkanRHI::SetupInstance() {
@@ -665,9 +673,12 @@ void VulkanRHI::SetupInstance() {
   std::vector<const char*> instance_extensions;
 
   uint32_t glfw_required_extensions_num;
-  const char** required_extensions = glfwGetRequiredInstanceExtensions(&glfw_required_extensions_num);
+  const char** required_extensions =
+      glfwGetRequiredInstanceExtensions(&glfw_required_extensions_num);
   if (glfw_required_extensions_num > 0) {
-      instance_extensions = std::vector<const char*>{ required_extensions, required_extensions + glfw_required_extensions_num };
+    instance_extensions = std::vector<const char*>{
+        required_extensions,
+        required_extensions + glfw_required_extensions_num};
   }
 
 #if _DEBUG
@@ -681,12 +692,14 @@ void VulkanRHI::SetupInstance() {
   instance_info.pApplicationInfo = &app_info;
 
   if (!instance_layers.empty()) {
-      instance_info.enabledLayerCount = static_cast<uint32_t>(instance_layers.size());
-      instance_info.ppEnabledLayerNames = &instance_layers[0];
+    instance_info.enabledLayerCount =
+        static_cast<uint32_t>(instance_layers.size());
+    instance_info.ppEnabledLayerNames = &instance_layers[0];
   }
   if (!instance_extensions.empty()) {
-      instance_info.enabledExtensionCount = static_cast<uint32_t>(instance_extensions.size());
-      instance_info.ppEnabledExtensionNames = &instance_extensions[0]; 
+    instance_info.enabledExtensionCount =
+        static_cast<uint32_t>(instance_extensions.size());
+    instance_info.ppEnabledExtensionNames = &instance_extensions[0];
   }
 
 #ifdef _DEBUG
@@ -738,11 +751,20 @@ void VulkanRHI::PresentFrame() {
   if (VKFAILED(vkQueuePresentKHR(present_queue_, &present_info)) ||
       VKFAILED(result)) {
     PEANUT_LOG_FATAL("Failed to queue swapchain image presentation");
+    return;
+  }
+
+  if (VKFAILED(vkAcquireNextImageKHR(vk_device_, swapchain_, UINT64_MAX,
+                                     VK_NULL_HANDLE, acquire_next_image_fence_,
+                                     &current_frame_index_))) {
+    PEANUT_LOG_FATAL("Failed to acquire next swapchain image");
+    return;
   }
 
   const VkFence fences[] = {acquire_next_image_fence_,
                             frame_submit_fences_[current_frame_index_]};
-  const uint32_t fence_num_wait = 2;
+  const uint32_t fence_num_wait =
+      (totle_frame_count_ < current_frame_index_) ? 1 : 2;
   vkWaitForFences(vk_device_, fence_num_wait, fences, VK_TRUE, UINT64_MAX);
   vkResetFences(vk_device_, fence_num_wait, fences);
 
@@ -781,7 +803,7 @@ void VulkanRHI::SetupPhysicalDevice() {
 VulkanPhysicalDevice VulkanRHI::FindSuitablePhysicalDevice(
     const std::vector<VkPhysicalDevice>& physical_devices) {
   PEANUT_LOG_DEBUG(
-      "find the suitable physical device from all %d physical devices",
+      "find the suitable physical device from all {0} physical devices",
       physical_devices.size());
 
   std::multimap<int32_t, VulkanPhysicalDevice, std::greater<int>>
@@ -800,7 +822,7 @@ VulkanPhysicalDevice VulkanRHI::FindSuitablePhysicalDevice(
     if (!CheckRequiredFeaturesSupport(required_device_features_,
                                       selected_device.features)) {
       PEANUT_LOG_WARN(
-          "physical device (%llu) not support required feature, skip it",
+          "physical device ({0}) not support required feature, skip it",
           (uint64_t)physical_device_handle);
       continue;
     }
@@ -808,14 +830,14 @@ VulkanPhysicalDevice VulkanRHI::FindSuitablePhysicalDevice(
     if (!CheckPhysicalDeviceExtensionSupport(physical_device_handle,
                                              required_device_extensions_)) {
       PEANUT_LOG_WARN(
-          "physical device (%llu) not support required extension, skip it",
+          "physical device ({0}) not support required extension, skip it",
           (uint64_t)physical_device_handle);
       continue;
     }
 
     if (!CheckPhysicalDeviceImageFormatSupport(physical_device_handle)) {
       PEANUT_LOG_WARN(
-          "physical device (%llu) not support required image format, skip it",
+          "physical device ({0}) not support required image format, skip it",
           (uint64_t)physical_device_handle);
       continue;
     }
@@ -854,8 +876,10 @@ bool VulkanRHI::CheckRequiredFeaturesSupport(
   bool required_features_supported = true;
   for (size_t i = 0; i < sizeof(VkPhysicalDeviceFeatures) / sizeof(VkBool32);
        ++i) {
-      VkBool32 required_feature = reinterpret_cast<const VkBool32*>(&required_device_features)[i];
-      VkBool32 actual_support_feature = reinterpret_cast<const VkBool32*>(&features)[i];
+    VkBool32 required_feature =
+        reinterpret_cast<const VkBool32*>(&required_device_features)[i];
+    VkBool32 actual_support_feature =
+        reinterpret_cast<const VkBool32*>(&features)[i];
     if (required_feature && !actual_support_feature) {
       PEANUT_LOG_WARN("not support feature with index {0}", i);
       required_features_supported = false;
@@ -1021,8 +1045,8 @@ void VulkanRHI::SetupLogicDevice() {
   std::vector<VkDeviceQueueCreateInfo> queue_create_infos;
   std::set<uint32_t> queue_families = {
       physical_device_.queue_family_indices.graphics_family.value(),
-      //physical_device_.queue_family_indices.compute_family.value(),
-      //physical_device_.queue_family_indices.present_family.value()
+      // physical_device_.queue_family_indices.compute_family.value(),
+      // physical_device_.queue_family_indices.present_family.value()
   };
 
   float queue_property = 1.0f;
@@ -1074,8 +1098,10 @@ void VulkanRHI::CreateSwapChain() {
   }
 
   // get image counts
-  uint32_t image_counts =
-      physical_device_.surface_capabilities.minImageCount + 1;
+  uint32_t image_counts = glm::clamp<uint32_t>(
+      2, physical_device_.surface_capabilities.minImageCount,
+      physical_device_.surface_capabilities.maxImageCount);
+
   if (physical_device_.surface_capabilities.maxImageCount > 0 &&
       image_counts > physical_device_.surface_capabilities.maxImageCount)
     image_counts = physical_device_.surface_capabilities.maxImageCount;
@@ -1106,6 +1132,7 @@ void VulkanRHI::CreateSwapChain() {
     swapchain_create_info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
   }
 
+  swapchain_create_info.presentMode = present_mode;
   swapchain_create_info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
   swapchain_create_info.clipped = VK_TRUE;
   swapchain_create_info.oldSwapchain = VK_NULL_HANDLE;
@@ -1114,14 +1141,19 @@ void VulkanRHI::CreateSwapChain() {
     PEANUT_LOG_FATAL("Failed to create swapchain");
   }
 
-  swapchain_images_.resize(image_counts);
-  if (VKFAILED(vkGetSwapchainImagesKHR(vk_device_, swapchain_, &image_counts,
-                                       &swapchain_images_[0]))) {
-    PEANUT_LOG_FATAL("Failed to retrieve swapchain image handles");
+  if (VKSUCCESS(vkGetSwapchainImagesKHR(vk_device_, swapchain_,
+                                        &frame_in_flight_numbers_, nullptr)) &&
+      frame_in_flight_numbers_ > 0) {
+    swapchain_images_.resize(frame_in_flight_numbers_);
+    if (VKFAILED(vkGetSwapchainImagesKHR(vk_device_, swapchain_,
+                                         &frame_in_flight_numbers_,
+                                         &swapchain_images_[0]))) {
+      PEANUT_LOG_FATAL("Failed to retrieve swapchain image handles");
+    }
   }
 
-  swapchain_image_views_.resize(image_counts);
-  for (int i = 0; i < image_counts; ++i) {
+  swapchain_image_views_.resize(frame_in_flight_numbers_);
+  for (int i = 0; i < frame_in_flight_numbers_; ++i) {
     VkImageViewCreateInfo view_create_info = {
         VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO};
     view_create_info.image = swapchain_images_[i];
@@ -1136,8 +1168,6 @@ void VulkanRHI::CreateSwapChain() {
       PEANUT_LOG_FATAL("Failed to create image view with index {0}", i);
     }
   }
-
-  frame_in_flight_numbers_ = image_counts;
 }
 
 void VulkanRHI::CreateCommandPoolAndCommandBuffers() {
@@ -1217,28 +1247,31 @@ void VulkanRHI::DestroyRenderTarget(RenderTarget& render_target) {
 
 void VulkanRHI::CreateSyncPrimitives() {
   // TODO: Create semaphore
-  VkSemaphoreCreateInfo semaphore_create_info{ VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
+  // VkSemaphoreCreateInfo semaphore_create_info{
+  // VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
 
   frame_submit_fences_.resize(frame_in_flight_numbers_);
-  image_available_render_semaphores_.resize(frame_in_flight_numbers_);
-  image_finish_render_semaphores_.resize(frame_in_flight_numbers_);
+  // image_available_render_semaphores_.resize(frame_in_flight_numbers_);
+  // image_finish_render_semaphores_.resize(frame_in_flight_numbers_);
 
-    VkFenceCreateInfo create_info = {VK_STRUCTURE_TYPE_FENCE_CREATE_INFO};
+  VkFenceCreateInfo create_info = {VK_STRUCTURE_TYPE_FENCE_CREATE_INFO};
+  if (VKFAILED(vkCreateFence(vk_device_, &create_info, nullptr,
+                             &acquire_next_image_fence_))) {
+    PEANUT_LOG_ERROR("Failed to create present fence");
+  }
+  for (int i = 0; i < frame_in_flight_numbers_; ++i) {
     if (VKFAILED(vkCreateFence(vk_device_, &create_info, nullptr,
-                                &acquire_next_image_fence_))) {
-        PEANUT_LOG_ERROR("Failed to create present fence");
+                               &frame_submit_fences_[i]))) {
+      PEANUT_LOG_ERROR("Failed to create submit fence with index {0}", i);
     }
-    for (int i = 0; i < frame_in_flight_numbers_; ++i) {
-        if (VKFAILED(vkCreateFence(vk_device_, &create_info, nullptr,
-                                    &frame_submit_fences_[i]))) {
-            PEANUT_LOG_ERROR("Failed to create submit fence with index {0}", i);
-        }
 
-        if (VKFAILED(vkCreateSemaphore(vk_device_, &semaphore_create_info, nullptr, &image_available_render_semaphores_[i])) ||
-        VKFAILED(vkCreateSemaphore(vk_device_, &semaphore_create_info, nullptr, &image_finish_render_semaphores_[i]))) {
-            PEANUT_LOG_ERROR("Failed to create semaphore with index {0}", i);
-        }
-    }
+    // if (VKFAILED(vkCreateSemaphore(vk_device_, &semaphore_create_info,
+    // nullptr, &image_available_render_semaphores_[i])) ||
+    // VKFAILED(vkCreateSemaphore(vk_device_, &semaphore_create_info, nullptr,
+    // &image_finish_render_semaphores_[i]))) {
+    //     PEANUT_LOG_ERROR("Failed to create semaphore with index {0}", i);
+    // }
+  }
 }
 
 void VulkanRHI::InitializeFrameIndex() {

@@ -25,19 +25,19 @@ class RenderUtils {
     return levels;
   }
 
-  template<typename T>
+  template <typename T>
   static bool CheckDoubleNearZero(T value) {
-      PEANUT_LOG_ERROR("Only support double and float");
+    PEANUT_LOG_ERROR("Only support double and float");
   }
 
-  template<>
+  template <>
   static bool CheckDoubleNearZero<double>(double value) {
-      return std::abs(value - 0.0f) <= std::numeric_limits<double>::epsilon();
+    return std::abs(value - 0.0f) <= std::numeric_limits<double>::epsilon();
   }
 
-  template<>
+  template <>
   static bool CheckDoubleNearZero<float>(float value) {
-      return std::abs(value - 0.0f) <= std::numeric_limits<float>::epsilon();
+    return std::abs(value - 0.0f) <= std::numeric_limits<float>::epsilon();
   }
 
   static bool ReadBinaryFile(const std::string& path,
