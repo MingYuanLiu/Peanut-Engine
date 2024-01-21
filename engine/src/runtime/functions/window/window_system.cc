@@ -6,12 +6,7 @@
 #include "runtime/core/event/window_event.h"
 
 namespace peanut {
-WindowSystem::WindowSystem(const WindowCreateInfo& create_info)
-    : m_glf_window_(nullptr), intialized_(false) {
-  PEANUT_LOG_INFO("Create window system ({0}, {1})", create_info.width,
-                  create_info.height);
-  Initialize(create_info);
-}
+WindowSystem::WindowSystem() : m_glf_window_(nullptr), intialized_(false) {}
 
 WindowSystem::~WindowSystem() {}
 
@@ -94,29 +89,12 @@ void WindowSystem::Initialize(const WindowCreateInfo& create_info) {
   glfwSetKeyCallback(m_glf_window_, [](GLFWwindow* window, int key,
                                        int scancode, int action, int mods) {
     WindowData& data = *(WindowData*)glfwGetWindowUserPointer(window);
+    bool pressed = action & GLFW_PRESS;
+    bool repeat = action & GLFW_REPEAT;
 
-    switch (action) {
-      case GLFW_PRESS: {
-        // key press event
-        KeyPressedEvent event(key);
-        for (auto callback : data.event_callback) {
-          callback(event);
-        }
-      }
-      case GLFW_RELEASE: {
-        // key release event
-        KeyReleasedEvent event(key);
-        for (auto callback : data.event_callback) {
-          callback(event);
-        }
-      }
-      case GLFW_REPEAT: {
-        // key repeat event
-        KeyPressedEvent event(key, true);
-        for (auto callback : data.event_callback) {
-          callback(event);
-        }
-      }
+    KeyEvent event(key, pressed, repeat);
+    for (auto callback : data.event_callback) {
+      callback(event);
     }
   });
 
@@ -136,21 +114,9 @@ void WindowSystem::Initialize(const WindowCreateInfo& create_info) {
   glfwSetMouseButtonCallback(
       m_glf_window_, [](GLFWwindow* window, int button, int action, int mods) {
         WindowData* data = (WindowData*)glfwGetWindowUserPointer(window);
-        switch (action) {
-          case GLFW_PRESS: {
-            // mouse button press
-            MouseButtonPressedEvent event((MouseCode)button);
-            for (auto callback : data->event_callback) {
-              callback(event);
-            }
-          }
-          case GLFW_RELEASE: {
-            // mouse button release event
-            MouseButtonReleasedEvent event((MouseCode)button);
-            for (auto callback : data->event_callback) {
-              callback(event);
-            }
-          }
+        MouseButtonEvent event((MouseCode)button, action);
+        for (auto callback : data->event_callback) {
+          callback(event);
         }
       });
 

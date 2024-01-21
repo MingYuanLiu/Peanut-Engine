@@ -11,11 +11,9 @@ enum EventType {
   WindowFocus,
   WindowLostFocus,
   WindowMoved,
-  KeyPressed,
-  KeyReleased,
+  KeyBoard,
   KeyTyped,
-  MouseButtonPressed,
-  MouseButtonReleased,
+  MouseButton,
   MouseMoved,
   MouseScrolled
 };
@@ -26,7 +24,7 @@ enum EventType {
   virtual const char* GetName() const override { return #type; }
 
 #define BIND_EVENT_FN(fn)                                   \
-  [](auto&&... args) -> decltype(auto) {                \
+  [this](auto&&... args) -> decltype(auto) {                \
     return fn(std::forward<decltype(args)>(args)...); \
   }
 

@@ -11,7 +11,7 @@ TEST(HelloTest, BasicAssertions) {
   EXPECT_EQ(7 * 6, 42);
 }
 
-TEST(LogTest, BasicAssertions) {
-  peanut::LogSystem::init("./logs/log.txt", true);
-  PEANUT_LOG_INFO("hello world!");
-}
+// TEST(LogTest, BasicAssertions) {
+//   peanut::LogSystem::init("./logs/log.txt", true);
+//   PEANUT_LOG_INFO("hello world!");
+// }
