@@ -88,9 +88,11 @@ void MainRenderPass::DeInitialize() {
 void MainRenderPass::RenderTick(const ViewSettings &view,
                                 const SceneSettings &scene) {
   const VkDeviceSize zero_offset = 0;
+
   glm::mat4 projection_mat =
       glm::perspectiveFov(view.fov, (float)(display_width_),
                           (float)(display_height_), 1.0f, 1000.0f);
+
   projection_mat[1][1] *= -1.0f;  // Vulkan uses right handed NDC with Y axis
                                   // pointing down, compensate for that.
 
@@ -99,11 +101,14 @@ void MainRenderPass::RenderTick(const ViewSettings &view,
 
   const glm::mat4 view_rotation_mat =
       glm::eulerAngleXY(glm::radians(view.pitch), glm::radians(view.yaw));
+
   const glm::mat4 scene_rotation_mat =
       glm::eulerAngleXY(glm::radians(scene.pitch), glm::radians(scene.yaw));
+
   const glm::mat4 view_mat =
       glm::translate(glm::mat4{1.0f}, {0.0f, 0.0f, -view.distance}) *
       view_rotation_mat;
+
   const glm::vec3 eye_position = glm::inverse(view_mat)[3];
 
   uint32_t current_frame_index =
@@ -149,33 +154,43 @@ void MainRenderPass::RenderTick(const ViewSettings &view,
   // draw skybox
   VkDescriptorSet uniforms_descriptorset =
       uniform_descriptor_sets_[current_frame_index];
+
   const std::array<VkDescriptorSet, 2> skybox_descriptorsets = {
       uniforms_descriptorset, skybox_descriptor_set_};
+
   vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                     skybox_pipeline_);
   vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                           g_pipeline_layouts_[DescriptorSetType::Skybox], 0,
                           static_cast<uint32_t>(skybox_descriptorsets.size()),
                           skybox_descriptorsets.data(), 0, nullptr);
+
   vkCmdBindVertexBuffers(command_buffer, 0, 1,
                          &skybox_mesh_->vertex_buffer.resource, &zero_offset);
+
   vkCmdBindIndexBuffer(command_buffer, skybox_mesh_->index_buffer.resource, 0,
                        VK_INDEX_TYPE_UINT32);
+
   vkCmdDrawIndexed(command_buffer, skybox_mesh_->num_elements, 1, 0, 0, 0);
 
   // draw pbr model
   const std::array<VkDescriptorSet, 1> pbr_descriptorsets = {
       pbr_descriptor_set_};
+
   vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                     pbr_pipeline_);
+
   vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                           g_pipeline_layouts_[DescriptorSetType::Pbr], 1,
                           static_cast<uint32_t>(pbr_descriptorsets.size()),
                           pbr_descriptorsets.data(), 0, nullptr);
+
   vkCmdBindVertexBuffers(command_buffer, 0, 1,
                          &pbr_mesh_->vertex_buffer.resource, &zero_offset);
+
   vkCmdBindIndexBuffer(command_buffer, pbr_mesh_->index_buffer.resource, 0,
                        VK_INDEX_TYPE_UINT32);
+
   vkCmdDrawIndexed(command_buffer, pbr_mesh_->num_elements, 1, 0, 0, 0);
 
   vkCmdNextSubpass(command_buffer, VK_SUBPASS_CONTENTS_INLINE);
@@ -183,14 +198,18 @@ void MainRenderPass::RenderTick(const ViewSettings &view,
   // draw a full screen triangle for postprocessing/tone mapping
   VkDescriptorSet tonemap_descriptorset =
       tonemap_descriptor_sets_[current_frame_index];
+
   const std::array<VkDescriptorSet, 1> tonemap_descriptorsets = {
       tonemap_descriptorset};
+
   vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                     tonemap_pipeline_);
+
   vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                           g_pipeline_layouts_[DescriptorSetType::ToneMap], 0,
                           static_cast<uint32_t>(tonemap_descriptorsets.size()),
                           tonemap_descriptorsets.data(), 0, nullptr);
+
   vkCmdDraw(command_buffer, 3, 1, 0, 0);
 
   vkCmdEndRenderPass(command_buffer);
@@ -629,6 +648,7 @@ void MainRenderPass::SetupPBRPipeline() {
   const std::vector<VkVertexInputBindingDescription> vertex_input_bindings = {
       {0, sizeof(Mesh::Vertex), VK_VERTEX_INPUT_RATE_VERTEX},
   };
+
   const std::vector<VkVertexInputAttributeDescription> vertex_attributes = {
       {0, 0, VK_FORMAT_R32G32B32A32_SFLOAT, 0},   // position
       {1, 0, VK_FORMAT_R32G32B32A32_SFLOAT, 12},  // normal
@@ -636,39 +656,54 @@ void MainRenderPass::SetupPBRPipeline() {
       {3, 0, VK_FORMAT_R32G32B32A32_SFLOAT, 36},  // bitangent
       {4, 0, VK_FORMAT_R32G32_SFLOAT, 48},        // texcoord
   };
+
   const std::vector<VkDescriptorSetLayoutBinding>
       descriptorset_layout_bindings = {
+
           {0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1,
            VK_SHADER_STAGE_FRAGMENT_BIT, &default_sampler_},  // Albedo texture
+
           {1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1,
            VK_SHADER_STAGE_FRAGMENT_BIT, &default_sampler_},  // Normal texture
+
           {2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1,
            VK_SHADER_STAGE_FRAGMENT_BIT,
            &default_sampler_},  // Metalness texture
+
           {3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1,
            VK_SHADER_STAGE_FRAGMENT_BIT,
            &default_sampler_},  // Roughness texture
+
           {4, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1,
            VK_SHADER_STAGE_FRAGMENT_BIT,
            &default_sampler_},  // specular env map texture
+
           {5, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1,
            VK_SHADER_STAGE_FRAGMENT_BIT,
            &default_sampler_},  // irradiance map texture
+
           {6, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1,
            VK_SHADER_STAGE_FRAGMENT_BIT, &brdf_sampler_},  // specular brdf lut
+
       };
+
   g_descriptor_layouts_[DescriptorSetType::Pbr] =
       rhi_->CreateDescriptorSetLayout(descriptorset_layout_bindings);
+
   const std::vector<VkDescriptorSetLayout> pipeline_descriptor_set_layouts = {
       g_descriptor_layouts_[DescriptorSetType::Uniforms],
       g_descriptor_layouts_[DescriptorSetType::Pbr]};
+
   std::vector<VkPushConstantRange> push_constants;
   g_pipeline_layouts_[DescriptorSetType::Pbr] = rhi_->CreatePipelineLayout(
       pipeline_descriptor_set_layouts, push_constants);
+
   VkPipelineMultisampleStateCreateInfo multi_sample_state_create_info = {
       VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO};
+
   multi_sample_state_create_info.rasterizationSamples =
       static_cast<VkSampleCountFlagBits>(g_render_targets_[0].samples);
+
   VkPipelineDepthStencilStateCreateInfo depth_stencil_state_create_info = {
       VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO};
   depth_stencil_state_create_info.depthTestEnable = VK_TRUE;
