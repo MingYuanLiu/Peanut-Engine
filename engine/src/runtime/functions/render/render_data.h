@@ -70,6 +70,13 @@ struct TextureData {
   void *pixels;
 };
 
+struct PbrMaterial {
+  std::shared_ptr<TextureData> albedo_texture_;
+  std::shared_ptr<TextureData> metallic_texture_;
+  std::shared_ptr<TextureData> normal_texture_;
+  std::shared_ptr<TextureData> roughness_texture_;
+};
+
 struct TextureMemoryBarrier {
   TextureMemoryBarrier(const TextureData &texture, VkAccessFlags srcAccessMask,
                        VkAccessFlags dstAccessMask, VkImageLayout oldLayout,

@@ -80,6 +80,8 @@ class MainRenderPass : public RenderPassBase {
   UniformBufferAllocation AllocateSubStorageFromUniformBuffer(
       UniformBuffer &buffer, VkDeviceSize size);
 
+  // draw
+
  private:
   std::vector<VkDescriptorSetLayout> g_descriptor_layouts_;
   std::vector<VkPipelineLayout> g_pipeline_layouts_;
