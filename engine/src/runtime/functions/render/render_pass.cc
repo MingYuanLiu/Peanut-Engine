@@ -22,9 +22,9 @@ void MainRenderPass::Initialize() {
 
   SetupSamplers();
 
-  SetupComputDescriptorPool();
+  SetupComputeDescriptorPool();
 
-  SetupComputDescriptorSets();
+  SetupComputeDescriptorSets();
 
   SetupUniformDescriptorSets();
 
@@ -297,7 +297,7 @@ void MainRenderPass::SetupSamplers() {
   rhi_->CreateSampler(&create_info, &brdf_sampler_);
 }
 
-void MainRenderPass::SetupComputDescriptorPool() {
+void MainRenderPass::SetupComputeDescriptorPool() {
   const std::array<VkDescriptorPoolSize, 2> pool_size = {
       {{VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1},
        {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, env_map_levels_}}};
@@ -310,7 +310,7 @@ void MainRenderPass::SetupComputDescriptorPool() {
   rhi_->CreateDescriptorPool(&create_info, &compute_descriptor_pool_);
 }
 
-void MainRenderPass::SetupComputDescriptorSets() {
+void MainRenderPass::SetupComputeDescriptorSets() {
   const std::vector<VkDescriptorSetLayoutBinding>
       descriptorset_layout_bindings = {
           {BindingsInputTexture, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1,

@@ -9,6 +9,9 @@
 #include "runtime/functions/assets/mesh.h"
 #include "runtime/functions/render/render_utils.h"
 
+#include <json11.hpp>
+#include <fstream>
+
 namespace peanut {
 std::shared_ptr<TextureData> AssetsManager::LoadTextureData(
     const std::string& texture_filepath,
@@ -68,7 +71,7 @@ std::shared_ptr<TextureData> AssetsManager::LoadTextureData(
                        texture_pixel_size);
   VkCommandBuffer command_buffer = rhi->BeginImmediateCommandBuffer();
 
-  const auto begin_barrier = TextureMemoryBarrier(*texture_data, 0, 
+  const auto begin_barrier = TextureMemoryBarrier(*texture_data, 0,
       VK_ACCESS_TRANSFER_WRITE_BIT,VK_IMAGE_LAYOUT_UNDEFINED,
       VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL).MipLevels(0, 1);
 
@@ -108,7 +111,7 @@ std::shared_ptr<MeshBuffer> AssetsManager::LoadMeshBuffer(
     PEANUT_LOG_FATAL("Mesh can not be loaded");
     assert(mesh.get() != nullptr);
   }
-  
+
   std::shared_ptr<MeshBuffer> mesh_buffer = std::make_shared<MeshBuffer>();
   mesh_buffer->num_elements = static_cast<uint32_t>(mesh->faces().size()) * 3;
   const auto vertex_size = mesh->vertices().size() * sizeof(Mesh::Vertex);
@@ -179,6 +182,76 @@ std::shared_ptr<MeshBuffer> AssetsManager::LoadMeshBuffer(
   }
 
   return mesh_buffer;
+}
+
+void AssetsManager::LoadRenderObjectFromDescriptionFile(const std::string& description_file,
+  std::map<std::string, std::shared_ptr<PbrMaterial> >& out_pbr_material_models,
+  std::map<std::string, std::shared_ptr<MeshBuffer> >& out_pbr_mesh_models)
+{
+  std::string json_content = ReadJsonFile(description_file);
+  if (json_content.empty()) {
+    PEANUT_LOG_WARN("Render description is empty can not load any render objects");
+    return;
+  }
+
+  std::string error;
+  json11::Json render_objects_json = json11::Json::parse(json_content, error);
+  if (!error.empty() || render_objects_json.is_null()) {
+    PEANUT_LOG_INFO("Failed to parse json, error: {0}, content: {1}", error, json_content);
+    return;
+  }
+
+  json11::Json::object render_objects = render_objects_json["render_objects"].object_items();
+  std::map<std::string, PbrMaterial> pbr_material_models;
+  std::map<std::string, MeshBuffer> pbr_mesh_models;
+  for (auto pair : render_objects) {
+    std::string object_name = pair.first;
+    json11::Json object_description = pair.second;
+
+    // read mesh data
+    std::string mesh_file = object_description["mesh"].string_value();
+    std::shared_ptr<MeshBuffer> object_mesh = LoadMeshBuffer(mesh_file);
+    out_pbr_mesh_models.insert(std::make_pair(object_name, object_mesh));
+
+    // read material data
+    json11::Json pbr_material_description = object_description["pbr_material"];
+    std::string albedo_texture_file = pbr_material_description["albedo_texture"].string_value();
+    std::string normal_texture_file = pbr_material_description["normal_texture"].string_value();
+    std::string metallic_texture_file = pbr_material_description["metallic_texture"].string_value();
+    std::string roughness_texture_file = pbr_material_description["roughness_texture"].string_value();
+
+    std::shared_ptr<PbrMaterial> pbr_material;
+
+    std::shared_ptr<TextureData> albedo_texture = LoadTextureData(albedo_texture_file, VK_FORMAT_R8G8B8A8_SRGB);
+    std::shared_ptr<TextureData> normal_texture = LoadTextureData(normal_texture_file, VK_FORMAT_R8G8B8A8_UNORM);
+    std::shared_ptr<TextureData> metallic_texture = LoadTextureData(metallic_texture_file, VK_FORMAT_R8_UNORM);
+    std::shared_ptr<TextureData> roughness_texture = LoadTextureData(roughness_texture_file, VK_FORMAT_R8_UNORM);
+
+    pbr_material->albedo_texture_ = albedo_texture;
+    pbr_material->normal_texture_ = normal_texture;
+    pbr_material->metallic_texture_ = metallic_texture;
+    pbr_material->roughness_texture_ = roughness_texture;
+
+    out_pbr_material_models.insert(std::make_pair(object_name, pbr_material));
+
+    PEANUT_LOG_INFO("Finished to read render object {0}", object_name);
+  }
+}
+
+std::string AssetsManager::ReadJsonFile(const std::string& file_path)
+{
+  std::ifstream file_read_stream(file_path.c_str(), std::ios::binary);
+  if (!file_read_stream.is_open()) {
+    PEANUT_LOG_ERROR("Failed to open json file {0}", file_path);
+    return "";
+  }
+
+  std::stringstream read_buffer;
+  read_buffer << file_read_stream.rdbuf();
+  std::string file_content(read_buffer.str());
+  PEANUT_LOG_INFO("File content {0}", file_content);
+  // file_read_in.read();
+  return file_content;
 }
 
 void AssetsManager::DestroyMeshBuffer(MeshBuffer& mesh_buffer)

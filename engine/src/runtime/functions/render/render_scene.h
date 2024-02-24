@@ -18,6 +18,7 @@ struct World {
 
 /**
  * @brief The main render scene of the engine
+ * which manager the render objects
  *
  */
 class RenderScene {

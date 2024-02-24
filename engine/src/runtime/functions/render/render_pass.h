@@ -60,8 +60,8 @@ class MainRenderPass : public RenderPassBase {
 
   void SetupSamplers();
   void SetupRenderpass();
-  void SetupComputDescriptorPool();
-  void SetupComputDescriptorSets();
+  void SetupComputeDescriptorPool();
+  void SetupComputeDescriptorSets();
   void SetupUniformDescriptorSets();
 
   void SetupPBRPipeline();
