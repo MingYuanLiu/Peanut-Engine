@@ -6,7 +6,7 @@
 namespace peanut {
 
 void MainRenderPass::Initialize() {
-  rhi_ = GlobalRuntimeContext::GetContext()->GetRenderSystem()->GetRHI();
+  rhi_ = GlobalEngineContext::GetContext()->GetRenderSystem()->GetRHI();
   env_map_levels_ = RenderUtils::NumMipmapLevels(kEnvMapSize, kEnvMapSize);
   g_descriptor_layouts_.resize(kNumDescriptorType);
   g_pipeline_layouts_.resize(kNumDescriptorType);

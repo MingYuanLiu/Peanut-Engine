@@ -39,5 +39,6 @@ add_subdirectory(src/shaders)
 add_subdirectory(3rdparty)
 add_subdirectory(src/runtime)
 add_subdirectory(src/test)
+add_subdirectory(src/reflection_parser)
 
 add_dependencies(PeanutRuntime EngineShader)

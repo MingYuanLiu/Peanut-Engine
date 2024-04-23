@@ -14,10 +14,10 @@ class RenderSystem;
  * @brief manage the global states of the game engine runtime
  *
  */
-class GlobalRuntimeContext {
+class GlobalEngineContext {
  public:
-  static GlobalRuntimeContext* GetContext() {
-    static GlobalRuntimeContext global_context;
+  static GlobalEngineContext* GetContext() {
+    static GlobalEngineContext global_context;
     return &global_context;
   }
 
@@ -32,8 +32,8 @@ class GlobalRuntimeContext {
   std::shared_ptr<RenderSystem> render_system_;
 
  private:
-  GlobalRuntimeContext() = default;
-  ~GlobalRuntimeContext() = default;
+  GlobalEngineContext() = default;
+  ~GlobalEngineContext() = default;
 
  private:
   // TODO: use config system to config this values

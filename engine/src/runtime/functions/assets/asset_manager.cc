@@ -52,7 +52,7 @@ std::shared_ptr<TextureData> AssetsManager::LoadTextureData(
   if (texture_data->levels > 1)
     usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;  // for mipmap generation
 
-  auto rhi = GlobalRuntimeContext::GetContext()->GetRenderSystem()->GetRHI();
+  auto rhi = GlobalEngineContext::GetContext()->GetRenderSystem()->GetRHI();
   texture_data->image =
       rhi->CreateImage(texture_width, texture_height, texture_data->layers,
                        texture_data->levels, 1, format, usage);
@@ -71,26 +71,30 @@ std::shared_ptr<TextureData> AssetsManager::LoadTextureData(
                        texture_pixel_size);
   VkCommandBuffer command_buffer = rhi->BeginImmediateCommandBuffer();
 
-  const auto begin_barrier = TextureMemoryBarrier(*texture_data, 0,
-      VK_ACCESS_TRANSFER_WRITE_BIT,VK_IMAGE_LAYOUT_UNDEFINED,
-      VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL).MipLevels(0, 1);
+  const auto begin_barrier =
+      TextureMemoryBarrier(*texture_data, 0, VK_ACCESS_TRANSFER_WRITE_BIT,
+                           VK_IMAGE_LAYOUT_UNDEFINED,
+                           VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
+          .MipLevels(0, 1);
 
   rhi->CmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-                            VK_PIPELINE_STAGE_TRANSFER_BIT, { begin_barrier });
+                          VK_PIPELINE_STAGE_TRANSFER_BIT, {begin_barrier});
 
   rhi->CmdCopyBufferToImage(command_buffer, staging_buffer, texture_data->image,
                             texture_data->width, texture_data->height,
                             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
   const VkImageLayout final_base_mip_layout =
-        (texture_data->levels > 1) ? VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL
-                                   : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-  const auto end_barrier = TextureMemoryBarrier(
-        *texture_data, VK_ACCESS_TRANSFER_WRITE_BIT, 0,
-        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, final_base_mip_layout).MipLevels(0, 1);
+      (texture_data->levels > 1) ? VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL
+                                 : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+  const auto end_barrier =
+      TextureMemoryBarrier(*texture_data, VK_ACCESS_TRANSFER_WRITE_BIT, 0,
+                           VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                           final_base_mip_layout)
+          .MipLevels(0, 1);
 
   rhi->CmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
-                            VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, { end_barrier });
+                          VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, {end_barrier});
 
   rhi->ExecImmediateCommandBuffer(command_buffer);
   rhi->DestroyBuffer(staging_buffer);
@@ -104,7 +108,6 @@ std::shared_ptr<TextureData> AssetsManager::LoadTextureData(
 
 std::shared_ptr<MeshBuffer> AssetsManager::LoadMeshBuffer(
     const std::string& mesh_filepath) {
-
   std::shared_ptr<Mesh> mesh = Mesh::ReadFromFile(mesh_filepath);
   if (mesh.get() == nullptr) {
     // FIXME: do not crash
@@ -118,7 +121,7 @@ std::shared_ptr<MeshBuffer> AssetsManager::LoadMeshBuffer(
   const auto index_size = mesh->faces().size() * sizeof(Mesh::Face);
 
   const auto& rhi =
-      GlobalRuntimeContext::GetContext()->GetRenderSystem()->GetRHI();
+      GlobalEngineContext::GetContext()->GetRenderSystem()->GetRHI();
 
   mesh_buffer->vertex_buffer = rhi->CreateBuffer(
       vertex_size,
@@ -184,24 +187,28 @@ std::shared_ptr<MeshBuffer> AssetsManager::LoadMeshBuffer(
   return mesh_buffer;
 }
 
-void AssetsManager::LoadRenderObjectFromDescriptionFile(const std::string& description_file,
-  std::map<std::string, std::shared_ptr<PbrMaterial> >& out_pbr_material_models,
-  std::map<std::string, std::shared_ptr<MeshBuffer> >& out_pbr_mesh_models)
-{
+void AssetsManager::LoadRenderObjectFromDescriptionFile(
+    const std::string& description_file,
+    std::map<std::string, std::shared_ptr<PbrMaterial> >&
+        out_pbr_material_models,
+    std::map<std::string, std::shared_ptr<MeshBuffer> >& out_pbr_mesh_models) {
   std::string json_content = ReadJsonFile(description_file);
   if (json_content.empty()) {
-    PEANUT_LOG_WARN("Render description is empty can not load any render objects");
+    PEANUT_LOG_WARN(
+        "Render description is empty can not load any render objects");
     return;
   }
 
   std::string error;
   json11::Json render_objects_json = json11::Json::parse(json_content, error);
   if (!error.empty() || render_objects_json.is_null()) {
-    PEANUT_LOG_INFO("Failed to parse json, error: {0}, content: {1}", error, json_content);
+    PEANUT_LOG_INFO("Failed to parse json, error: {0}, content: {1}", error,
+                    json_content);
     return;
   }
 
-  json11::Json::object render_objects = render_objects_json["render_objects"].object_items();
+  json11::Json::object render_objects =
+      render_objects_json["render_objects"].object_items();
   std::map<std::string, PbrMaterial> pbr_material_models;
   std::map<std::string, MeshBuffer> pbr_mesh_models;
   for (auto pair : render_objects) {
@@ -215,17 +222,25 @@ void AssetsManager::LoadRenderObjectFromDescriptionFile(const std::string& descr
 
     // read material data
     json11::Json pbr_material_description = object_description["pbr_material"];
-    std::string albedo_texture_file = pbr_material_description["albedo_texture"].string_value();
-    std::string normal_texture_file = pbr_material_description["normal_texture"].string_value();
-    std::string metallic_texture_file = pbr_material_description["metallic_texture"].string_value();
-    std::string roughness_texture_file = pbr_material_description["roughness_texture"].string_value();
+    std::string albedo_texture_file =
+        pbr_material_description["albedo_texture"].string_value();
+    std::string normal_texture_file =
+        pbr_material_description["normal_texture"].string_value();
+    std::string metallic_texture_file =
+        pbr_material_description["metallic_texture"].string_value();
+    std::string roughness_texture_file =
+        pbr_material_description["roughness_texture"].string_value();
 
-    std::shared_ptr<PbrMaterial> pbr_material;
+    std::shared_ptr<PbrMaterial> pbr_material = std::make_shared<PbrMaterial>();
 
-    std::shared_ptr<TextureData> albedo_texture = LoadTextureData(albedo_texture_file, VK_FORMAT_R8G8B8A8_SRGB);
-    std::shared_ptr<TextureData> normal_texture = LoadTextureData(normal_texture_file, VK_FORMAT_R8G8B8A8_UNORM);
-    std::shared_ptr<TextureData> metallic_texture = LoadTextureData(metallic_texture_file, VK_FORMAT_R8_UNORM);
-    std::shared_ptr<TextureData> roughness_texture = LoadTextureData(roughness_texture_file, VK_FORMAT_R8_UNORM);
+    std::shared_ptr<TextureData> albedo_texture =
+        LoadTextureData(albedo_texture_file, VK_FORMAT_R8G8B8A8_SRGB);
+    std::shared_ptr<TextureData> normal_texture =
+        LoadTextureData(normal_texture_file, VK_FORMAT_R8G8B8A8_UNORM);
+    std::shared_ptr<TextureData> metallic_texture =
+        LoadTextureData(metallic_texture_file, VK_FORMAT_R8_UNORM);
+    std::shared_ptr<TextureData> roughness_texture =
+        LoadTextureData(roughness_texture_file, VK_FORMAT_R8_UNORM);
 
     pbr_material->albedo_texture_ = albedo_texture;
     pbr_material->normal_texture_ = normal_texture;
@@ -238,8 +253,7 @@ void AssetsManager::LoadRenderObjectFromDescriptionFile(const std::string& descr
   }
 }
 
-std::string AssetsManager::ReadJsonFile(const std::string& file_path)
-{
+std::string AssetsManager::ReadJsonFile(const std::string& file_path) {
   std::ifstream file_read_stream(file_path.c_str(), std::ios::binary);
   if (!file_read_stream.is_open()) {
     PEANUT_LOG_ERROR("Failed to open json file {0}", file_path);
@@ -251,15 +265,15 @@ std::string AssetsManager::ReadJsonFile(const std::string& file_path)
   std::string file_content(read_buffer.str());
   PEANUT_LOG_INFO("File content {0}", file_content);
   // file_read_in.read();
+  file_read_stream.close();
   return file_content;
 }
 
-void AssetsManager::DestroyMeshBuffer(MeshBuffer& mesh_buffer)
-{
-    const auto& rhi =
-        GlobalRuntimeContext::GetContext()->GetRenderSystem()->GetRHI();
-    rhi->DestroyBuffer(mesh_buffer.vertex_buffer);
-    rhi->DestroyBuffer(mesh_buffer.index_buffer);
-    mesh_buffer = {};
+void AssetsManager::DestroyMeshBuffer(MeshBuffer& mesh_buffer) {
+  const auto& rhi =
+      GlobalEngineContext::GetContext()->GetRenderSystem()->GetRHI();
+  rhi->DestroyBuffer(mesh_buffer.vertex_buffer);
+  rhi->DestroyBuffer(mesh_buffer.index_buffer);
+  mesh_buffer = {};
 }
 }  // namespace peanut

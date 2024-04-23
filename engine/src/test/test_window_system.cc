@@ -38,11 +38,11 @@ using namespace peanut;
 // }
 
 // TEST(RuntimeContextTest, BasicAssertions) {
-//   peanut::GlobalRuntimeContext::GetContext()->SetupSubSystems();
+//   peanut::GlobalEngineContext::GetContext()->SetupSubSystems();
 
 //   bool window_should_close = false;
 //   auto window_system =
-//       peanut::GlobalRuntimeContext::GetContext()->window_system_;
+//       peanut::GlobalEngineContext::GetContext()->window_system_;
 //   window_system->PushEventCallback([&window_should_close](Event& e) {
 //     EventDispatcher dispatcher(e);
 //     dispatcher.Dispatch<WindowCloseEvent>(

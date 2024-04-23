@@ -12,7 +12,7 @@ TEST(EngineMainTest, BasicAssertions) {
 }
 
 TEST(AssetLoad_Test, BasicAssertions) {
-  peanut::LogSystem::init("./logs/log.txt", true);
+  PeanutEngine::GetInstance().Initliaze();
   std::string test_asset_description_file_path = "assets_description.json";
   std::map<std::string, std::shared_ptr<PbrMaterial> > material_models;
   std::map<std::string, std::shared_ptr<MeshBuffer> > mesh_models;
@@ -21,7 +21,7 @@ TEST(AssetLoad_Test, BasicAssertions) {
 }
 
 TEST(AssetLoad_FileNotExist_Test, BasicAssertions) {
-  peanut::LogSystem::init("./logs/log.txt", true);
+  // peanut::LogSystem::init("./logs/log.txt", true);
   std::string test_asset_description_file_path = "assets_description_not_exist.json";
   std::map<std::string, std::shared_ptr<PbrMaterial> > material_models;
   std::map<std::string, std::shared_ptr<MeshBuffer> > mesh_models;
