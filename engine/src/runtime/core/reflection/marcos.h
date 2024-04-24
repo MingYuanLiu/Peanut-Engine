@@ -13,6 +13,8 @@ namespace relection { \
 // for reflection parse
 #define META_CLASS(class_name, ...) class class_name
 #define META_STRUCT(struct_name, ...) struct struct_name
+#define META_ENUM(enum_name, ...) enum enum_name
+#define META_PROPERTY(...)
 #define PROPERTY(...)
 
 #define PEANUT_REFLECTION_NEW(name, ...) reflection::ReflectionPtr(#name, new name(__VA_ARGS__))
