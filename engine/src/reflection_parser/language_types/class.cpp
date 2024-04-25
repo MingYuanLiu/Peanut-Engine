@@ -9,8 +9,8 @@ Class::Class(const Cursor& cursor, const Namespace& current_namespace) :
     m_qualified_name(Utils::getTypeNameWithoutNamespace(cursor.getType())),
     m_display_name(Utils::getNameWithoutFirstM(m_qualified_name))
 {
-    Utils::replaceAll(m_name, " ", "");
-    Utils::replaceAll(m_name, "Piccolo::", "");
+    Utils::ReplaceAll(m_name, " ", "");
+    Utils::ReplaceAll(m_name, "Piccolo::", "");
 
     for (auto& child : cursor.getChildren())
     {

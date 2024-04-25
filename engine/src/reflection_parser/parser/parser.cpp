@@ -59,6 +59,7 @@ int ReflectionParser::Parse(void)
         arguments_.emplace_back(std::move(include_path));
     }
 
+    // check header file exist
     fs::path generated_include_file(header_file_generate_path_);
     if (!fs::exists(generated_include_file))
     {
@@ -152,7 +153,8 @@ bool ReflectionParser::GenerateIncludeFiles(void)
 
 void ReflectionParser::BuildAST(const CXCursor& cursor, Namespace& current_namespace)
 {
-    
+    // 收集AST信息，生成类型相关信息
+
 }
 
 
