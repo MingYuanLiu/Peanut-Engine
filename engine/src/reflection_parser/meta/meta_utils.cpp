@@ -127,7 +127,7 @@ namespace Utils
         return ret_list;
     }
 
-    std::string getFileName(std::string path)
+    std::string GetFileName(std::string path)
     {
         if (path.size() < 1)
         {
@@ -207,7 +207,7 @@ namespace Utils
         return source_string;
     }
 
-    std::string toUpper(std::string& source_string)
+    std::string ToUpper(std::string& source_string)
     {
         transform(source_string.begin(), source_string.end(), source_string.begin(), ::toupper);
         return source_string;
@@ -279,7 +279,7 @@ namespace Utils
         return;
     }
 
-    void replaceAll(std::string& resource_str, std::string sub_str, std::string new_str)
+    void ReplaceAll(std::string& resource_str, std::string sub_str, std::string new_str)
     {
         std::string::size_type pos = 0;
         while ((pos = resource_str.find(sub_str)) != std::string::npos)

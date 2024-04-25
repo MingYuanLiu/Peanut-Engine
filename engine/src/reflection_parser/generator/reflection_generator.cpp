@@ -11,7 +11,7 @@
 namespace Generator
 {
     ReflectionGenerator::ReflectionGenerator(std::string                             source_directory,
-                                             std::function<std::string(std::string)> get_include_function) :
+                                             std::function<std::string(const std::string&)> get_include_function) :
         GeneratorInterface(source_directory + "/_generated/reflection", source_directory, get_include_function)
     {
         prepareStatus(m_out_path);
