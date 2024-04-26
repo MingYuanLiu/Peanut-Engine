@@ -21,6 +21,8 @@ public:
 
     bool IsConst(void) const;
 
+    bool IsVolatile(void) const;
+
 private:
-    CXType m_handle;
+    CXType handle_;
 };

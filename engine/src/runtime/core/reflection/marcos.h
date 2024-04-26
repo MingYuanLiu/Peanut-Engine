@@ -15,7 +15,7 @@ namespace relection { \
 #define META_STRUCT(struct_name, ...) struct struct_name
 #define META_ENUM(enum_name, ...) enum enum_name
 #define META_PROPERTY(...)
-#define PROPERTY(...)
+#define META_FUNCTION(...)
 
 #define PEANUT_REFLECTION_NEW(name, ...) reflection::ReflectionPtr(#name, new name(__VA_ARGS__))
 

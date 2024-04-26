@@ -1,9 +1,7 @@
 #include "cursor_wapper.h"
 
 WapperCursor::WapperCursor(const CXCursor& cursor) : cursor_(cursor)
-{
-
-}
+{}
 
 std::string WapperCursor::GetCursorSpelling() const
 {
@@ -35,8 +33,8 @@ std::string WapperCursor::GetCursorLocateFile()
 	std::string localtion_file;
 	Utils::toString(clang_getFileName(file), localtion_file);
 
-	std::cout << "========== GetCursorLocateFile ==============" << std::endl;
-	std::cout << "get localtion file: " << localtion_file << std::endl;
+	std::cout << "========== GetCursorLocateFile ============== \n";
+	std::cout << "get location file: " << localtion_file << "\n";
 
 	return localtion_file;
 }
@@ -55,9 +53,35 @@ void WapperCursor::GetCursorLocateLine(uint32_t& start_line, uint32_t& end_line)
 	std::string localtion_file;
 	Utils::toString(clang_getFileName(file), localtion_file);
 
-	std::cout << "========== GetCursorLocateLine ==============" << std::endl;
-	std::cout << "get localtion file: " << localtion_file << std::endl;
-	std::cout << "start_line: " << start_line << " end_line: " << end_line << std::endl;
-	std::cout << "start_column: " << start_column << " end_column: " << end_column << std::endl;
-	std::cout << "=============================================" << std::endl;
+	std::cout << "========== GetCursorLocateLine ============== \n";
+	std::cout << "get location file: " << localtion_file << "\n";
+	std::cout << "start_line: " << start_line << " end_line: " << end_line << "\n";
+	std::cout << "start_column: " << start_column << " end_column: " << end_column << "\n";
+	std::cout << "=============================================" << "\n";
+}
+
+ WapperCursor::List WapperCursor::GetAllChild()
+{
+	List children;
+
+	auto Visitor = [](CXCursor cursor, CXCursor parent, CXClientData client_data) -> CXChildVisitResult
+	{
+		auto container = static_cast<List*>(client_data);
+
+		container->emplace_back(cursor);
+
+		if (cursor.kind == CXCursor_LastPreprocessing)
+			return CXChildVisit_Break;
+
+		return CXChildVisit_Continue;
+	};
+	
+	clang_visitChildren(cursor_, Visitor, &children);
+
+	return children;
+}
+
+void WapperCursor::VisitAllChild(CXCursorVisitor visitor, void* data)
+{
+	clang_visitChildren(cursor_, visitor, data);
 }

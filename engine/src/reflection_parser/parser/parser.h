@@ -29,10 +29,10 @@ public:
 
     void Finish(void);
 
-    // 解析include_file_generate_path
+    // parse the header_desc_file and generate file to save include_file_generate_path
     int Parse(void);
 
-    // 根据project_input_file生成包含全部项目头文件的头文件路径
+    // Generate a header file path containing all project header files based on project_input_file
     bool GenerateIncludeFiles(void);
 
     void GenerateFiles(void);

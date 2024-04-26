@@ -153,7 +153,6 @@ bool ReflectionParser::GenerateIncludeFiles(void)
 
 void ReflectionParser::BuildAST(const CXCursor& cursor, Namespace& current_namespace)
 {
-    // 收集AST信息，生成类型相关信息
 
 }
 
