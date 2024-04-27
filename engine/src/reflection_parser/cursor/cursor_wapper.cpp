@@ -19,7 +19,7 @@ std::string WapperCursor::GetCursorDisplayName() const
 	return displayName;
 }
 
-std::string WapperCursor::GetCursorLocateFile()
+std::string WapperCursor::GetCursorLocateFile() const
 {
 	auto cursor_range = clang_Cursor_getSpellingNameRange(cursor_, 0, 0);
 
@@ -39,7 +39,7 @@ std::string WapperCursor::GetCursorLocateFile()
 	return localtion_file;
 }
 
-void WapperCursor::GetCursorLocateLine(uint32_t& start_line, uint32_t& end_line)
+void WapperCursor::GetCursorLocateLine(uint32_t& start_line, uint32_t& end_line) const
 {
 	auto cursor_range = clang_getCursorExtent(cursor_);
 
@@ -60,7 +60,7 @@ void WapperCursor::GetCursorLocateLine(uint32_t& start_line, uint32_t& end_line)
 	std::cout << "=============================================" << "\n";
 }
 
- WapperCursor::List WapperCursor::GetAllChild()
+ WapperCursor::List WapperCursor::GetAllChild() const
 {
 	List children;
 

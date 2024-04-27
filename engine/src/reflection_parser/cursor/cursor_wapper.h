@@ -10,12 +10,12 @@ class WapperCursor
 public:
 	typedef std::vector<WapperCursor> List;
 
-	WapperCursor(const CXCursor& cursor);
+	explicit WapperCursor(const CXCursor& cursor);
 	~WapperCursor() {}
 
 	inline CXCursor GetCursor() const { return cursor_; }
 
-	List GetAllChild();
+	List GetAllChild() const;
 
 	std::string GetCursorSpelling() const;
 
@@ -23,9 +23,9 @@ public:
 
 	CXCursorKind GetCursorKind() const { return clang_getCursorKind(cursor_); }
 
-	std::string GetCursorLocateFile();
+	std::string GetCursorLocateFile() const;
 
-	void GetCursorLocateLine(uint32_t& start_line, uint32_t& end_line);
+	void GetCursorLocateLine(uint32_t& start_line, uint32_t& end_line) const;
 
 	void VisitAllChild(CXCursorVisitor visitor, void* data);
 

@@ -14,3 +14,16 @@ namespace NativeProperty
     const auto WhiteListMethods = "WhiteListMethods";
 
 } // namespace NativeProperty
+
+namespace MetaFlag
+{
+    const std::string ClassEnable = "meta_class";
+
+    const std::string StructEnable = "meta_struct";
+
+    const std::string PropertyEnable = "meta_property";
+
+    const std::string FunctionEnable = "meta_function";
+
+    const std::string EnumEnable = "meta_enum";
+}
