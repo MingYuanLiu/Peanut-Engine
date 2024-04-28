@@ -6,8 +6,12 @@
 
 class BaseClass
 {
+public:
     BaseClass(const WapperCursor& cursor);
 
+    std::string GetClassName() const { return base_class_name_; }
+
+private:
     std::string base_class_name_;
     WapperCursor cursor_;
 };
@@ -17,10 +21,9 @@ class MetaClass : public MetaType
 public:
     MetaClass(const WapperCursor& own_cursor, Namespace current_namespace);
 
-    inline std::string GetClassName() const { return class_name_; }
+    ~MetaClass() {}
 
-    template<typename T>
-    using SharedPtrVector = std::vector<std::shared_ptr<T> >;
+    inline std::string GetClassName() const { return class_name_; }
 
     const SharedPtrVector<BaseClass>& GetBaseClasses() const { return base_classes_; }
 
@@ -29,8 +32,11 @@ public:
     const SharedPtrVector<MetaFunction> GetFunctions() const { return functions_; }
 
     virtual bool ShouldCompiled() override;
+
 private:
     std::string class_name_;
+
+    std::string qualified_name_;
 
     SharedPtrVector<BaseClass> base_classes_;
 

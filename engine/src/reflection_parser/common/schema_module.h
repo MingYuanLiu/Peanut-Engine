@@ -1,14 +1,15 @@
 #pragma once
 #include "precompiled.h"
 
-class Class;
+class MetaClass;
 class Global;
 class Function;
 class Enum;
 
+// use SchemaModule to record multiple classes in a file
 struct SchemaMoudle
 {
-    std::string name;
+    std::string name; // class name
 
-    std::vector<std::shared_ptr<Class>> classes;
+    std::vector<std::shared_ptr<MetaClass>> classes;
 };

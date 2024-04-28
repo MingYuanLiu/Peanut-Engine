@@ -1,6 +1,11 @@
 #include "parser.h"
 
 #include "generator/reflection_generator.h"
+#include "language_types/meta_class.h"
+
+#include <memory>
+
+#define ADD_LANGUAGE_TYPE()
 
 void ReflectionParser::Prepare(void)
 {
@@ -83,7 +88,7 @@ int ReflectionParser::Parse(void)
     cursor = clang_getTranslationUnitCursor(unit);
 
     Namespace tmp_namespace;
-    BuildAST(cursor, tmp_namespace);
+    BuildAST(WapperCursor(cursor), tmp_namespace);
     
 	return 0;
 }
@@ -91,6 +96,12 @@ int ReflectionParser::Parse(void)
 void ReflectionParser::GenerateFiles()
 {
     
+}
+
+std::string ReflectionParser::GetIncludeFile(const std::string& class_name)
+{
+    auto iter = type_file_table_.find(class_name);
+    return iter != type_file_table_.end() ? iter->second : std::string();
 }
 
 
@@ -151,8 +162,34 @@ bool ReflectionParser::GenerateIncludeFiles(void)
     return true;
 }
 
-void ReflectionParser::BuildAST(const CXCursor& cursor, Namespace& current_namespace)
+void ReflectionParser::BuildAST(const WapperCursor& cursor, Namespace& current_namespace)
 {
+    // tranverse all classes in current file
+    for (const auto& child : cursor.GetAllChild())
+    {
+        
+        if (child.GetCursorKind() == CXCursor_ClassDecl
+            || child.GetCursorKind() == CXCursor_StructDecl)
+        {
+            std::shared_ptr<MetaClass> class_ptr = std::make_shared<MetaClass>(child, current_namespace);
+
+            // add language type
+            auto class_name = class_ptr->GetClassName();
+
+            auto source_file = class_ptr->GetSourceFile();
+            schema_modules_[source_file].classes.emplace_back(class_ptr);
+            type_file_table_[class_name] = source_file;
+        }
+        // todo: add enum
+        else if (CXCursor_Namespace)
+        {
+            // recursive build namespace
+            auto display_name = child.GetCursorDisplayName();
+            current_namespace.push_back(display_name);
+            BuildAST(child, current_namespace);
+            current_namespace.pop_back();
+        }
+    }
 
 }
 

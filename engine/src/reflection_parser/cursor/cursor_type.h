@@ -1,6 +1,6 @@
 #pragma once
 
-class Cursor;
+class WapperCursor;
 
 class CursorType
 {
@@ -15,7 +15,7 @@ public:
 
     CursorType GetCanonicalType(void) const;
 
-    Cursor GetDeclaration(void) const;
+    WapperCursor GetDeclaration(void) const;
 
     CXTypeKind GetKind(void) const;
 

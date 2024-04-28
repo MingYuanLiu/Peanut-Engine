@@ -1,5 +1,6 @@
 #pragma once
 #include "common/schema_module.h"
+#include "language_types/meta_class.h"
 
 #include <functional>
 #include <string>
@@ -14,18 +15,24 @@ namespace Generator
             m_out_path(out_path),
             m_root_path(root_path), m_get_include_func(get_include_func)
         {}
-        virtual int  generate(std::string path, SchemaMoudle schema) = 0;
-        virtual void finish() {};
+        virtual int  Generate(std::string path, SchemaMoudle schema) = 0;
+        virtual void Finish() {};
 
         virtual ~GeneratorInterface() {};
 
     protected:
-        virtual void prepareStatus(std::string path);
-        virtual void genClassRenderData(std::shared_ptr<Class> class_temp, Mustache::data& class_def);
-        virtual void genClassFieldRenderData(std::shared_ptr<Class> class_temp, Mustache::data& feild_defs);
-        virtual void genClassMethodRenderData(std::shared_ptr<Class> class_temp, Mustache::data& method_defs);
+        virtual void PrepareStatus(std::string path);
 
-        virtual std::string processFileName(std::string path) = 0;
+        // Generate render data for class code template generation
+        virtual void GenClassCodeRenderData(std::shared_ptr<MetaClass> class_temp, Mustache::data& class_def);
+        
+        // Generate render data for class field code template generation
+        virtual void GenClassFieldCodeRenderData(std::shared_ptr<MetaClass> class_temp, Mustache::data& feild_defs);
+        
+        // Generate render data for class function code template generation
+        virtual void GenClassFunctionCodeRenderData(std::shared_ptr<MetaClass> class_temp, Mustache::data& method_defs);
+
+        virtual std::string ProcessFileName(std::string path) = 0;
 
         std::string                             m_out_path {"gen_src"};
         std::string                             m_root_path;

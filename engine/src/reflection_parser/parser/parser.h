@@ -5,7 +5,7 @@
 #include "common/namespace.h"
 #include "common/schema_module.h"
 
-#include "cursor/cursor.h"
+#include "cursor/cursor_wapper.h"
 
 #include "generator/generator.h"
 #include "template_manager/template_manager.h"
@@ -40,7 +40,7 @@ public:
     std::string GetIncludeFile(const std::string& file_name);
 
 private:
-    void BuildAST(const CXCursor& cursor, Namespace& current_namespace);
+    void BuildAST(const WapperCursor& cursor, Namespace& current_namespace);
 
 
 private:
@@ -62,6 +62,8 @@ private:
 
     std::vector<std::string> work_paths_;
 
+
+    std::unordered_map<std::string, std::string> type_file_table_;
     std::unordered_map<std::string, SchemaMoudle> schema_modules_;
     std::vector<std::shared_ptr<Generator::GeneratorInterface> > generators_;
 };

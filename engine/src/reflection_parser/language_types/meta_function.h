@@ -9,6 +9,8 @@ public:
 	MetaFunction(const WapperCursor& own_cursor, Namespace current_namespace,
 		MetaClass* parent_class = nullptr);
 
+	virtual bool ShouldCompiled() override;
+
 private:
 	MetaClass* parent_class_;
 };

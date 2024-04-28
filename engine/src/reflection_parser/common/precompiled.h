@@ -23,3 +23,6 @@ namespace fs = std::filesystem;
 #include "mustache.hpp"
 
 namespace Mustache = kainjow::mustache;
+
+template<typename T>
+using SharedPtrVector = std::vector<std::shared_ptr<T> >;

@@ -6,5 +6,9 @@ MetaFunction::MetaFunction(const WapperCursor& own_cursor, Namespace current_nam
 {
 	auto meta_flag = meta_data_.GetFlag();
 	enable_ = meta_flag == MetaFlag::FunctionEnable;
+}
 
+bool MetaFunction::ShouldCompiled()
+{
+	return parent_class_ != nullptr ? (parent_class_->ShouldCompiled() && enable_) : false;
 }

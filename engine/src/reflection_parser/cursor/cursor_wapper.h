@@ -2,6 +2,8 @@
 #include "common/precompiled.h"
 
 #include <vector>
+
+class CursorType;
 /**
 * The wapper class of CXCursor
 */
@@ -26,6 +28,8 @@ public:
 	std::string GetCursorLocateFile() const;
 
 	void GetCursorLocateLine(uint32_t& start_line, uint32_t& end_line) const;
+
+	CursorType GetType() const { return clang_getCursorType(cursor_); }
 
 	void VisitAllChild(CXCursorVisitor visitor, void* data);
 

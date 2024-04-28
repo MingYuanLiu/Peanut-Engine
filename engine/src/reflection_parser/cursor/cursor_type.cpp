@@ -1,6 +1,6 @@
 #include "common/precompiled.h"
 
-#include "cursor.h"
+#include "cursor_wapper.h"
 #include "cursor_type.h"
 
 CursorType::CursorType(const CXType& handle) : handle_(handle) {}
@@ -20,7 +20,7 @@ CursorType CursorType::GetArgument(unsigned index) const { return clang_getArgTy
 
 CursorType CursorType::GetCanonicalType(void) const { return clang_getCanonicalType(handle_); }
 
-Cursor CursorType::GetDeclaration(void) const { return clang_getTypeDeclaration(handle_); }
+WapperCursor CursorType::GetDeclaration(void) const { return clang_getTypeDeclaration(handle_); }
 
 CXTypeKind CursorType::GetKind(void) const { return handle_.kind; }
 
