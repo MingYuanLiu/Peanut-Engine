@@ -1,0 +1,28 @@
+#pragma once
+
+class WapperCursor;
+
+class CursorType
+{
+public:
+    CursorType(const CXType& handle);
+
+    std::string GetDisplayName(void) const;
+
+    int GetArgumentCount(void) const;
+
+    CursorType GetArgument(unsigned index) const;
+
+    CursorType GetCanonicalType(void) const;
+
+    WapperCursor GetDeclaration(void) const;
+
+    CXTypeKind GetKind(void) const;
+
+    bool IsConst(void) const;
+
+    bool IsVolatile(void) const;
+
+private:
+    CXType handle_;
+};

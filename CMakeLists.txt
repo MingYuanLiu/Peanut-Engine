@@ -18,4 +18,6 @@ endif()
 set(PEANUT_ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
 set(CMAKE_INSTALL_PREFIX "${PEANUT_ROOT_DIR}/bin")
 
+
+
 add_subdirectory(engine)

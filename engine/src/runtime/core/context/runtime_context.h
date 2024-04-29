@@ -9,15 +9,15 @@
 #include "runtime/core/log/peanut_log.h"
 
 namespace peanut {
-    class RenderSystem;
+class RenderSystem;
 /**
  * @brief manage the global states of the game engine runtime
  *
  */
-class GlobalRuntimeContext {
+class GlobalEngineContext {
  public:
-  static GlobalRuntimeContext* GetContext() {
-    static GlobalRuntimeContext global_context;
+  static GlobalEngineContext* GetContext() {
+    static GlobalEngineContext global_context;
     return &global_context;
   }
 
@@ -32,14 +32,14 @@ class GlobalRuntimeContext {
   std::shared_ptr<RenderSystem> render_system_;
 
  private:
-  GlobalRuntimeContext() = default;
-  ~GlobalRuntimeContext() = default;
+  GlobalEngineContext() = default;
+  ~GlobalEngineContext() = default;
 
  private:
   // TODO: use config system to config this values
   const std::string default_log_path_ = "./logs/runtime_log.txt";
-  const uint32_t default_window_width_ = 1024;
-  const uint32_t default_window_height_ = 1024;
+  const uint32_t default_window_width_ = 1280;
+  const uint32_t default_window_height_ = 720;
   const std::string default_window_title_ = "Peanut";
 };
 

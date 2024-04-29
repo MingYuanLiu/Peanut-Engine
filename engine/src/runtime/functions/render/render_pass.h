@@ -60,8 +60,8 @@ class MainRenderPass : public RenderPassBase {
 
   void SetupSamplers();
   void SetupRenderpass();
-  void SetupComputDescriptorPool();
-  void SetupComputDescriptorSets();
+  void SetupComputeDescriptorPool();
+  void SetupComputeDescriptorSets();
   void SetupUniformDescriptorSets();
 
   void SetupPBRPipeline();
@@ -79,6 +79,8 @@ class MainRenderPass : public RenderPassBase {
   }
   UniformBufferAllocation AllocateSubStorageFromUniformBuffer(
       UniformBuffer &buffer, VkDeviceSize size);
+
+  // draw
 
  private:
   std::vector<VkDescriptorSetLayout> g_descriptor_layouts_;

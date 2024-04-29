@@ -10,7 +10,7 @@ std::string CurrentWorkDir()
 }
 
 namespace peanut {
-	void GlobalRuntimeContext::SetupSubSystems()
+	void GlobalEngineContext::SetupSubSystems()
 	{
 		LogSystem::init(default_log_path_);
 
@@ -28,7 +28,7 @@ namespace peanut {
 		render_system_->Initialize(window_system_);
 	}
 
-	void GlobalRuntimeContext::DestroySubSystems()
+	void GlobalEngineContext::DestroySubSystems()
 	{
 		window_system_->Shutdown();
 		render_system_->Shutdown();

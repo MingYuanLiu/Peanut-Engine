@@ -1098,9 +1098,8 @@ void VulkanRHI::CreateSwapChain() {
   }
 
   // get image counts
-  uint32_t image_counts = glm::clamp<uint32_t>(
-      2, physical_device_.surface_capabilities.minImageCount,
-      physical_device_.surface_capabilities.maxImageCount);
+  uint32_t image_counts =
+      physical_device_.surface_capabilities.minImageCount + 1;
 
   if (physical_device_.surface_capabilities.maxImageCount > 0 &&
       image_counts > physical_device_.surface_capabilities.maxImageCount)

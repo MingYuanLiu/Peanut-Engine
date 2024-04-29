@@ -3,6 +3,7 @@
 #include <vulkan/vulkan.h>
 #include <optional>
 #include <vector>
+#include <memory>
 
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>
@@ -68,6 +69,13 @@ struct TextureData {
   uint32_t levels;
   uint32_t layers;
   void *pixels;
+};
+
+struct PbrMaterial {
+  std::shared_ptr<TextureData> albedo_texture_;
+  std::shared_ptr<TextureData> metallic_texture_;
+  std::shared_ptr<TextureData> normal_texture_;
+  std::shared_ptr<TextureData> roughness_texture_;
 };
 
 struct TextureMemoryBarrier {
