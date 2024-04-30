@@ -15,12 +15,17 @@ namespace Generator
         virtual ~SerializerGenerator() override;
 
     protected:
-        virtual void Prepare(std::string path) override;
+        virtual void Prepare(const std::string& path) override;
 
         virtual std::string ProcessFileName(std::string path) override;
 
     private:
+        void LoadCodeTemplate();
         Mustache::data m_class_defines {Mustache::data::type::list};
         Mustache::data m_include_headfiles {Mustache::data::type::list};
+
+        static const std::string all_serialize_template_filename;
+        static const std::string all_serialize_template_impl_filename;
+        static const std::string common_serialize_template_filename;
     };
 } // namespace Generator

@@ -5,6 +5,8 @@
 
 #include <memory>
 
+#include "generator/serializer_generator.h"
+
 #define ADD_LANGUAGE_TYPE()
 
 void ReflectionParser::Prepare(void)
@@ -28,6 +30,8 @@ ReflectionParser::ReflectionParser(
 {
     work_paths_ = Utils::split(project_base_dir_, ",");
     generators_.emplace_back(std::make_shared<Generator::ReflectionGenerator>(project_base_dir_,
+        std::bind(&ReflectionParser::GetIncludeFile, this, std::placeholders::_1)));
+    generators_.emplace_back(std::make_shared<Generator::SerializerGenerator>(project_base_dir_,
         std::bind(&ReflectionParser::GetIncludeFile, this, std::placeholders::_1)));
 
 }
@@ -95,7 +99,21 @@ int ReflectionParser::Parse(void)
 
 void ReflectionParser::GenerateFiles()
 {
-    
+    // generate all header reflection and serialize files
+    for (const auto& module_pair : schema_modules_)
+    {
+        std::string filepath = module_pair.first;
+        SchemaMoudle module = module_pair.second;
+        for (std::shared_ptr<Generator::GeneratorInterface>& generator : generators_)
+        {
+            generator->Generate(filepath, module);
+        }
+    }
+
+    for (std::shared_ptr<Generator::GeneratorInterface>& generator : generators_)
+    {
+        generator->Finish();
+    }
 }
 
 std::string ReflectionParser::GetIncludeFile(const std::string& class_name)

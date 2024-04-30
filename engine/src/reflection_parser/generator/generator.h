@@ -11,7 +11,7 @@ namespace Generator
     public:
         GeneratorInterface(std::string                             out_path,
                            std::string                             root_path,
-                           std::function<std::string(std::string)> get_include_func) :
+                           std::function<std::string(const std::string&)> get_include_func) :
             out_path_(out_path),
             root_path_(root_path), get_include_func_(get_include_func)
         {}
@@ -42,6 +42,6 @@ namespace Generator
 
         std::string                             out_path_ {"gen_src"};
         std::string                             root_path_;
-        std::function<std::string(std::string)> get_include_func_;
+        std::function<std::string(const std::string&)> get_include_func_;
     };
 } // namespace Generator

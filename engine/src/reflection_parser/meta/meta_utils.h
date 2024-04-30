@@ -47,7 +47,7 @@ namespace Utils
 
     std::string loadFile(std::string path);
 
-    void saveFile(const std::string& outpu_string, const std::string& output_file);
+    void SaveFile(const std::string& outpu_string, const std::string& output_file);
 
     void ReplaceAll(std::string& resource_str, std::string sub_str, std::string new_str);
 

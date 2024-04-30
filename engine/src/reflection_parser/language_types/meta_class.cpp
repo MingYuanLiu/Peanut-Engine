@@ -1,4 +1,5 @@
 #include "language_types/meta_class.h"
+#include "cursor/cursor_type.h"
 
 BaseClass::BaseClass(const WapperCursor& cursor)
 	: base_class_name_(cursor.GetCursorDisplayName()),

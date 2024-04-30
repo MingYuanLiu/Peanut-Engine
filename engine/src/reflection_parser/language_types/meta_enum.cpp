@@ -9,9 +9,9 @@ MetaEnum::MetaEnum(const WapperCursor& own_cursor, Namespace current_namespace)
 
 	for (const auto& child : own_cursor.GetAllChild())
 	{
-		if (child.GetCursorKind() == CXCursor_FieldDecl)
+		if (child.GetCursorKind() == CXCursor_EnumConstantDecl)
 		{
-			fields_.emplace_back(std::make_shared<MetaField>(child, current_namespace_, this));
+			fields_.emplace_back(std::make_shared<MetaField>(child, current_namespace_));
 		}
 	}
 }

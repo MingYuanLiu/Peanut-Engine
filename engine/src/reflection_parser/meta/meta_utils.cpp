@@ -265,7 +265,7 @@ namespace Utils
         return template_stream.str();
     }
 
-    void saveFile(const std::string& outpu_string, const std::string& output_file)
+    void SaveFile(const std::string& outpu_string, const std::string& output_file)
     {
         fs::path out_path(output_file);
 

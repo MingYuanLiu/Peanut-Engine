@@ -120,7 +120,7 @@ namespace Generator
 
         std::string render_string =
             TemplateManager::getInstance()->RenderByTemplate(common_reflection_template_filename, mustache_data);
-        Utils::saveFile(render_string, file_path);
+        Utils::SaveFile(render_string, file_path);
 
         sourcefile_list_.emplace_back(tmp);
 
@@ -148,7 +148,7 @@ namespace Generator
         mustache_data.set("sourefile_names", sourefile_names);
         std::string render_string =
             TemplateManager::getInstance()->RenderByTemplate(all_reflection_template_filename, mustache_data);
-        Utils::saveFile(render_string, out_path_ + "/all_reflection.h");
+        Utils::SaveFile(render_string, out_path_ + "/all_reflection.h");
     }
 
     ReflectionGenerator::~ReflectionGenerator() {}

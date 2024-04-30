@@ -57,18 +57,6 @@ typedef std::tuple<SetArrayFunction, GetArrayFuntion, GetSizeFuncion,
 
 namespace reflection
 {
-	class ReflectionInstance
-	{
-	public:
-		ReflectionInstance() {}
-		ReflectionInstance(const TypeMetaData& meta_data, void* instance) 
-			: meta_data_(meta_data), instance_(instance) {}
-
-	private:
-		TypeMetaData meta_data_;
-		void* instance_;
-	};
-
 	// 反射核心类：会将所有类型元数据保存到该类中，
 	// 外部用户可通过下面定义的接口可以获取反射对应的变量、方法、类型信息
 	// 
@@ -108,6 +96,18 @@ namespace reflection
 
 		// whether current type is already registered
 		bool is_valid_;
+	};
+
+	class ReflectionInstance
+	{
+	public:
+		ReflectionInstance() {}
+		ReflectionInstance(const TypeMetaData& meta_data, void* instance) 
+			: meta_data_(meta_data), instance_(instance) {}
+
+	private:
+		TypeMetaData meta_data_;
+		void* instance_;
 	};
 
 	class FieldAccessor

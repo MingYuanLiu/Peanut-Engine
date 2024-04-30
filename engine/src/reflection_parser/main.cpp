@@ -16,7 +16,7 @@ int main(int argc, char* argv[])
     if (argv[1] != nullptr && argv[2] != nullptr && argv[3] != nullptr && 
         argv[4] != nullptr && argv[5] != nullptr && argv[6] != nullptr)
     {
-        MetaParser::Prepare();
+        ReflectionParser::Prepare();
 
         result = parse(argv[1], argv[2], argv[3], argv[4], argv[5], argv[6]);
 
