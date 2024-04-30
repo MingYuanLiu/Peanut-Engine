@@ -10,13 +10,13 @@ public:
             m_pInstance = new TemplateManager();
         return m_pInstance;
     }
-    void loadTemplates(std::string path, std::string template_name);
+    void LoadTemplates(std::string path, std::string template_name);
 
-    std::string renderByTemplate(std::string template_name, Mustache::data& template_data);
+    std::string RenderByTemplate(std::string template_name, Mustache::data& template_data);
 
 private:
     TemplateManager() {}
     TemplateManager(const TemplateManager&);
     TemplateManager&                             operator=(const TemplateManager&);
-    std::unordered_map<std::string, std::string> m_template_pool;
+    std::unordered_map<std::string, std::string> template_pool_;
 };

@@ -52,7 +52,7 @@ int parse(std::string project_input_file_name,
 
     bool is_show_errors = "0" != show_errors;
 
-    MetaParser parser(
+    ReflectionParser parser(
         project_input_file_name, source_include_file_name, include_path, sys_include, module_name, is_show_errors);
 
     std::cout << "Parsing in " << include_path << std::endl;

@@ -7,16 +7,20 @@ namespace Generator
     public:
         ReflectionGenerator() = delete;
         ReflectionGenerator(std::string source_directory, std::function<std::string(const std::string&)> get_include_function);
-        virtual int  generate(std::string path, SchemaMoudle schema) override;
-        virtual void finish() override;
+        virtual int  Generate(std::string path, SchemaMoudle schema) override;
+        virtual void Finish() override;
         virtual ~ReflectionGenerator() override;
 
     protected:
-        virtual void        prepareStatus(std::string path) override;
-        virtual std::string processFileName(std::string path) override;
+        virtual void        Prepare(const std::string& path) override;
+        virtual std::string ProcessFileName(std::string path) override;
 
     private:
-        std::vector<std::string> m_head_file_list;
-        std::vector<std::string> m_sourcefile_list;
+        void LoadCodeTemplate();
+        std::vector<std::string> head_file_list_;
+        std::vector<std::string> sourcefile_list_;
+
+        static const std::string common_reflection_template_filename;
+        static const std::string all_reflection_template_filename;
     };
 } // namespace Generator

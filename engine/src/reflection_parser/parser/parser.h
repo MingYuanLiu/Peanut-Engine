@@ -37,7 +37,7 @@ public:
 
     void GenerateFiles(void);
 
-    std::string GetIncludeFile(const std::string& file_name);
+    std::string GetIncludeFile(const std::string& class_name);
 
 private:
     void BuildAST(const WapperCursor& cursor, Namespace& current_namespace);

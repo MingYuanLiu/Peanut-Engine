@@ -1,6 +1,6 @@
 #include "generator/serializer_generator.h"
 #include "common/precompiled.h"
-#include "language_types/class.h"
+#include "language_types/meta_class.h"
 
 namespace Generator
 {
@@ -8,12 +8,12 @@ namespace Generator
                                              std::function<std::string(std::string)> get_include_function) :
         GeneratorInterface(source_directory + "/_generated/serializer", source_directory, get_include_function)
     {
-        prepareStatus(m_out_path);
+        Prepare(out_path_);
     }
 
-    void SerializerGenerator::prepareStatus(std::string path)
+    void SerializerGenerator::Prepare(std::string path)
     {
-        GeneratorInterface::prepareStatus(path);
+        GeneratorInterface::Prepare(path);
         TemplateManager::getInstance()->loadTemplates(m_root_path, "allSerializer.h");
         TemplateManager::getInstance()->loadTemplates(m_root_path, "allSerializer.ipp");
         TemplateManager::getInstance()->loadTemplates(m_root_path, "commonSerializerGenFile");

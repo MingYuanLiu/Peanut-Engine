@@ -1,5 +1,7 @@
 #include "common/precompiled.h"
 
+#include "cursor/cursor_wapper.h"
+#include "cursor/cursor_type.h"
 #include "meta_utils.h"
 
 static int parse_flag = 0;
@@ -15,7 +17,7 @@ namespace Utils
         clang_disposeString(str);
     }
 
-    std::string getQualifiedName(const CursorType& type) { return type.GetDisplayName(); }
+    std::string GetQualifiedName(const CursorType& type) { return type.GetDisplayName(); }
 
     std::string getTypeNameWithoutNamespace(const CursorType& type)
     {
@@ -23,7 +25,7 @@ namespace Utils
         return type_name;
     }
 
-    std::string getQualifiedName(const std::string& display_name, const Namespace& current_namespace)
+    std::string GetQualifiedName(const std::string& display_name, const Namespace& current_namespace)
     {
         std::string name = "";
         for (auto& iter_string : current_namespace)
@@ -36,12 +38,12 @@ namespace Utils
         return name;
     }
 
-    std::string getQualifiedName(const Cursor& cursor, const Namespace& current_namespace)
+    std::string GetQualifiedName(const WapperCursor& cursor, const Namespace& current_namespace)
     {
-        return getQualifiedName(cursor.getSpelling(), current_namespace);
+        return GetQualifiedName(cursor.GetCursorSpelling(), current_namespace);
     }
 
-    std::string formatQualifiedName(std::string& source_string)
+    std::string FormatQualifiedName(std::string& source_string)
     {
         Utils::replace(source_string, '<', 'L');
         Utils::replace(source_string, ':', 'S');
@@ -151,7 +153,7 @@ namespace Utils
         return result;
     }
 
-    std::string getNameWithoutContainer(std::string name)
+    std::string GetTypeNameOfVector(std::string name)
     {
 
         size_t left  = name.find_first_of('<') + 1;
@@ -301,7 +303,7 @@ namespace Utils
             local_path_string = fs::current_path().string() + "/" + local_path_string;
         }
 
-        replaceAll(local_path_string, "\\", "/");
+        ReplaceAll(local_path_string, "\\", "/");
         std::vector<std::string> subString = split(local_path_string, "/");
         std::vector<std::string> out_sub_string;
         for (auto p : subString)
@@ -322,7 +324,7 @@ namespace Utils
         out_string.append(out_sub_string[out_sub_string.size() - 1]);
         return 0;
     }
-    std::string convertNameToUpperCamelCase(const std::string& name, std::string pat)
+    std::string ConvertNameToUpperCamelCase(const std::string& name, std::string pat)
     {
         std::string ret_string;
         auto&& name_spilts = split(name, pat);

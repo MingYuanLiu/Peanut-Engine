@@ -4,10 +4,11 @@
 
 namespace Generator
 {
-    void GeneratorInterface::PrepareStatus(std::string path)
+    void GeneratorInterface::Prepare(const std::string& path)
     {
         if (!fs::exists(path))
         {
+            // create output directory
             fs::create_directories(path);
         }
     }

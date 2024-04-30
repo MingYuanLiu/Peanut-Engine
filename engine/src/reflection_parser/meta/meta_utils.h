@@ -1,20 +1,20 @@
 #pragma once
 
 #include "common/namespace.h"
-#include "cursor/cursor.h"
+#include "cursor/cursor_wapper.h"
 
 namespace Utils
 {
 
     void toString(const CXString& str, std::string& output);
 
-    std::string getQualifiedName(const CursorType& type);
+    std::string GetQualifiedName(const CursorType& type);
 
-    std::string getQualifiedName(const std::string& display_name, const Namespace& current_namespace);
+    std::string GetQualifiedName(const std::string& display_name, const Namespace& current_namespace);
 
-    std::string getQualifiedName(const Cursor& cursor, const Namespace& current_namespace);
+    std::string GetQualifiedName(const WapperCursor& cursor, const Namespace& current_namespace);
 
-    std::string formatQualifiedName(std::string& source_string);
+    std::string FormatQualifiedName(std::string& source_string);
 
     fs::path makeRelativePath(const fs::path& from, const fs::path& to);
 
@@ -31,7 +31,7 @@ namespace Utils
 
     std::string getTypeNameWithoutNamespace(const CursorType& type);
 
-    std::string getNameWithoutContainer(std::string name);
+    std::string GetTypeNameOfVector(std::string name);
 
     std::string getStringWithoutQuot(std::string input);
 
@@ -53,7 +53,7 @@ namespace Utils
 
     unsigned long formatPathString(const std::string& path_string, std::string& out_string);
 
-    std::string convertNameToUpperCamelCase(const std::string& name, std::string pat);
+    std::string ConvertNameToUpperCamelCase(const std::string& name, std::string pat);
 
 } // namespace Utils
 
