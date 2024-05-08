@@ -9,6 +9,7 @@ namespace peanut
 {
 	class META_CLASS() World
 	{
+		GENERATE_BODY()
 	public:
 
 		META_FUNCTION()

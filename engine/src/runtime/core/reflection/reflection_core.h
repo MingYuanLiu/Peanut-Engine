@@ -88,8 +88,8 @@ namespace peanut {
 			FieldAccessor GetFieldByName(const std::string& name);
 			MethodAccessor GetMethodByName(const std::string& name);
 
-			int GetFieldList(std::vector<FieldAccessor>& out_field_list);
-			int GetMethodList(std::vector<MethodAccessor>& out_method_list);
+			inline int GetFieldList(std::vector<FieldAccessor>& out_field_list);
+			inline int GetMethodList(std::vector<MethodAccessor>& out_method_list);
 
 			bool IsValid() { return is_valid_; }
 
@@ -131,25 +131,30 @@ namespace peanut {
 			TypeMetaData GetOwnerTypeMetaData();
 			bool GetTypeMetaData(TypeMetaData& out_meta_data);
 
-			inline const char* GetFieldName() const { return field_name_; }
-			inline const char* GetFieldTypeName() const { return field_type_name_; }
+			inline const char* GetFieldName() const { return field_name_.c_str(); }
+			inline const char* GetFieldTypeName() const { return field_type_name_.c_str(); }
 
 			bool IsArrayType();
 
 		private:
 			FieldFunctions* functions_;
-			const char* field_name_;
-			const char* field_type_name_;
+			std::string field_name_;
+			std::string field_type_name_;
 		};
 
 		class MethodAccessor
 		{
 		public:
-			MethodAccessor() {}
-			explicit MethodAccessor(MethodFunctions* functions) : functions_(functions) {}
+			MethodAccessor();
+			explicit MethodAccessor(MethodFunctions* functions);
+
+			inline const char* GetMethodName() const { return method_name_.c_str(); }
+
+			void InvokeMethod(void* instance);
 
 		private:
 			MethodFunctions* functions_;
+			std::string method_name_;
 		};
 
 		class ArrayAccessor

@@ -9,7 +9,7 @@ namespace peanut {
 		static std::map<std::string, ArrayFunctions*> GArrayTypeMap;
 
 
-		static std::string unkown_type_name_ = "UnkownType";
+		static std::string kUnkownTypeName = "UnkownType";
 
 		void TypeMetaDataRegisterInterface::RegisterToFieldMap(const char* name, FieldFunctions* value)
 		{
@@ -72,7 +72,7 @@ namespace peanut {
 			GArrayTypeMap.clear();
 		}
 
-		TypeMetaData::TypeMetaData() : type_name_(unkown_type_name_), is_valid_(false)
+		TypeMetaData::TypeMetaData() : type_name_(kUnkownTypeName), is_valid_(false)
 		{
 			fields_.clear();
 			methods_.clear();
@@ -147,6 +147,20 @@ namespace peanut {
 		}
 
 		// Field Accessor
+		FieldAccessor::FieldAccessor() : 
+			functions_(nullptr), field_name_(kUnkownTypeName), field_type_name_(kUnkownTypeName)
+		{
+		}
+
+		FieldAccessor::FieldAccessor(FieldFunctions* functions) : functions_(functions)
+		{
+			if (functions_ != nullptr)
+			{
+				field_name_ = std::get<3>(*functions_)();
+				field_type_name_ = std::get<4>(*functions_)();
+			}
+		}
+
 		void FieldAccessor::Set(void* instance, void* value)
 		{
 			if (functions_ != nullptr)
@@ -173,14 +187,14 @@ namespace peanut {
 				return meta;
 			}
 
-			return TypeMetaData(unkown_type_name_.c_str());
+			return TypeMetaData(kUnkownTypeName.c_str());
 		}
 
 		bool FieldAccessor::GetTypeMetaData(TypeMetaData& out_meta_data)
 		{
 			if (functions_ != nullptr)
 			{
-				TypeMetaData meta(field_type_name_);
+				TypeMetaData meta(field_type_name_.c_str());
 				out_meta_data = meta;
 				return meta.is_valid_;
 			}
@@ -195,5 +209,28 @@ namespace peanut {
 				return std::get<5>(*functions_)();
 			}
 		}
+
+		MethodAccessor::MethodAccessor() : functions_(nullptr), method_name_(kUnkownTypeName)
+		{
+		}
+
+		MethodAccessor::MethodAccessor(MethodFunctions* functions) : 
+			functions_(functions),
+			method_name_(kUnkownTypeName)
+		{
+			if (functions_ != nullptr)
+			{
+				method_name_ = std::get<0>(*functions_)();
+			}
+		}
+
+		void MethodAccessor::InvokeMethod(void* instance)
+		{
+			if (functions_ != nullptr)
+			{
+				std::get<1>(*functions_)(instance);
+			}
+		}
+
 	} // namespace reflection
 } // namespace peanut
