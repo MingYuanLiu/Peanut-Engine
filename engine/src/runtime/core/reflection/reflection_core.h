@@ -153,7 +153,7 @@ namespace peanut {
 			void InvokeMethod(void* instance);
 
 		private:
-			MethodFunctions* functions_;
+			MethodFunctions* functions_; 
 			std::string method_name_;
 		};
 
