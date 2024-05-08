@@ -1,14 +1,16 @@
 #include "meta_field.h"
+#include "language_types/meta_class.h"
+
 #include <string>
 
-MetaField::MetaField(const WapperCursor& own_cursor, Namespace current_namespace, MetaClass* parent_class = nullptr)
+MetaField::MetaField(const WapperCursor& own_cursor, Namespace current_namespace, MetaClass* parent_class)
 	: MetaType(own_cursor, current_namespace),
 	parent_class_(parent_class),
 	is_const_(own_cursor.GetType().IsConst()),
 	type_(own_cursor_.GetType().GetDisplayName())
 {
 	auto meta_flag = meta_data_.GetFlag();
-	enable_ = meta_flag == MetaFlag::FunctionEnable;
+	enable_ = meta_flag == MetaFlag::PropertyEnable;
 
 	Utils::ReplaceAll(type_, " ", "");
 

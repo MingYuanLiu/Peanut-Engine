@@ -20,7 +20,7 @@ CursorType CursorType::GetArgument(unsigned index) const { return clang_getArgTy
 
 CursorType CursorType::GetCanonicalType(void) const { return clang_getCanonicalType(handle_); }
 
-WapperCursor CursorType::GetDeclaration(void) const { return clang_getTypeDeclaration(handle_); }
+WapperCursor CursorType::GetDeclaration(void) const { return WapperCursor(clang_getTypeDeclaration(handle_)); }
 
 CXTypeKind CursorType::GetKind(void) const { return handle_.kind; }
 

@@ -1,6 +1,7 @@
 #include "common/precompiled.h"
 
 #include "generator/generator.h"
+#include "cursor/cursor_type.h"
 
 namespace Generator
 {

@@ -44,8 +44,8 @@ private:
 
 
 private:
-    std::vector<std::string> arguments_ =
-        {"-x","c++", "-std=c++11", "-D__REFLECTION_PARSER__",
+    std::vector<std::string> arguments_ = // "-x","c++", "-std=c++11",
+        { "-x", "c++", "-D__REFLECTION_PARSER__",
         "-DNDEBUG", "-D__clang__", "-w", "-MG", "-M", "-ferror-limit=0",
         "-o clangLog.txt"};
 

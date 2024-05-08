@@ -58,7 +58,7 @@ namespace Utils
     /// <param name="from"></param>
     /// <param name="to"></param>
     /// <returns></returns>
-    fs::path makeRelativePath(const fs::path& from, const fs::path& to)
+    fs::path MakeRelativePath(const fs::path& from, const fs::path& to)
     {
         // Start at the root path and while they are the same then do nothing then when they first
         // diverge take the remainder of the two path and replace the entire from path with ".."
@@ -97,8 +97,8 @@ namespace Utils
 
             ++iter_to;
         }
-
-        return final_path;
+        
+        return final_path.generic_string();
     }
 
     void fatalError(const std::string& error)

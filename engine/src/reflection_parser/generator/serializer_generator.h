@@ -1,5 +1,6 @@
 #pragma once
 #include "generator/generator.h"
+
 namespace Generator
 {
     class SerializerGenerator : public GeneratorInterface

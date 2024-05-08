@@ -18,21 +18,27 @@ MetaClass::MetaClass(const WapperCursor& own_cursor, Namespace current_namespace
 
 	for (const WapperCursor& child : own_cursor_.GetAllChild())
 	{
-		if (child.GetCursorKind() == CXCursor_CXXMethod)
+		auto kind = child.GetCursorKind();
+		if (kind == CXCursor_CXXMethod)
 		{
 			auto method = std::make_shared<MetaFunction>(child, current_namespace, this);
 			functions_.emplace_back(method);
 		}
-		else if (child.GetCursorKind() == CXCursor_FieldDecl)
+		else if (kind == CXCursor_FieldDecl)
 		{
 			auto field = std::make_shared<MetaField>(child, current_namespace, this);
 			fields_.emplace_back(field);
 		}
-		else if (child.GetCursorKind() == CXCursor_CXXBaseSpecifier)
+		else if (kind == CXCursor_CXXBaseSpecifier)
 		{
 			auto base_class = std::make_shared<BaseClass>(child);
 			base_classes_.emplace_back(base_class);
 		}
+		else if (kind == CXCursor_AnnotateAttr)
+		{
+			std::cout << "class has annotate attr" << std::endl;
+		}
+
 	}
 }
 

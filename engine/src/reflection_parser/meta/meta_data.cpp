@@ -12,7 +12,9 @@ MetaData::MetaData(const WapperCursor& cursor)
 			Utils::toString(display_name, display_name_str);
 
 			if (!display_name_str.empty())
+			{
 				properties_.emplace_back(display_name_str);
+			}
 		}
 	}
 }

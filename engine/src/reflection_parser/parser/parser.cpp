@@ -1,4 +1,4 @@
-#include "parser.h"
+﻿#include "parser.h"
 
 #include "generator/reflection_generator.h"
 #include "language_types/meta_class.h"
@@ -56,14 +56,18 @@ int ReflectionParser::Parse(void)
      // include system header file in argument
     std::vector<const char*> temp_arguments;
     std::string include_flag = "-I";
-    if (project_base_dir_ != "*")
+
+    if (include_sys_ != "*")
     {
-        std::string include_path = include_flag + project_base_dir_;
-        arguments_.emplace_back(std::move(include_path));
+        std::string sys_include_path = include_flag + include_sys_;
+        arguments_.emplace_back(std::move(sys_include_path));
     }
 
     for (std::string& path : work_paths_)
     {
+        if (project_base_dir_ == "*")
+            continue;
+
         std::string include_path = include_flag + path;
         arguments_.emplace_back(std::move(include_path));
     }
@@ -81,7 +85,7 @@ int ReflectionParser::Parse(void)
     cursor_index_ = clang_createIndex(0, show_error);
 
     std::vector<const char*> translate_arguments;
-    for (const std::string& arg : arguments_)
+    for (std::string& arg : arguments_)
     {
         translate_arguments.push_back(arg.c_str());
     }
@@ -160,15 +164,15 @@ bool ReflectionParser::GenerateIncludeFiles(void)
     }
 
     parse_header_out_stream << "#ifndef __" << generated_header_file_name << "__ \n";
-    parse_header_out_stream << "#define __" << generated_header_file_name << "-- \n";
+    parse_header_out_stream << "#define __" << generated_header_file_name << "__ \n";
     parse_header_out_stream << "\n";
 
     // write include files
     for (const std::string& header_file : header_files)
     {
         std::string tmp(header_file);
-        Utils::replace(tmp, "\\", "/");
-        parse_header_out_stream << "#include  \"" << header_file << "\" \n";
+        Utils::ReplaceAll(tmp, "\\", "/");
+        parse_header_out_stream << "#include  \"" << tmp << "\" \n";
     }
 
     parse_header_out_stream << "\n";
@@ -185,27 +189,42 @@ void ReflectionParser::BuildAST(const WapperCursor& cursor, Namespace& current_n
     // tranverse all classes in current file
     for (const auto& child : cursor.GetAllChild())
     {
-        
-        if (child.GetCursorKind() == CXCursor_ClassDecl
-            || child.GetCursorKind() == CXCursor_StructDecl)
+
+        auto kind = child.GetCursorKind();
+        std::string kind_str;
+        Utils::toString(clang_getCursorKindSpelling(kind), kind_str);
+
+        std::cout << "============================" << std::endl;
+        std::cout << "cursor kind: " << kind_str << std::endl;
+        std::cout << "curosr name: " << child.GetCursorDisplayName() << std::endl;
+        std::cout << "============================" << std::endl;
+        if (child.IsDefinition() && (kind == CXCursor_ClassDecl
+            || kind == CXCursor_StructDecl))
         {
             std::shared_ptr<MetaClass> class_ptr = std::make_shared<MetaClass>(child, current_namespace);
 
             // add language type
-            auto class_name = class_ptr->GetClassName();
+            if (class_ptr->ShouldCompiled())
+            {
+                auto class_name = class_ptr->GetClassName();
+                auto source_file = class_ptr->GetSourceFile();
+                schema_modules_[source_file].classes.emplace_back(class_ptr);
+                type_file_table_[class_name] = source_file;
+            }
 
-            auto source_file = class_ptr->GetSourceFile();
-            schema_modules_[source_file].classes.emplace_back(class_ptr);
-            type_file_table_[class_name] = source_file;
         }
         // todo: add enum
-        else if (CXCursor_Namespace)
+        else if (kind == CXCursor_Namespace)
         {
             // recursive build namespace
             auto display_name = child.GetCursorDisplayName();
             current_namespace.push_back(display_name);
             BuildAST(child, current_namespace);
             current_namespace.pop_back();
+        }
+        else if (kind == CXCursor_MacroDefinition)
+        {
+            std::cout << "get macro definition curosr: " << child.GetCursorDisplayName() << std::endl;
         }
     }
 

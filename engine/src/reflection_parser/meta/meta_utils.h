@@ -2,6 +2,7 @@
 
 #include "common/namespace.h"
 #include "cursor/cursor_wapper.h"
+#include "cursor/cursor_type.h"
 
 namespace Utils
 {
@@ -16,7 +17,7 @@ namespace Utils
 
     std::string FormatQualifiedName(std::string& source_string);
 
-    fs::path makeRelativePath(const fs::path& from, const fs::path& to);
+    fs::path MakeRelativePath(const fs::path& from, const fs::path& to);
 
     void fatalError(const std::string& error);
 

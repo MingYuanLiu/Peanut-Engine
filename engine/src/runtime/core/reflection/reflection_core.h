@@ -9,170 +9,183 @@
 #include <vector>
 #include <tuple>
 
-#define REGISTER_FILED_MAP(name, value)
-#define REGISTER_ARRAY_MAP(name, value)
-#define REGISTER_BASE_CLASS_MAP(name, value)
-#define REGISTER_METHOD_MAP(name, value)
-#define UNREGISTER_ALL
-
-// declare here used by functions' defination
-namespace reflection
-{
-	class TypeDataMeta;
-	class FieldAccessor;
-	class MethodAccessor;
-	class ArrayAccessor;
-	class ReflectionInstance;
-} // namespace Reflection
-
-// define methods
-typedef std::function<void(void*/*instance*/, void*/*filed value*/)> SetFunction;
-typedef std::function<void*/*filed value*/ (void* /*instance*/)>	 GetFunction;
-typedef std::function<const char*/*filed & class name*/()>			 GetNameFunction;
-typedef std::function<bool()>										 GetBoolFunction;
-
-// feild methods
-typedef std::tuple<SetFunction, GetFunction, GetNameFunction /*class name*/, GetNameFunction /*filed name*/,
-	GetNameFunction /*filed type name*/, GetBoolFunction/*is arrary type*/> FieldFunctions;
-
-// define class methods
-typedef std::function<void*/*instance*/(const json11::Json&)>		  ConstructWithJson;
-typedef std::function<json11::Json(void*)>							  WriteJson;
-typedef std::function<int(reflection::ReflectionInstance*& , void*)>	  GetBaseClassReflectionInstanceListFunction;
-
-typedef std::tuple<ConstructWithJson, WriteJson, GetBaseClassReflectionInstanceListFunction> ClassFunctions;
-
-//define method functions
-typedef std::function<void(void*/*method address*/)>				 InvokeFunction;
-typedef std::tuple<GetNameFunction/*method name*/, InvokeFunction> MethodFunctions;
-
-// define array functions
-typedef std::function<int(void*/*instance*/)>						 GetSizeFuncion;
-typedef std::function<void(void*/*instance*/, void*/*array value*/, int/*index*/)> SetArrayFunction;
-typedef std::function<void* (void*/*instance*/, int/*index*/)>		 GetArrayFuntion;
-
-typedef std::tuple<SetArrayFunction, GetArrayFuntion, GetSizeFuncion,
-	GetNameFunction /*array name*/, GetNameFunction /*value name*/> ArrayFunctions;
+namespace peanut {
 
 
-namespace reflection
-{
-	// 反射核心类：会将所有类型元数据保存到该类中，
-	// 外部用户可通过下面定义的接口可以获取反射对应的变量、方法、类型信息
-	// 
-	class TypeMetaData
+	// declare here used by functions' defination
+	namespace reflection
 	{
-		friend class FieldAccessor;
-		friend class MethodAccessor;
-		friend class ArrayAccessor;
+		class TypeDataMeta;
+		class FieldAccessor;
+		class MethodAccessor;
+		class ArrayAccessor;
+		class ReflectionInstance;
+	} // namespace Reflection
 
-	public:
-		TypeMetaData();
+	#define REGISTER_FILED_MAP(name, value) peanut::TypeMetaDataRegisterInterface::RegisterToFieldMap(name, value)
+	#define REGISTER_ARRAY_MAP(name, value) peanut::TypeMetaDataRegisterInterface::RegisterToArrayMap(name, value)
+	#define REGISTER_BASE_CLASS_MAP(name, value) peanut::TypeMetaDataRegisterInterface::RegisterToClassMap(name, value)
+	#define REGISTER_METHOD_MAP(name, value) peanut::TypeMetaDataRegisterInterface::RegisterToMethodMap(name, value)
+	#define UNREGISTER_ALL_MAP() peanut::TypeMetaDataRegisterInterface::UnRegisterAllMap()
 
-		static TypeMetaData NewMetaFromName(std::string type_name);
-		static ReflectionInstance ConstructFromJson(std::string type_name, const json11::Json& json_context);
-		static bool NewArrayAccessorFromName(std::string type_name, ArrayAccessor& out_array_accessor);
-		static json11::Json WriteToJson(std::string type_name, void* instance);
+	#define TypeMetaDefine(class_name, object_ptr_of_class) \
+		peanut::reflection::ReflectionInstance(peanut::reflection::TypeDataMeta::NewMetaFromName(#class_name), object_ptr_of_class)
 
-		std::string GetTypeName() { return type_name_; };
+	#define TypeMetaDefinePtr(class_name, object_ptr_of_class) \
+		new peanut::reflection::ReflectionInstance(peanut::reflection::TypeDataMeta::NewMetaFromName(#class_name), object_ptr_of_class)
 
-		FieldAccessor GetFieldByName(const std::string& name);
-		MethodAccessor GetMethodByName(const std::string& name);
+	// define methods
+	typedef std::function<void(void*/*instance*/, void*/*filed value*/)> SetFunction;
+	typedef std::function<void*/*filed value*/ (void* /*instance*/)>	 GetFunction;
+	typedef std::function<const char*/*filed & class name*/()>			 GetNameFunction;
+	typedef std::function<bool()>										 GetBoolFunction;
 
-		int GetFieldList(std::vector<FieldAccessor>& out_field_list);
-		int GetMethodList(std::vector<MethodAccessor>& out_method_list);
+	// feild methods
+	typedef std::tuple<SetFunction, GetFunction, GetNameFunction /*class name*/, GetNameFunction /*filed name*/,
+		GetNameFunction /*filed type name*/, GetBoolFunction/*is arrary type*/> FieldFunctions;
 
-		bool IsValid() { return is_valid_; }
+	// define class functions
+	typedef std::function<void*/*instance*/(const json11::Json&)>		  ConstructWithJson;
+	typedef std::function<json11::Json(void*)>							  WriteJson;
+	typedef std::function<int(reflection::ReflectionInstance*&, void*)>	  GetBaseClassReflectionInstanceListFunction;
 
-		int GetBaseClassRefectionInstanceList(void* instance, ReflectionInstance*& out_instance_list);
+	typedef std::tuple<ConstructWithJson, WriteJson, GetBaseClassReflectionInstanceListFunction> ClassFunctions;
 
-	private:
-		explicit TypeMetaData(const char* type_name);
+	//define method functions
+	typedef std::function<void(void*/*method address*/)>				 InvokeFunction;
+	typedef std::tuple<GetNameFunction/*method name*/, InvokeFunction> MethodFunctions;
 
-	private:
-		std::vector<FieldAccessor, std::allocator<FieldAccessor> > fields_;
-		std::vector<MethodAccessor, std::allocator<MethodAccessor> > methods_;
-		std::string type_name_;
+	// define array functions
+	typedef std::function<int(void*/*instance*/)>						 GetSizeFuncion;
+	typedef std::function<void(void*/*instance*/, void*/*array value*/, int/*index*/)> SetArrayFunction;
+	typedef std::function<void* (void*/*instance*/, int/*index*/)>		 GetArrayFuntion;
 
-		// whether current type is already registered
-		bool is_valid_;
-	};
+	typedef std::tuple<SetArrayFunction, GetArrayFuntion, GetSizeFuncion,
+		GetNameFunction /*array name*/, GetNameFunction /*value name*/> ArrayFunctions;
 
-	class ReflectionInstance
+
+	namespace reflection
 	{
-	public:
-		ReflectionInstance() {}
-		ReflectionInstance(const TypeMetaData& meta_data, void* instance) 
-			: meta_data_(meta_data), instance_(instance) {}
+		// 反射核心类：会将所有类型元数据保存到该类中，
+		// 外部用户可通过下面定义的接口可以获取反射对应的变量、方法、类型信息
+		// 
+		class TypeMetaData
+		{
+			friend class FieldAccessor;
+			friend class MethodAccessor;
+			friend class ArrayAccessor;
 
-	private:
-		TypeMetaData meta_data_;
-		void* instance_;
-	};
+		public:
+			TypeMetaData();
 
-	class FieldAccessor
-	{
-	public:
-		FieldAccessor();
-		explicit FieldAccessor(FieldFunctions* functions);
+			static TypeMetaData NewMetaFromName(std::string type_name);
+			static ReflectionInstance ConstructFromJson(std::string type_name, const json11::Json& json_context);
+			static bool NewArrayAccessorFromName(std::string type_name, ArrayAccessor& out_array_accessor);
+			static json11::Json WriteToJson(std::string type_name, void* instance);
 
-		void Set(void* instance, void* value);
-		void* Get(void* instance);
+			std::string GetTypeName() { return type_name_; };
 
-		TypeMetaData GetOwnerTypeMetaData();
-		bool GetTypeMetaData(TypeMetaData& out_meta_data);
+			FieldAccessor GetFieldByName(const std::string& name);
+			MethodAccessor GetMethodByName(const std::string& name);
 
-		inline const char* GetFieldName() const { return field_name_; }
-		inline const char* GetFieldTypeName() const { return field_type_name_; }
+			int GetFieldList(std::vector<FieldAccessor>& out_field_list);
+			int GetMethodList(std::vector<MethodAccessor>& out_method_list);
 
-		bool IsArrayType();
+			bool IsValid() { return is_valid_; }
 
-	private:
-		FieldFunctions* functions_;
-		const char* field_name_;
-		const char* field_type_name_;
-	};
+			int GetBaseClassRefectionInstanceList(void* instance, ReflectionInstance*& out_instance_list);
 
-	class MethodAccessor 
-	{
-	public:
-		MethodAccessor() {}
-		explicit MethodAccessor(MethodFunctions* functions) : functions_(functions) {}
+		private:
+			explicit TypeMetaData(const char* type_name);
 
-	private:
-		MethodFunctions* functions_;
-	};
+		private:
+			std::vector<FieldAccessor, std::allocator<FieldAccessor> > fields_;
+			std::vector<MethodAccessor, std::allocator<MethodAccessor> > methods_;
+			std::string type_name_;
 
-	class ArrayAccessor
-	{
-	public:
-		ArrayAccessor() {}
-		explicit ArrayAccessor(ArrayFunctions* functions) : functions_(functions) {}
+			// whether current type is already registered
+			bool is_valid_;
+		};
 
-	private:
-		ArrayFunctions* functions_;
-	};
+		class ReflectionInstance
+		{
+		public:
+			ReflectionInstance() {}
+			ReflectionInstance(const TypeMetaData& meta_data, void* instance)
+				: meta_data_(meta_data), instance_(instance) {}
 
-	template<typename T>
-	class ReflectionPtr
-	{
-	public:
-		// constructor
-		ReflectionPtr() : instance_(nullptr) {}
-	};
+		private:
+			TypeMetaData meta_data_;
+			void* instance_;
+		};
 
-	// 反射实现的基本逻辑：
-	// 1. 反射解析程序提取出带有反射标记的类型信息；
-	// 2. 将提出到的类型信息，注册到记录表中；
-	// 3. 使用时，根据类型名去记录表中查找对应的反射信息；
-	class TypeMetaDataRegisterInterface
-	{
-		void RegisterToFieldMap(const char* name, FieldFunctions* value);
+		class FieldAccessor
+		{
+		public:
+			FieldAccessor();
+			explicit FieldAccessor(FieldFunctions* functions);
 
-		void RegisterToClassMap(const char* name, ClassFunctions* value);
+			void Set(void* instance, void* value);
+			void* Get(void* instance);
 
-		void RegisterToMethodMap(const char* name, MethodFunctions* value);
+			TypeMetaData GetOwnerTypeMetaData();
+			bool GetTypeMetaData(TypeMetaData& out_meta_data);
 
-		void RegisterToArrayMap(const char* name, ArrayFunctions* value);
-	};
-}
+			inline const char* GetFieldName() const { return field_name_; }
+			inline const char* GetFieldTypeName() const { return field_type_name_; }
+
+			bool IsArrayType();
+
+		private:
+			FieldFunctions* functions_;
+			const char* field_name_;
+			const char* field_type_name_;
+		};
+
+		class MethodAccessor
+		{
+		public:
+			MethodAccessor() {}
+			explicit MethodAccessor(MethodFunctions* functions) : functions_(functions) {}
+
+		private:
+			MethodFunctions* functions_;
+		};
+
+		class ArrayAccessor
+		{
+		public:
+			ArrayAccessor() {}
+			explicit ArrayAccessor(ArrayFunctions* functions) : functions_(functions) {}
+
+		private:
+			ArrayFunctions* functions_;
+		};
+
+		template<typename T>
+		class ReflectionPtr
+		{
+		public:
+			// constructor
+			ReflectionPtr() : instance_(nullptr) {}
+		};
+
+		// 反射实现的基本逻辑：
+		// 1. 反射解析程序提取出带有反射标记的类型信息；
+		// 2. 将提出到的类型信息，注册到记录表中；
+		// 3. 使用时，根据类型名去记录表中查找对应的反射信息；
+		class TypeMetaDataRegisterInterface
+		{
+			void RegisterToFieldMap(const char* name, FieldFunctions* value);
+
+			void RegisterToClassMap(const char* name, ClassFunctions* value);
+
+			void RegisterToMethodMap(const char* name, MethodFunctions* value);
+
+			void RegisterToArrayMap(const char* name, ArrayFunctions* value);
+
+			void UnregisterAllMap();
+		};
+	}
+
+} // namespace peanut

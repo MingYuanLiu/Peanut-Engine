@@ -1,15 +1,16 @@
 #pragma once
+#include <string>
+
 #include "runtime/core/reflection/marcos.h"
 
 namespace peanut
 {
-	META_CLASS()
-	class Level
+	class META_CLASS() Level
 	{
 	public:
 
 		META_FUNCTION()
-		std::string GetLevelName();
+		std::string GetLevelName() { return level_name_; }
 		
 	private:
 		META_PROPERTY()

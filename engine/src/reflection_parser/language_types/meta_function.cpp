@@ -1,6 +1,7 @@
 #include "language_types/meta_function.h"
+#include "language_types/meta_class.h"
 
-MetaFunction::MetaFunction(const WapperCursor& own_cursor, Namespace current_namespace, MetaClass* parent_class = nullptr)
+MetaFunction::MetaFunction(const WapperCursor& own_cursor, Namespace current_namespace, MetaClass* parent_class)
 	: MetaType(own_cursor, current_namespace),
 	parent_class_(parent_class)
 {

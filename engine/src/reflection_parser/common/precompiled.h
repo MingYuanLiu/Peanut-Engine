@@ -19,7 +19,6 @@ namespace fs = std::filesystem;
 
 #include "meta/meta_data_config.h"
 #include "meta/meta_utils.h"
-#include "cursor/cursor_type.h"
 
 #include "mustache.hpp"
 

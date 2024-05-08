@@ -4,6 +4,7 @@
 
 #include "language_types/meta_class.h"
 #include "template_manager/template_manager.h"
+#include "cursor/cursor_type.h"
 
 #include <map>
 #include <set>
@@ -51,17 +52,13 @@ namespace Generator
         Mustache::data class_defines(Mustache::data::type::list);
 
         include_headfiles.push_back(
-            Mustache::data("headfile_name", Utils::makeRelativePath(root_path_, path).string()));
+            Mustache::data("headfile_name", Utils::MakeRelativePath(root_path_, path).string()));
 
-        std::map<std::string, bool> class_names;
         // class defs in single header file
         for (auto class_temp : schema.classes)
         {
             if (!class_temp->ShouldCompiled())
                 continue;
-
-            class_names.insert_or_assign(class_temp->GetClassName(), false);
-            class_names[class_temp->GetClassName()] = true;
 
             std::vector<std::string>                                   field_names;
             std::map<std::string, std::pair<std::string, std::string>> vector_map;
@@ -124,7 +121,7 @@ namespace Generator
 
         sourcefile_list_.emplace_back(tmp);
 
-        head_file_list_.emplace_back(Utils::makeRelativePath(root_path_, file_path).string());
+        head_file_list_.emplace_back(Utils::MakeRelativePath(root_path_, file_path).string());
         return 0;
     }
 

@@ -2,6 +2,7 @@
 #include "common/precompiled.h"
 #include "language_types/meta_class.h"
 #include "template_manager/template_manager.h"
+#include "cursor/cursor_type.h"
 
 namespace Generator
 {
@@ -43,7 +44,7 @@ namespace Generator
         Mustache::data class_defines(Mustache::data::type::list);
 
         include_headfiles.push_back(
-            Mustache::data("headfile_name", Utils::makeRelativePath(root_path_, path).string()));
+            Mustache::data("headfile_name", Utils::MakeRelativePath(root_path_, path).string()));
         for (auto class_temp : schema.classes)
         {
             if (!class_temp->ShouldCompiled())
@@ -63,7 +64,7 @@ namespace Generator
                     if (file_path != include_file_base)
                     {
                         include_headfiles.push_back(Mustache::data(
-                            "headfile_name", Utils::makeRelativePath(root_path_, include_file_base).string()));
+                            "headfile_name", Utils::MakeRelativePath(root_path_, include_file_base).string()));
                     }
                 }
             }
@@ -83,7 +84,7 @@ namespace Generator
                         if (file_path != include_file_base)
                         {
                             include_headfiles.push_back(Mustache::data(
-                                "headfile_name", Utils::makeRelativePath(root_path_, include_file_base).string()));
+                                "headfile_name", Utils::MakeRelativePath(root_path_, include_file_base).string()));
                         }
                     }
                 }
@@ -100,7 +101,7 @@ namespace Generator
         Utils::SaveFile(render_string, file_path);
 
         m_include_headfiles.push_back(
-            Mustache::data("headfile_name", Utils::makeRelativePath(out_path_, file_path).string()));
+            Mustache::data("headfile_name", Utils::MakeRelativePath(out_path_, file_path).string()));
         return 0;
     }
 

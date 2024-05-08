@@ -1,7 +1,8 @@
 #pragma once
 
 #include "language_types/meta_type.h"
-#include "language_types/meta_class.h"
+
+class MetaClass;
 
 class MetaFunction : public MetaType
 {
