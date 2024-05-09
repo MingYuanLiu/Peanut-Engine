@@ -210,26 +210,134 @@ namespace peanut {
 			}
 		}
 
-		MethodAccessor::MethodAccessor() : functions_(nullptr), method_name_(kUnkownTypeName)
+		FieldAccessor& FieldAccessor::operator=(const FieldAccessor& other)
+		{
+			if (this == &other)
+			{
+				return *this;
+			}
+
+			functions_ = other.functions_;
+			field_name_ = other.field_name_;
+			field_type_name_ = other.field_type_name_;
+			return *this;
+		}
+
+		// method
+		MethodAccessor::MethodAccessor() : method_functions_(nullptr), method_name_(kUnkownTypeName)
 		{
 		}
 
 		MethodAccessor::MethodAccessor(MethodFunctions* functions) : 
-			functions_(functions),
+			method_functions_(functions),
 			method_name_(kUnkownTypeName)
 		{
-			if (functions_ != nullptr)
+			if (method_functions_ != nullptr)
 			{
-				method_name_ = std::get<0>(*functions_)();
+				method_name_ = std::get<0>(*method_functions_)();
 			}
 		}
 
 		void MethodAccessor::InvokeMethod(void* instance)
 		{
-			if (functions_ != nullptr)
+			if (method_functions_ != nullptr)
 			{
-				std::get<1>(*functions_)(instance);
+				std::get<1>(*method_functions_)(instance);
 			}
+		}
+
+		MethodAccessor& MethodAccessor::operator=(const MethodAccessor& other)
+		{
+			if (this == &other)
+			{
+				return *this;
+			}
+
+			method_functions_ = other.method_functions_;
+			method_name_ = other.method_name_;
+			return *this;
+		}
+
+		// arrary
+		ArrayAccessor::ArrayAccessor() : 
+			array_functions_(nullptr),
+			arrary_name_(kUnkownTypeName),
+			element_type_name_(kUnkownTypeName)
+		{
+		}
+
+		ArrayAccessor::ArrayAccessor(ArrayFunctions* functions) : array_functions_(functions)
+		{
+			if (array_functions_ != nullptr)
+			{
+				arrary_name_ = std::get<3>(*array_functions_)();
+				element_type_name_ = std::get<4>(*array_functions_)();
+			}
+		}
+
+		void ArrayAccessor::Set(void* instance, void* value, int index)
+		{
+			if (array_functions_ != nullptr)
+			{
+				std::get<0>(*array_functions_)(instance, value, index);
+			}
+		}
+
+		void* ArrayAccessor::Get(void* instance, int index)
+		{
+			if (array_functions_ != nullptr)
+			{
+				return static_cast<void*>(std::get<1>(*array_functions_)(instance, index));
+			}
+
+			return nullptr;
+		}
+
+		int ArrayAccessor::GetSize(void* instance)
+		{
+			if (array_functions_ != nullptr)
+			{
+				return static_cast<int>(std::get<2>(*array_functions_)(instance));
+			}
+
+			return 0;
+		}
+
+		ArrayAccessor& ArrayAccessor::operator=(const ArrayAccessor& other)
+		{
+			if (this == &other)
+			{
+				return *this;
+			}
+
+			array_functions_ = other.array_functions_;
+			arrary_name_ = other.arrary_name_;
+			element_type_name_ = other.element_type_name_;
+			return *this;
+		}
+
+		ReflectionInstance& ReflectionInstance::operator=(const ReflectionInstance& other)
+		{
+			if (this == &other)
+			{
+				return *this;
+			}
+
+			meta_data_ = other.meta_data_;
+			instance_ = other.instance_;
+			return *this;
+		}
+
+		ReflectionInstance& ReflectionInstance::operator=(const ReflectionInstance&& other)
+		{
+			if (this == &other)
+			{
+				return *this;
+			}
+
+			meta_data_ = other.meta_data_;
+			instance_ = other.instance_;
+			return *this;
 		}
 
 	} // namespace reflection

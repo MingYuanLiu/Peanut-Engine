@@ -8,6 +8,7 @@
 #include <unordered_set>
 #include <vector>
 #include <tuple>
+#include <assert.h>
 
 namespace peanut {
 
@@ -85,15 +86,15 @@ namespace peanut {
 
 			std::string GetTypeName() { return type_name_; };
 
-			FieldAccessor GetFieldByName(const std::string& name);
-			MethodAccessor GetMethodByName(const std::string& name);
+			FieldAccessor GetFieldByName(const std::string& name); // todo: impl
+			MethodAccessor GetMethodByName(const std::string& name); // todo: impl
 
-			inline int GetFieldList(std::vector<FieldAccessor>& out_field_list);
-			inline int GetMethodList(std::vector<MethodAccessor>& out_method_list);
+			inline int GetFieldList(std::vector<FieldAccessor>& out_field_list); // todo: impl
+			inline int GetMethodList(std::vector<MethodAccessor>& out_method_list); // todo: impl
 
 			bool IsValid() { return is_valid_; }
 
-			int GetBaseClassRefectionInstanceList(void* instance, ReflectionInstance*& out_instance_list);
+			int GetBaseClassRefectionInstanceList(void* instance, ReflectionInstance*& out_instance_list); // todo: impl
 
 		private:
 			explicit TypeMetaData(const char* type_name);
@@ -110,9 +111,12 @@ namespace peanut {
 		class ReflectionInstance
 		{
 		public:
-			ReflectionInstance() {}
+			ReflectionInstance() : meta_data_(TypeMetaData()), instance_(nullptr) {}
 			ReflectionInstance(const TypeMetaData& meta_data, void* instance)
 				: meta_data_(meta_data), instance_(instance) {}
+
+			ReflectionInstance& operator=(const ReflectionInstance& other);
+			ReflectionInstance& operator=(const ReflectionInstance&& other);
 
 		private:
 			TypeMetaData meta_data_;
@@ -121,9 +125,9 @@ namespace peanut {
 
 		class FieldAccessor
 		{
+			friend class TypeMetaData;
 		public:
 			FieldAccessor();
-			explicit FieldAccessor(FieldFunctions* functions);
 
 			void Set(void* instance, void* value);
 			void* Get(void* instance);
@@ -136,6 +140,11 @@ namespace peanut {
 
 			bool IsArrayType();
 
+			FieldAccessor& operator=(const FieldAccessor& other);
+
+		private:
+			explicit FieldAccessor(FieldFunctions* functions);
+
 		private:
 			FieldFunctions* functions_;
 			std::string field_name_;
@@ -144,27 +153,47 @@ namespace peanut {
 
 		class MethodAccessor
 		{
+			friend class TypeMetaData;
 		public:
 			MethodAccessor();
-			explicit MethodAccessor(MethodFunctions* functions);
+			
 
 			inline const char* GetMethodName() const { return method_name_.c_str(); }
 
 			void InvokeMethod(void* instance);
 
+			MethodAccessor& operator=(const MethodAccessor& other);
+
 		private:
-			MethodFunctions* functions_; 
+			explicit MethodAccessor(MethodFunctions* functions);
+
+		private:
+			MethodFunctions* method_functions_; 
 			std::string method_name_;
 		};
 
 		class ArrayAccessor
 		{
+			friend class TypeMetaData;
 		public:
-			ArrayAccessor() {}
-			explicit ArrayAccessor(ArrayFunctions* functions) : functions_(functions) {}
+			ArrayAccessor();
+			inline const char* GetArrayName() const { return arrary_name_.c_str(); }
+			inline const char* GetElementTypeName() const { return element_type_name_.c_str(); }
+
+			void Set(void* instance, void* value, int index);
+			void* Get(void* instance, int index);
+
+			int GetSize(void* instance);
+
+			ArrayAccessor& operator=(const ArrayAccessor& other);
 
 		private:
-			ArrayFunctions* functions_;
+			explicit ArrayAccessor(ArrayFunctions* functions);
+
+		private:
+			ArrayFunctions* array_functions_;
+			std::string arrary_name_;
+			std::string element_type_name_;
 		};
 
 		template<typename T>
@@ -172,7 +201,145 @@ namespace peanut {
 		{
 		public:
 			// constructor
-			ReflectionPtr() : instance_(nullptr) {}
+			ReflectionPtr(const std::string& type_name, T* instance)
+				: type_name_(type_name), instance_(instance) {}
+
+			ReflectionPtr() : type_name_(), instance_(nullptr) {}
+
+			ReflectionPtr(const ReflectionPtr& other)
+				: type_name_(other.type_name_), instance_(other.instance_) {}
+
+			std::string GetTypeName() { return type_name_; }
+			void SetTypeName(const std::string& type_name) { type_name_ = type_name; }
+
+			T* GetNative() { return instance_; }
+			T* GetNative() const { return instance_; }
+
+			T* operator->() { 
+				assert(instance_ != nullptr);
+				return instance_; 
+			}
+
+			T* operator->() const { 
+				assert(instance_ != nullptr);
+				return instance_; 
+			}
+
+			T& operator*() { 
+				assert(instance_ != nullptr);
+				return *instance_; 
+			}
+
+			T& operator*() const { 
+				assert(instance_ != nullptr);
+				return *instance_; 
+			}
+
+			const T& operator*() const { 
+				assert(instance_ != nullptr);
+				return *(static_cast<const T*>(instance_));
+			}
+
+			operator bool() const { return (instance_ != nullptr); }
+
+			ReflectionPtr<T>& operator=(const ReflectionPtr<T>& other)
+			{
+				if (this == &other)
+				{
+					return *this;
+				}
+
+				type_name_ = other.type_name_;
+				instance_ = other.instance_;
+				return *this;
+			}
+
+			ReflectionPtr<T>& operator=(ReflectionPtr<T>&& other)
+			{
+				if (this == &other)
+				{
+					return *this;
+				}
+
+				type_name_ = other.type_name_;
+				instance_ = other.instance_;
+				return *this;
+			}
+
+			template<typename U>
+			ReflectionPtr<T>& operator=(const ReflectionPtr<U>& other)
+			{
+				if (this == &other)
+				{
+					return *this;
+				}
+
+				type_name_ = other.GetTypeName();
+				instance_ = static_cast<T*>(other.GetNative());
+				return *this;
+			}
+
+			template<typename U>
+			ReflectionPtr<T>& operator=(ReflectionPtr<U>&& other)
+			{
+				if (this == &other)
+				{
+					return *this;
+				}
+
+				type_name_ = other.GetTypeName();
+				instance_ = static_cast<T*>(other.GetNative());
+				return *this;
+			}
+
+			bool operator==(const ReflectionPtr<T>& rhs_other) const
+			{
+				return (instance_ == rhs_other.instance_);
+			}
+
+			bool operator!=(ReflectionPtr<T>&& rhs_other) const
+			{
+				return (instance_ != rhs_other.instance_);
+			}
+
+			bool operator==(const T* other) const 
+			{
+				return (instance_ == other);
+			}
+
+			bool operator!=(const T* other) const
+			{
+				return (instance_ != other);
+			}
+
+			template<typename T1>
+			explicit operator T1*() 
+			{
+				return static_cast<T1*>(instance_);
+			}
+
+			template<typename T1>
+			explicit operator const T1*() const
+			{
+				return static_cast<const T1*>(instance_);
+			}
+
+			template<typename T1>
+			explicit operator ReflectionPtr<T1>()
+			{
+				return ReflectionPtr<T1>(type_name_, static_cast<T1*>(instance_));
+			}
+
+			template<typename T1>
+			explicit operator ReflectionPtr<T1>() const
+			{
+				return ReflectionPtr<T1>(type_name_, static_cast<T1*>(instance_));
+			}
+
+		private:
+			std::string type_name_;
+			typedef T Type;
+			T* instance_;
 		};
 
 		// 反射实现的基本逻辑：
