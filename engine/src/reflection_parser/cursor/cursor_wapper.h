@@ -1,9 +1,12 @@
 #pragma once
 #include "common/precompiled.h"
 
+#include "cursor/cursor_type.h"
+
 #include <vector>
 
 class CursorType;
+
 /**
 * The wapper class of CXCursor
 */
@@ -28,6 +31,8 @@ public:
 	std::string GetCursorLocateFile() const;
 
 	void GetCursorLocateLine(uint32_t& start_line, uint32_t& end_line) const;
+
+	bool IsDefinition(void) const;
 
 	CursorType GetType() const { return clang_getCursorType(cursor_); }
 

@@ -1,13 +1,15 @@
 #include "common/precompiled.h"
 
 #include "generator/generator.h"
+#include "cursor/cursor_type.h"
 
 namespace Generator
 {
-    void GeneratorInterface::PrepareStatus(std::string path)
+    void GeneratorInterface::Prepare(const std::string& path)
     {
         if (!fs::exists(path))
         {
+            // create output directory
             fs::create_directories(path);
         }
     }

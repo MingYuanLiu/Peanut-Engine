@@ -37,15 +37,15 @@ public:
 
     void GenerateFiles(void);
 
-    std::string GetIncludeFile(const std::string& file_name);
+    std::string GetIncludeFile(const std::string& class_name);
 
 private:
     void BuildAST(const WapperCursor& cursor, Namespace& current_namespace);
 
 
 private:
-    std::vector<std::string> arguments_ =
-        {"-x","c++", "-std=c++11", "-D__REFLECTION_PARSER__",
+    std::vector<std::string> arguments_ = // "-x","c++", "-std=c++11",
+        { "-x", "c++", "-D__REFLECTION_PARSER__",
         "-DNDEBUG", "-D__clang__", "-w", "-MG", "-M", "-ferror-limit=0",
         "-o clangLog.txt"};
 

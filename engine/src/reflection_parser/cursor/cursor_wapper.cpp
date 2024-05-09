@@ -33,8 +33,8 @@ std::string WapperCursor::GetCursorLocateFile() const
 	std::string localtion_file;
 	Utils::toString(clang_getFileName(file), localtion_file);
 
-	std::cout << "========== GetCursorLocateFile ============== \n";
-	std::cout << "get location file: " << localtion_file << "\n";
+	// std::cout << "========== GetCursorLocateFile ============== \n";
+	// std::cout << "get location file: " << localtion_file << "\n";
 
 	return localtion_file;
 }
@@ -58,6 +58,11 @@ void WapperCursor::GetCursorLocateLine(uint32_t& start_line, uint32_t& end_line)
 	std::cout << "start_line: " << start_line << " end_line: " << end_line << "\n";
 	std::cout << "start_column: " << start_column << " end_column: " << end_column << "\n";
 	std::cout << "=============================================" << "\n";
+}
+
+bool WapperCursor::IsDefinition(void) const
+{
+	return clang_isCursorDefinition(cursor_);
 }
 
  WapperCursor::List WapperCursor::GetAllChild() const
