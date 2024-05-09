@@ -208,6 +208,7 @@ void ReflectionParser::BuildAST(const WapperCursor& cursor, Namespace& current_n
             {
                 auto class_name = class_ptr->GetClassName();
                 auto source_file = class_ptr->GetSourceFile();
+                schema_modules_[source_file].name = class_name;
                 schema_modules_[source_file].classes.emplace_back(class_ptr);
                 type_file_table_[class_name] = source_file;
             }

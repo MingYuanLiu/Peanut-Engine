@@ -7,7 +7,7 @@ namespace Generator
     public:
         ReflectionGenerator() = delete;
         ReflectionGenerator(std::string source_directory, std::function<std::string(const std::string&)> get_include_function);
-        virtual int  Generate(std::string path, SchemaMoudle schema) override;
+        virtual int  Generate(const std::string& path, const SchemaMoudle& schema) override;
         virtual void Finish() override;
         virtual ~ReflectionGenerator() override;
 

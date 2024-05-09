@@ -1,7 +1,11 @@
 #pragma once
 
-class Serializer
+namespace peanut
 {
-public:
-    
-};
+	class Serializer
+	{
+	public:
+
+	};
+}
+
