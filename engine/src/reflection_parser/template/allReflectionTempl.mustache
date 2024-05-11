@@ -6,8 +6,8 @@
 {{/include_headfiles}}
 
 namespace peanut{
-namespace Reflection{
-    void TypeMetaRegister::metaRegister(){
+namespace reflection{
+    void TypeMetaRegister::MetaRegister(){
         {{#sourefile_names}}TypeWrappersRegister::{{sourefile_name_upper_camel_case}}();
         {{/sourefile_names}}
     }

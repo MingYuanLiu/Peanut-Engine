@@ -3,13 +3,14 @@
 
 #include "runtime/core/reflection/marcos.h"
 #include "runtime/core/framework/level/level.h"
-
+#include "_generated_/reflection/all_reflection.h"
 
 namespace peanut
 {
 	class META_CLASS() World
 	{
-		GENERATE_BODY()
+		GENERATE_BODY(World);
+
 	public:
 
 		META_FUNCTION()

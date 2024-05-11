@@ -146,6 +146,22 @@ namespace peanut {
 			return ReflectionInstance();
 		}
 
+		FieldAccessor TypeMetaData::GetFieldByName(const std::string& name)
+		{
+			for (const auto& accessor : fields_)
+			{
+				if (accessor.GetFieldName() == name)
+				{
+					return accessor;
+				}
+			}
+		}
+
+		MethodAccessor TypeMetaData::GetMethodByName(const std::string& name)
+		{
+
+		}
+
 		// Field Accessor
 		FieldAccessor::FieldAccessor() : 
 			functions_(nullptr), field_name_(kUnkownTypeName), field_type_name_(kUnkownTypeName)

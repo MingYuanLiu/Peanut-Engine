@@ -31,10 +31,10 @@ namespace peanut
 #endif
 
 #define GENERATE_BODY(class_name) \
-	friend class relection::TypeReflectionOparator::##class_name##Operators;
+	friend class reflection::TypeReflectionOparator::##class_name##Operators;
 
 #define REFLECTION_TYPE(class_name) \
-namespace relection { \
+namespace reflection { \
 	namespace TypeReflectionOparator { \
 		class ##class_name##Operators; \
 	} \
