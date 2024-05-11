@@ -41,7 +41,7 @@ namespace Generator
         return out_path_ + "/" + relative_dir;
     }
 
-    int ReflectionGenerator::Generate(std::string path, SchemaMoudle schema)
+    int ReflectionGenerator::Generate(const std::string& path, const SchemaMoudle& schema)
     {
         static const std::string vector_prefix = "std::vector<";
 

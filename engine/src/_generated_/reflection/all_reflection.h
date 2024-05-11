@@ -5,8 +5,8 @@
 #include "_generated_/reflection/world.reflection.gen.h"
 
 namespace peanut{
-namespace Reflection{
-    void TypeMetaRegister::metaRegister(){
+namespace reflection{
+    void TypeMetaRegister::MetaRegister(){
         TypeWrappersRegister::Level();
         TypeWrappersRegister::World();
     }

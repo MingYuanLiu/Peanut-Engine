@@ -20,6 +20,7 @@ namespace Generator
     void SerializerGenerator::Prepare(const std::string& path)
     {
         GeneratorInterface::Prepare(path);
+        LoadCodeTemplate();
     }
 
     void SerializerGenerator::LoadCodeTemplate()
@@ -35,7 +36,7 @@ namespace Generator
         return out_path_ + "/" + relativeDir;
     }
     
-    int SerializerGenerator::Generate(std::string path, SchemaMoudle schema)
+    int SerializerGenerator::Generate(const std::string& path, const SchemaMoudle& schema)
     {
         std::string file_path = ProcessFileName(path);
 
@@ -91,7 +92,7 @@ namespace Generator
                 // deal normal
             }
             class_defines.push_back(class_def);
-            m_class_defines.push_back(class_def);
+            class_defines_.push_back(class_def);
         }
 
         muatache_data.set("class_defines", class_defines);
@@ -100,7 +101,7 @@ namespace Generator
             TemplateManager::getInstance()->RenderByTemplate(common_serialize_template_filename, muatache_data);
         Utils::SaveFile(render_string, file_path);
 
-        m_include_headfiles.push_back(
+        include_headfiles_.push_back(
             Mustache::data("headfile_name", Utils::MakeRelativePath(out_path_, file_path).string()));
         return 0;
     }
@@ -108,8 +109,8 @@ namespace Generator
     void SerializerGenerator::Finish()
     {
         Mustache::data mustache_data;
-        mustache_data.set("class_defines", m_class_defines);
-        mustache_data.set("include_headfiles", m_include_headfiles);
+        mustache_data.set("class_defines", class_defines_);
+        mustache_data.set("include_headfiles", include_headfiles_);
 
         std::string render_string = TemplateManager::getInstance()->RenderByTemplate(all_serialize_template_filename, mustache_data);
         Utils::SaveFile(render_string, out_path_ + "/all_serializer.h");

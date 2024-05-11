@@ -21,7 +21,7 @@ namespace Generator
         * @param: path
         * @param: schema
         */
-        virtual int  Generate(std::string path, SchemaMoudle schema) = 0;
+        virtual int  Generate(const std::string& path, const SchemaMoudle& schema) = 0;
         virtual void Finish() {};
 
         virtual ~GeneratorInterface() {};

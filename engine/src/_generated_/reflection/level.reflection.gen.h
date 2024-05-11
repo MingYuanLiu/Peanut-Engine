@@ -1,20 +1,21 @@
 #pragma once
+#include "runtime/core/reflection/reflection_core.h"
 #include "runtime/core/framework/level/level.h"
 
 namespace peanut{
     class Level;
 namespace reflection{
 namespace TypeReflectionOparator{
-    class LevelOperator{
+    class LevelOperators{
     public:
         static const char* GetClassName(){ return "Level";}
         static void* ConstructFromJson(const Json& json_context){
             Level* ret_instance= new Level;
-            Serializer::read(json_context, *ret_instance);
+            Serializer::Read(json_context, *ret_instance);
             return ret_instance;
         }
         static Json WriteByName(void* instance){
-            return Serializer::write(*(Level*)instance);
+            return Serializer::Write(*(Level*)instance);
         }
         // base class
         static int GetLevelBaseClassReflectionInstanceList(ReflectionInstance* &out_list, void* instance){
@@ -38,25 +39,25 @@ namespace TypeReflectionOparator{
 
     void TypeWrapperRegister_Level(){
 		FieldFunctions* field_function_tuple_level_name_=new FieldFunctions(
-            &TypeReflectionOparator::LevelOperator::Set_level_name_,
-            &TypeReflectionOparator::LevelOperator::Get_level_name_,
-            &TypeReflectionOparator::LevelOperator::GetClassName,
-            &TypeReflectionOparator::LevelOperator::GetFieldName_level_name_,
-            &TypeReflectionOparator::LevelOperator::GetFieldTypeName_level_name_,
-            &TypeReflectionOparator::LevelOperator::IsArray_level_name_);
+            &TypeReflectionOparator::LevelOperators::Set_level_name_,
+            &TypeReflectionOparator::LevelOperators::Get_level_name_,
+            &TypeReflectionOparator::LevelOperators::GetClassName,
+            &TypeReflectionOparator::LevelOperators::GetFieldName_level_name_,
+            &TypeReflectionOparator::LevelOperators::GetFieldTypeName_level_name_,
+            &TypeReflectionOparator::LevelOperators::IsArray_level_name_);
         REGISTER_FIELD_TO_MAP("Level", field_function_tuple_level_name_);
 
         MethodFunctions* method_function_tuple_GetLevelName=new MethodFunctions(
-            &TypeFieldReflectionOparator::TypeLevelOperator::GetMethodName_GetLevelName,
-            &TypeFieldReflectionOparator::TypeLevelOperator::Invoke_GetLevelName);
-        REGISTER_Method_TO_MAP("Level", method_function_tuple_GetLevelName);
+            &TypeReflectionOparator::LevelOperators::GetMethodName_GetLevelName,
+            &TypeReflectionOparator::LevelOperators::Invoke_GetLevelName);
+        REGISTER_METHOD_TO_MAP("Level", method_function_tuple_GetLevelName);
         
         
 		
 		ClassFunctions* class_function_tuple_Level=new ClassFunctions(
-            &TypeFieldReflectionOparator::TypeLevelOperator::ConstructorWithJson,
-            &TypeFieldReflectionOparator::TypeLevelOperator::WriteByName,
-			&TypeFieldReflectionOparator::TypeLevelOperator::GetLevelBaseClassReflectionInstanceList);
+            &TypeReflectionOparator::LevelOperators::ConstructFromJson,
+            &TypeReflectionOparator::LevelOperators::WriteByName,
+			&TypeReflectionOparator::LevelOperators::GetLevelBaseClassReflectionInstanceList);
         REGISTER_BASE_CLASS_TO_MAP("Level", class_function_tuple_Level);
     }
 namespace TypeWrappersRegister{

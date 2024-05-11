@@ -9,7 +9,7 @@ namespace Generator
         SerializerGenerator() = delete;
         SerializerGenerator(std::string source_directory, std::function<std::string(std::string)> get_include_function);
 
-        virtual int Generate(std::string path, SchemaMoudle schema) override;
+        virtual int Generate(const std::string& path, const SchemaMoudle& schema) override;
 
         virtual void Finish() override;
 
@@ -22,8 +22,8 @@ namespace Generator
 
     private:
         void LoadCodeTemplate();
-        Mustache::data m_class_defines {Mustache::data::type::list};
-        Mustache::data m_include_headfiles {Mustache::data::type::list};
+        Mustache::data class_defines_ {Mustache::data::type::list};
+        Mustache::data include_headfiles_ {Mustache::data::type::list};
 
         static const std::string all_serialize_template_filename;
         static const std::string all_serialize_template_impl_filename;

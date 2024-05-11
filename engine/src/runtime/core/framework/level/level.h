@@ -2,11 +2,14 @@
 #include <string>
 
 #include "runtime/core/reflection/marcos.h"
+#include "_generated_/reflection/all_reflection.h"
 
 namespace peanut
 {
 	class META_CLASS() Level
 	{
+		GENERATE_BODY(Level);
+
 	public:
 
 		META_FUNCTION()

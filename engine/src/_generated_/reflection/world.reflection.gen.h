@@ -1,20 +1,21 @@
 #pragma once
+#include "runtime/core/reflection/reflection_core.h"
 #include "runtime/core/framework/world/world.h"
 
 namespace peanut{
     class World;
 namespace reflection{
 namespace TypeReflectionOparator{
-    class WorldOperator{
+    class WorldOperators{
     public:
         static const char* GetClassName(){ return "World";}
         static void* ConstructFromJson(const Json& json_context){
             World* ret_instance= new World;
-            Serializer::read(json_context, *ret_instance);
+            Serializer::Read(json_context, *ret_instance);
             return ret_instance;
         }
         static Json WriteByName(void* instance){
-            return Serializer::write(*(World*)instance);
+            return Serializer::Write(*(World*)instance);
         }
         // base class
         static int GetWorldBaseClassReflectionInstanceList(ReflectionInstance* &out_list, void* instance){
@@ -45,37 +46,37 @@ namespace TypeReflectionOparator{
 
     void TypeWrapperRegister_World(){
 		FieldFunctions* field_function_tuple_world_name_=new FieldFunctions(
-            &TypeReflectionOparator::WorldOperator::Set_world_name_,
-            &TypeReflectionOparator::WorldOperator::Get_world_name_,
-            &TypeReflectionOparator::WorldOperator::GetClassName,
-            &TypeReflectionOparator::WorldOperator::GetFieldName_world_name_,
-            &TypeReflectionOparator::WorldOperator::GetFieldTypeName_world_name_,
-            &TypeReflectionOparator::WorldOperator::IsArray_world_name_);
+            &TypeReflectionOparator::WorldOperators::Set_world_name_,
+            &TypeReflectionOparator::WorldOperators::Get_world_name_,
+            &TypeReflectionOparator::WorldOperators::GetClassName,
+            &TypeReflectionOparator::WorldOperators::GetFieldName_world_name_,
+            &TypeReflectionOparator::WorldOperators::GetFieldTypeName_world_name_,
+            &TypeReflectionOparator::WorldOperators::IsArray_world_name_);
         REGISTER_FIELD_TO_MAP("World", field_function_tuple_world_name_);
 		FieldFunctions* field_function_tuple_current_level_=new FieldFunctions(
-            &TypeReflectionOparator::WorldOperator::Set_current_level_,
-            &TypeReflectionOparator::WorldOperator::Get_current_level_,
-            &TypeReflectionOparator::WorldOperator::GetClassName,
-            &TypeReflectionOparator::WorldOperator::GetFieldName_current_level_,
-            &TypeReflectionOparator::WorldOperator::GetFieldTypeName_current_level_,
-            &TypeReflectionOparator::WorldOperator::IsArray_current_level_);
+            &TypeReflectionOparator::WorldOperators::Set_current_level_,
+            &TypeReflectionOparator::WorldOperators::Get_current_level_,
+            &TypeReflectionOparator::WorldOperators::GetClassName,
+            &TypeReflectionOparator::WorldOperators::GetFieldName_current_level_,
+            &TypeReflectionOparator::WorldOperators::GetFieldTypeName_current_level_,
+            &TypeReflectionOparator::WorldOperators::IsArray_current_level_);
         REGISTER_FIELD_TO_MAP("World", field_function_tuple_current_level_);
 
         MethodFunctions* method_function_tuple_GetWorldName=new MethodFunctions(
-            &TypeFieldReflectionOparator::TypeWorldOperator::GetMethodName_GetWorldName,
-            &TypeFieldReflectionOparator::TypeWorldOperator::Invoke_GetWorldName);
-        REGISTER_Method_TO_MAP("World", method_function_tuple_GetWorldName);
+            &TypeReflectionOparator::WorldOperators::GetMethodName_GetWorldName,
+            &TypeReflectionOparator::WorldOperators::Invoke_GetWorldName);
+        REGISTER_METHOD_TO_MAP("World", method_function_tuple_GetWorldName);
         MethodFunctions* method_function_tuple_GetCurrentLevel=new MethodFunctions(
-            &TypeFieldReflectionOparator::TypeWorldOperator::GetMethodName_GetCurrentLevel,
-            &TypeFieldReflectionOparator::TypeWorldOperator::Invoke_GetCurrentLevel);
-        REGISTER_Method_TO_MAP("World", method_function_tuple_GetCurrentLevel);
+            &TypeReflectionOparator::WorldOperators::GetMethodName_GetCurrentLevel,
+            &TypeReflectionOparator::WorldOperators::Invoke_GetCurrentLevel);
+        REGISTER_METHOD_TO_MAP("World", method_function_tuple_GetCurrentLevel);
         
         
 		
 		ClassFunctions* class_function_tuple_World=new ClassFunctions(
-            &TypeFieldReflectionOparator::TypeWorldOperator::ConstructorWithJson,
-            &TypeFieldReflectionOparator::TypeWorldOperator::WriteByName,
-			&TypeFieldReflectionOparator::TypeWorldOperator::GetWorldBaseClassReflectionInstanceList);
+            &TypeReflectionOparator::WorldOperators::ConstructFromJson,
+            &TypeReflectionOparator::WorldOperators::WriteByName,
+			&TypeReflectionOparator::WorldOperators::GetWorldBaseClassReflectionInstanceList);
         REGISTER_BASE_CLASS_TO_MAP("World", class_function_tuple_World);
     }
 namespace TypeWrappersRegister{

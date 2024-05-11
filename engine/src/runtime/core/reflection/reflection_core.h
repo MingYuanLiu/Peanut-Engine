@@ -16,24 +16,24 @@ namespace peanut {
 	// declare here used by functions' defination
 	namespace reflection
 	{
-		class TypeDataMeta;
+		class TypeMetaData;
 		class FieldAccessor;
 		class MethodAccessor;
 		class ArrayAccessor;
 		class ReflectionInstance;
 	} // namespace Reflection
 
-	#define REGISTER_FILED_MAP(name, value) peanut::TypeMetaDataRegisterInterface::RegisterToFieldMap(name, value)
-	#define REGISTER_ARRAY_MAP(name, value) peanut::TypeMetaDataRegisterInterface::RegisterToArrayMap(name, value)
-	#define REGISTER_BASE_CLASS_MAP(name, value) peanut::TypeMetaDataRegisterInterface::RegisterToClassMap(name, value)
-	#define REGISTER_METHOD_MAP(name, value) peanut::TypeMetaDataRegisterInterface::RegisterToMethodMap(name, value)
-	#define UNREGISTER_ALL_MAP() peanut::TypeMetaDataRegisterInterface::UnRegisterAllMap()
+	#define REGISTER_FIELD_TO_MAP(name, value) peanut::reflection::TypeMetaDataRegisterInterface::RegisterToFieldMap(name, value)
+	#define REGISTER_ARRAY_TO_MAP(name, value) peanut::reflection::TypeMetaDataRegisterInterface::RegisterToArrayMap(name, value)
+	#define REGISTER_BASE_CLASS_TO_MAP(name, value) peanut::reflection::TypeMetaDataRegisterInterface::RegisterToClassMap(name, value)
+	#define REGISTER_METHOD_TO_MAP(name, value) peanut::reflection::TypeMetaDataRegisterInterface::RegisterToMethodMap(name, value)
+	#define UNREGISTER_ALL_MAP() peanut::reflection::TypeMetaDataRegisterInterface::UnRegisterAllMap()
 
 	#define TypeMetaDefine(class_name, object_ptr_of_class) \
-		peanut::reflection::ReflectionInstance(peanut::reflection::TypeDataMeta::NewMetaFromName(#class_name), object_ptr_of_class)
+		peanut::reflection::ReflectionInstance(peanut::reflection::TypeMetaData::NewMetaFromName(#class_name), object_ptr_of_class)
 
 	#define TypeMetaDefinePtr(class_name, object_ptr_of_class) \
-		new peanut::reflection::ReflectionInstance(peanut::reflection::TypeDataMeta::NewMetaFromName(#class_name), object_ptr_of_class)
+		new peanut::reflection::ReflectionInstance(peanut::reflection::TypeMetaData::NewMetaFromName(#class_name), object_ptr_of_class)
 
 	// define methods
 	typedef std::function<void(void*/*instance*/, void*/*filed value*/)> SetFunction;
@@ -117,6 +117,8 @@ namespace peanut {
 
 			ReflectionInstance& operator=(const ReflectionInstance& other);
 			ReflectionInstance& operator=(const ReflectionInstance&& other);
+
+			void* GetNative() { return instance_; }
 
 		private:
 			TypeMetaData meta_data_;
@@ -212,8 +214,21 @@ namespace peanut {
 			std::string GetTypeName() { return type_name_; }
 			void SetTypeName(const std::string& type_name) { type_name_ = type_name; }
 
-			T* GetNative() { return instance_; }
-			T* GetNative() const { return instance_; }
+			T* GetNative() { 
+				return instance_; 
+			}
+
+			T* GetNative() const { 
+				return instance_; 
+			}
+
+			T*& GetPtrRef() const {
+				return instance_;
+			}
+
+			T*& GetPtrRef() {
+				return instance_;
+			}
 
 			T* operator->() { 
 				assert(instance_ != nullptr);
@@ -348,15 +363,23 @@ namespace peanut {
 		// 3. 使用时，根据类型名去记录表中查找对应的反射信息；
 		class TypeMetaDataRegisterInterface
 		{
-			void RegisterToFieldMap(const char* name, FieldFunctions* value);
+		public:
+			static void RegisterToFieldMap(const char* name, FieldFunctions* value);
 
-			void RegisterToClassMap(const char* name, ClassFunctions* value);
+			static void RegisterToClassMap(const char* name, ClassFunctions* value);
 
-			void RegisterToMethodMap(const char* name, MethodFunctions* value);
+			static void RegisterToMethodMap(const char* name, MethodFunctions* value);
 
-			void RegisterToArrayMap(const char* name, ArrayFunctions* value);
+			static void RegisterToArrayMap(const char* name, ArrayFunctions* value);
 
-			void UnregisterAllMap();
+			static void UnregisterAllMap();
+		};
+
+		class TypeMetaRegister
+		{
+		public:
+			static void MetaRegister();
+			static void MetaUnregister() { TypeMetaDataRegisterInterface::UnregisterAllMap(); }
 		};
 	}
 

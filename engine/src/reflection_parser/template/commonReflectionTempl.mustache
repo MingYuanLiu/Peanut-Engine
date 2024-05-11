@@ -1,4 +1,5 @@
 #pragma once
+#include "runtime/core/reflection/reflection_core.h"
 {{#include_headfiles}}
 #include "{{headfile_name}}"
 {{/include_headfiles}}
@@ -8,16 +9,16 @@ namespace peanut{
     {{/class_defines}}
 namespace reflection{
 {{#class_defines}}namespace TypeReflectionOparator{
-    class {{class_name}}Operator{
+    class {{class_name}}Operators{
     public:
         static const char* GetClassName(){ return "{{class_name}}";}
         static void* ConstructFromJson(const Json& json_context){
             {{class_name}}* ret_instance= new {{class_name}};
-            Serializer::read(json_context, *ret_instance);
+            Serializer::Read(json_context, *ret_instance);
             return ret_instance;
         }
         static Json WriteByName(void* instance){
-            return Serializer::write(*({{class_name}}*)instance);
+            return Serializer::Write(*({{class_name}}*)instance);
         }
         // base class
         static int Get{{class_name}}BaseClassReflectionInstanceList(ReflectionInstance* &out_list, void* instance){
@@ -48,7 +49,7 @@ namespace reflection{
 {{#vector_exist}}namespace ArrayReflectionOperator{
 {{#vector_defines}}#ifndef Array{{vector_useful_name}}OperatorMACRO
 #define Array{{vector_useful_name}}OperatorMACRO
-    class Array{{vector_useful_name}}Operator{
+    class Array{{vector_useful_name}}Operators{
         public:
             static const char* GetArrayTypeName(){ return "{{{vector_type_name}}}";}
             static const char* GetElementTypeName(){ return "{{{vector_element_type_name}}}";}
@@ -72,39 +73,39 @@ namespace reflection{
     void TypeWrapperRegister_{{class_name}}(){
         {{#class_field_defines}}
 		FieldFunctions* field_function_tuple_{{class_field_name}}=new FieldFunctions(
-            &TypeReflectionOparator::{{class_name}}Operator::Set_{{class_field_name}},
-            &TypeReflectionOparator::{{class_name}}Operator::Get_{{class_field_name}},
-            &TypeReflectionOparator::{{class_name}}Operator::GetClassName,
-            &TypeReflectionOparator::{{class_name}}Operator::GetFieldName_{{class_field_name}},
-            &TypeReflectionOparator::{{class_name}}Operator::GetFieldTypeName_{{class_field_name}},
-            &TypeReflectionOparator::{{class_name}}Operator::IsArray_{{class_field_name}});
+            &TypeReflectionOparator::{{class_name}}Operators::Set_{{class_field_name}},
+            &TypeReflectionOparator::{{class_name}}Operators::Get_{{class_field_name}},
+            &TypeReflectionOparator::{{class_name}}Operators::GetClassName,
+            &TypeReflectionOparator::{{class_name}}Operators::GetFieldName_{{class_field_name}},
+            &TypeReflectionOparator::{{class_name}}Operators::GetFieldTypeName_{{class_field_name}},
+            &TypeReflectionOparator::{{class_name}}Operators::IsArray_{{class_field_name}});
         REGISTER_FIELD_TO_MAP("{{class_name}}", field_function_tuple_{{class_field_name}});
         {{/class_field_defines}}
 
         {{#class_method_defines}}
         MethodFunctions* method_function_tuple_{{class_method_name}}=new MethodFunctions(
-            &TypeFieldReflectionOparator::Type{{class_name}}Operator::GetMethodName_{{class_method_name}},
-            &TypeFieldReflectionOparator::Type{{class_name}}Operator::Invoke_{{class_method_name}});
-        REGISTER_Method_TO_MAP("{{class_name}}", method_function_tuple_{{class_method_name}});
+            &TypeReflectionOparator::{{class_name}}Operators::GetMethodName_{{class_method_name}},
+            &TypeReflectionOparator::{{class_name}}Operators::Invoke_{{class_method_name}});
+        REGISTER_METHOD_TO_MAP("{{class_name}}", method_function_tuple_{{class_method_name}});
         {{/class_method_defines}}
         
         {{#vector_exist}}
 		{{#vector_defines}}
 		ArrayFunctions* array_tuple_{{vector_useful_name}} = new  ArrayFunctions(
-            &ArrayReflectionOperator::Array{{vector_useful_name}}Operator::Set,
-            &ArrayReflectionOperator::Array{{vector_useful_name}}Operator::Get,
-            &ArrayReflectionOperator::Array{{vector_useful_name}}Operator::GetSize,
-            &ArrayReflectionOperator::Array{{vector_useful_name}}Operator::GetArrayTypeName,
-            &ArrayReflectionOperator::Array{{vector_useful_name}}Operator::GetElementTypeName);
+            &ArrayReflectionOperator::Array{{vector_useful_name}}Operators::Set,
+            &ArrayReflectionOperator::Array{{vector_useful_name}}Operators::Get,
+            &ArrayReflectionOperator::Array{{vector_useful_name}}Operators::GetSize,
+            &ArrayReflectionOperator::Array{{vector_useful_name}}Operators::GetArrayTypeName,
+            &ArrayReflectionOperator::Array{{vector_useful_name}}Operators::GetElementTypeName);
         REGISTER_ARRAY_TO_MAP("{{{vector_type_name}}}", array_tuple_{{vector_useful_name}});
         {{/vector_defines}}
 		{{/vector_exist}}
 		
         {{#class_need_register}}
 		ClassFunctions* class_function_tuple_{{class_name}}=new ClassFunctions(
-            &TypeFieldReflectionOparator::Type{{class_name}}Operator::ConstructorWithJson,
-            &TypeFieldReflectionOparator::Type{{class_name}}Operator::WriteByName,
-			&TypeFieldReflectionOparator::Type{{class_name}}Operator::Get{{class_name}}BaseClassReflectionInstanceList);
+            &TypeReflectionOparator::{{class_name}}Operators::ConstructFromJson,
+            &TypeReflectionOparator::{{class_name}}Operators::WriteByName,
+			&TypeReflectionOparator::{{class_name}}Operators::Get{{class_name}}BaseClassReflectionInstanceList);
         REGISTER_BASE_CLASS_TO_MAP("{{class_name}}", class_function_tuple_{{class_name}});
         {{/class_need_register}}
     }{{/class_defines}}
