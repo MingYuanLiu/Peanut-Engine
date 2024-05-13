@@ -31,7 +31,8 @@ namespace peanut
 #endif
 
 #define GENERATE_BODY(class_name) \
-	friend class reflection::TypeReflectionOparator::##class_name##Operators;
+	friend class reflection::TypeReflectionOparator::##class_name##Operators; \
+	friend class Serializer;
 
 #define REFLECTION_TYPE(class_name) \
 namespace reflection { \

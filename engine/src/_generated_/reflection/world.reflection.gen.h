@@ -34,6 +34,11 @@ namespace TypeReflectionOparator{
         static void Set_current_level_(void* instance, void* field_value){ static_cast<World*>(instance)->current_level_ = *static_cast<Level**>(field_value);}
         static void* Get_current_level_(void* instance){ return static_cast<void*>(&(static_cast<World*>(instance)->current_level_));}
         static bool IsArray_current_level_(){ return false; }
+        static const char* GetFieldName_levels_(){ return "levels_";}
+        static const char* GetFieldTypeName_levels_(){ return "std::vector<Level*>";}
+        static void Set_levels_(void* instance, void* field_value){ static_cast<World*>(instance)->levels_ = *static_cast<std::vector<Level*>*>(field_value);}
+        static void* Get_levels_(void* instance){ return static_cast<void*>(&(static_cast<World*>(instance)->levels_));}
+        static bool IsArray_levels_(){ return true; }
 
         // methods
         static const char* GetMethodName_GetWorldName(){ return "GetWorldName";}
@@ -42,7 +47,28 @@ namespace TypeReflectionOparator{
         static void Invoke_GetCurrentLevel(void * instance){static_cast<World*>(instance)->GetCurrentLevel();}
     };
 }//namespace TypeReflectionOparator
-
+namespace ArrayReflectionOperator{
+#ifndef ArraystdSSvectorLLevelPROperatorMACRO
+#define ArraystdSSvectorLLevelPROperatorMACRO
+    class ArraystdSSvectorLLevelPROperators{
+        public:
+            static const char* GetArrayTypeName(){ return "std::vector<Level*>";}
+            static const char* GetElementTypeName(){ return "Level*";}
+            static int GetSize(void* instance){
+                //todo: should check validation
+                return static_cast<int>(static_cast<std::vector<Level*>*>(instance)->size());
+            }
+            static void* Get(int index,void* instance){
+                //todo: should check validation
+                return static_cast<void*>(&((*static_cast<std::vector<Level*>*>(instance))[index]));
+            }
+            static void Set(int index, void* instance, void* element_value){
+                //todo: should check validation
+                (*static_cast<std::vector<Level*>*>(instance))[index] = *static_cast<Level**>(element_value);
+            }
+    };
+#endif //ArraystdSSvectorLLevelPROperator
+}//namespace ArrayReflectionOperator
 
     void TypeWrapperRegister_World(){
 		FieldFunctions* field_function_tuple_world_name_=new FieldFunctions(
@@ -61,6 +87,14 @@ namespace TypeReflectionOparator{
             &TypeReflectionOparator::WorldOperators::GetFieldTypeName_current_level_,
             &TypeReflectionOparator::WorldOperators::IsArray_current_level_);
         REGISTER_FIELD_TO_MAP("World", field_function_tuple_current_level_);
+		FieldFunctions* field_function_tuple_levels_=new FieldFunctions(
+            &TypeReflectionOparator::WorldOperators::Set_levels_,
+            &TypeReflectionOparator::WorldOperators::Get_levels_,
+            &TypeReflectionOparator::WorldOperators::GetClassName,
+            &TypeReflectionOparator::WorldOperators::GetFieldName_levels_,
+            &TypeReflectionOparator::WorldOperators::GetFieldTypeName_levels_,
+            &TypeReflectionOparator::WorldOperators::IsArray_levels_);
+        REGISTER_FIELD_TO_MAP("World", field_function_tuple_levels_);
 
         MethodFunctions* method_function_tuple_GetWorldName=new MethodFunctions(
             &TypeReflectionOparator::WorldOperators::GetMethodName_GetWorldName,
@@ -71,7 +105,13 @@ namespace TypeReflectionOparator{
             &TypeReflectionOparator::WorldOperators::Invoke_GetCurrentLevel);
         REGISTER_METHOD_TO_MAP("World", method_function_tuple_GetCurrentLevel);
         
-        
+		ArrayFunctions* array_tuple_stdSSvectorLLevelPR = new  ArrayFunctions(
+            &ArrayReflectionOperator::ArraystdSSvectorLLevelPROperators::Set,
+            &ArrayReflectionOperator::ArraystdSSvectorLLevelPROperators::Get,
+            &ArrayReflectionOperator::ArraystdSSvectorLLevelPROperators::GetSize,
+            &ArrayReflectionOperator::ArraystdSSvectorLLevelPROperators::GetArrayTypeName,
+            &ArrayReflectionOperator::ArraystdSSvectorLLevelPROperators::GetElementTypeName);
+        REGISTER_ARRAY_TO_MAP("std::vector<Level*>", array_tuple_stdSSvectorLLevelPR);
 		
 		ClassFunctions* class_function_tuple_World=new ClassFunctions(
             &TypeReflectionOparator::WorldOperators::ConstructFromJson,
