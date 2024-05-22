@@ -10,75 +10,84 @@ RenderSystem::RenderSystem()
       last_mouse_pos_y_(0.0f),
       input_mode_(InputMode::None) {}
 
-void RenderSystem::Initialize(
-    const std::shared_ptr<WindowSystem>& window_system) {
-  PEANUT_LOG_INFO("Intialize Render system");
-  rhi_->Init(window_system);
-  main_render_pass_->Initialize();
-  InitViewSettingAndSceneSetting();
+void RenderSystem::Initialize(const std::shared_ptr<WindowSystem>& window_system) 
+{
+    PEANUT_LOG_INFO("Intialize Render system");
+    rhi_->Init(window_system);
+    main_render_pass_->Initialize();
+    InitViewSettingAndSceneSetting();
 
-  window_system->PushEventCallback([this](Event& e) {
-    EventDispatcher dispatcher(e);
-    dispatcher.Dispatch<MouseButtonEvent>(
-        BIND_EVENT_FN(RenderSystem::HandleMouseButtonEvent));
-    dispatcher.Dispatch<MouseMovedEvent>(
-        BIND_EVENT_FN(RenderSystem::HandleMousePositionEvent));
-    dispatcher.Dispatch<MouseScrolledEvent>(
-        BIND_EVENT_FN(RenderSystem::HandleMouseScrollEvent));
-    dispatcher.Dispatch<KeyEvent>(BIND_EVENT_FN(RenderSystem::HandleKeyEvent));
-  });
+    window_system->PushEventCallback([this](Event& e) 
+    {
+        EventDispatcher dispatcher(e);
+        dispatcher.Dispatch<MouseButtonEvent>(
+            BIND_EVENT_FN(RenderSystem::HandleMouseButtonEvent));
+        dispatcher.Dispatch<MouseMovedEvent>(
+            BIND_EVENT_FN(RenderSystem::HandleMousePositionEvent));
+        dispatcher.Dispatch<MouseScrolledEvent>(
+            BIND_EVENT_FN(RenderSystem::HandleMouseScrollEvent));
+        dispatcher.Dispatch<KeyEvent>(BIND_EVENT_FN(RenderSystem::HandleKeyEvent));
+    });
 
-  window_system_ = window_system;
+    window_system_ = window_system;
 }
 
-void RenderSystem::Shutdown() {
-  rhi_->Shutdown();
-  main_render_pass_->DeInitialize();
+void RenderSystem::Shutdown() 
+{
+    rhi_->Shutdown();
+    main_render_pass_->DeInitialize();
 }
 
 void RenderSystem::Tick() { main_render_pass_->RenderTick(view_, scene_); }
 
-void RenderSystem::InitViewSettingAndSceneSetting() {
-  view_.distance = kViewDistance;
-  view_.fov = kViewFOV;
+void RenderSystem::InitViewSettingAndSceneSetting()
+{
+    view_.distance = kViewDistance;
+    view_.fov = kViewFOV;
 
-  scene_.lights[0].direction = glm::normalize(glm::vec3{-1.0f, 0.0f, 0.0f});
-  scene_.lights[1].direction = glm::normalize(glm::vec3{1.0f, 0.0f, 0.0f});
-  scene_.lights[2].direction = glm::normalize(glm::vec3{0.0f, -1.0f, 0.0f});
+    scene_.lights[0].direction = glm::normalize(glm::vec3{-1.0f, 0.0f, 0.0f});
+    scene_.lights[1].direction = glm::normalize(glm::vec3{1.0f, 0.0f, 0.0f});
+    scene_.lights[2].direction = glm::normalize(glm::vec3{0.0f, -1.0f, 0.0f});
 
-  scene_.lights[0].radiance = glm::vec3{1.0f};
-  scene_.lights[1].radiance = glm::vec3{1.0f};
-  scene_.lights[2].radiance = glm::vec3{1.0f};
+    scene_.lights[0].radiance = glm::vec3{1.0f};
+    scene_.lights[1].radiance = glm::vec3{1.0f};
+    scene_.lights[2].radiance = glm::vec3{1.0f};
 }
 
-bool RenderSystem::HandleMousePositionEvent(MouseMovedEvent& e) {
-  PEANUT_LOG_INFO("Handle mouse position");
-  if (input_mode_ != InputMode::None) {
+bool RenderSystem::HandleMousePositionEvent(MouseMovedEvent& e) 
+{
+    PEANUT_LOG_INFO("Handle mouse position");
+    if (input_mode_ != InputMode::None) {
     const double delta_x = RenderUtils::CheckDoubleNearZero(last_mouse_pos_x_)
-                               ? 0
-                               : e.GetX() - last_mouse_pos_x_;
+                                ? 0
+                                : e.GetX() - last_mouse_pos_x_;
     const double delta_y = RenderUtils::CheckDoubleNearZero(last_mouse_pos_y_)
-                               ? 0
-                               : e.GetY() - last_mouse_pos_y_;
+                                ? 0
+                                : e.GetY() - last_mouse_pos_y_;
 
-    switch (input_mode_) {
-      case InputMode::RotatingView:
-        view_.yaw += kOrbitSpeed * (float)(delta_x);
-        view_.pitch += kOrbitSpeed * (float)(delta_y);
-        break;
-      case InputMode::RotatingScene:
-        scene_.yaw += kOrbitSpeed * (float)(delta_x);
-        scene_.pitch += kOrbitSpeed * (float)(delta_y);
-        break;
-      default:
-        break;
+    switch (input_mode_) 
+    {
+        case InputMode::RotatingView:
+        {
+            view_.yaw += kOrbitSpeed * (float)(delta_x);
+            view_.pitch += kOrbitSpeed * (float)(delta_y);
+            break;
+        }
+        case InputMode::RotatingScene:
+        {
+            scene_.yaw += kOrbitSpeed * (float)(delta_x);
+            scene_.pitch += kOrbitSpeed * (float)(delta_y);
+            break;
+        }
+        default:
+            break;
     }
 
     last_mouse_pos_x_ = e.GetX();
     last_mouse_pos_y_ = e.GetY();
-  }
+    }
 
-  return true;
+    return true;
 }
 
 bool RenderSystem::HandleMouseButtonEvent(MouseButtonEvent& e) {

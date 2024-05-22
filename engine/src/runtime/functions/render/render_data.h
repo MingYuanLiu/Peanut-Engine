@@ -10,75 +10,130 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/euler_angles.hpp>
 
-namespace peanut {
+namespace peanut 
+{
+    template <class T>
+    struct Resource 
+    {
+        T resource;
+        VkDeviceMemory memory;
+        VkDeviceSize allocation_size;
+        uint32_t memory_type_index;
+    };
 
-template <class T>
-struct Resource {
-  T resource;
-  VkDeviceMemory memory;
-  VkDeviceSize allocation_size;
-  uint32_t memory_type_index;
-};
+    enum class RenderDataType
+    {
+        Base,
+        StaticMesh,
+        Light,
+        SkeletalMesh
+    };
 
-struct QueueFamilyIndices {
-  std::optional<uint32_t> graphics_family;
-  std::optional<uint32_t> present_family;
-  std::optional<uint32_t> compute_family;
+    class RenderData
+    {
+    protected:
+        RenderDataType data_type_;
+    };
 
-  bool isComplete() {
-    return graphics_family.has_value() && present_family.has_value() &&
-           compute_family.has_value();
-    ;
-  }
-};
+    struct QueueFamilyIndices 
+    {
+        std::optional<uint32_t> graphics_family;
+        std::optional<uint32_t> present_family;
+        std::optional<uint32_t> compute_family;
 
-struct VulkanPhysicalDevice {
-  VkPhysicalDevice physic_device_handle;
-  VkPhysicalDeviceProperties properties;
-  VkPhysicalDeviceMemoryProperties memory_properties;
-  VkPhysicalDeviceFeatures features;
-  VkSurfaceCapabilitiesKHR surface_capabilities;
-  std::vector<VkSurfaceFormatKHR> surface_formats;
-  std::vector<VkPresentModeKHR> present_modes;
-  QueueFamilyIndices queue_family_indices;
-};
+        bool isComplete()
+        {
+            return graphics_family.has_value() && present_family.has_value() &&
+                    compute_family.has_value();
+        ;
+        }
+    };
 
-struct RenderTarget {
-  Resource<VkImage> color_image;
-  Resource<VkImage> depth_image;
-  VkImageView color_view;
-  VkImageView depth_view;
-  VkFormat color_format;
-  VkFormat depth_format;
-  uint32_t width, height;
-  uint32_t samples;
-};
+    struct VulkanPhysicalDevice 
+    {
+        VkPhysicalDevice physic_device_handle;
+        VkPhysicalDeviceProperties properties;
+        VkPhysicalDeviceMemoryProperties memory_properties;
+        VkPhysicalDeviceFeatures features;
+        VkSurfaceCapabilitiesKHR surface_capabilities;
+        std::vector<VkSurfaceFormatKHR> surface_formats;
+        std::vector<VkPresentModeKHR> present_modes;
+        QueueFamilyIndices queue_family_indices;
+    };
 
-struct MeshBuffer {
-  Resource<VkBuffer> vertex_buffer;
-  Resource<VkBuffer> index_buffer;
-  uint32_t num_elements;
-};
+    // wapper of decriptor set and layout
+    struct RenderDescriptorSet
+    {
+        VkDescriptorSetLayout* descriptor_set_layout_;
+        VkDescriptorSet* descritptor_set_;
+    };
 
-struct TextureData {
-  Resource<VkImage> image;
-  VkImageView image_view;
-  uint32_t width;
-  uint32_t height;
-  uint32_t channels;
-  uint32_t levels;
-  uint32_t layers;
-  void *pixels;
-};
+    // wapper of pipeline and pipeline layout
+    struct RenderPipeline
+    {
+        VkPipelineLayout* pipeline_layout_;
+        VkPipeline* pipeline_;
+    };
 
-struct PbrMaterial {
-  std::shared_ptr<TextureData> albedo_texture_;
-  std::shared_ptr<TextureData> metallic_texture_;
-  std::shared_ptr<TextureData> normal_texture_;
-  std::shared_ptr<TextureData> roughness_texture_;
-};
+    struct RenderPassAttachment
+    {
+        Resource<VkImage> image_;
+        VkImageView image_view_;
+        VkFormat format_;
+    };
 
-struct TextureMemoryBarrier {
+    struct RenderPassTarget
+    {
+        uint16_t width_;
+        uint16_t height_;
+
+        std::vector<RenderPassAttachment> attchments_;
+    };
+
+    struct RenderTarget 
+    {
+        Resource<VkImage> color_image;
+        Resource<VkImage> depth_image;
+
+        VkImageView color_view;
+        VkImageView depth_view;
+
+        VkFormat color_format;
+        VkFormat depth_format;
+
+        uint32_t width, height;
+        uint32_t samples;
+    };
+
+    struct MeshBuffer 
+    {
+        Resource<VkBuffer> vertex_buffer;
+        Resource<VkBuffer> index_buffer;
+        uint32_t num_elements;
+    };
+
+    struct TextureData 
+    {
+        Resource<VkImage> image;
+        VkImageView image_view;
+        uint32_t width;
+        uint32_t height;
+        uint32_t channels;
+        uint32_t levels;
+        uint32_t layers;
+        void *pixels;
+    };
+
+    struct PbrMaterial 
+    {
+        std::shared_ptr<TextureData> albedo_texture_;
+        std::shared_ptr<TextureData> metallic_texture_;
+        std::shared_ptr<TextureData> normal_texture_;
+        std::shared_ptr<TextureData> roughness_texture_;
+    };
+
+struct TextureMemoryBarrier 
+{
   TextureMemoryBarrier(const TextureData &texture, VkAccessFlags srcAccessMask,
                        VkAccessFlags dstAccessMask, VkImageLayout oldLayout,
                        VkImageLayout newLayout) {
