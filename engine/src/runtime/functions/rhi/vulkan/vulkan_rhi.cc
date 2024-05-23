@@ -14,41 +14,44 @@
 #define PEANUT_STR(s) #s
 
 namespace peanut {
-void VulkanRHI::Init(const std::shared_ptr<WindowSystem>& window_system) {
-  native_window_ = (GLFWwindow*)window_system->GetNativeWindow();
-  if (!native_window_) {
-    PEANUT_LOG_ERROR("Glfw window must be created before init vulkan rhi");
-    return;
-  }
 
-  required_device_features_.shaderStorageImageExtendedFormats = VK_TRUE;
-  required_device_features_.samplerAnisotropy = VK_TRUE;
-  window_width_ = window_system->GetWidth();
-  window_height_ = window_system->GetHeight();
+void VulkanRHI::Init(const std::shared_ptr<WindowSystem>& window_system) 
+{
+    native_window_ = (GLFWwindow*)window_system->GetNativeWindow();
+    if (!native_window_) 
+    {
+        PEANUT_LOG_ERROR("Glfw window must be created before init vulkan rhi");
+        return;
+    }
 
-  SetupInstance();
+    required_device_features_.shaderStorageImageExtendedFormats = VK_TRUE;
+    required_device_features_.samplerAnisotropy = VK_TRUE;
+    window_width_ = window_system->GetWidth();
+    window_height_ = window_system->GetHeight();
 
-  CreateWindowSurface();
+    SetupInstance();
 
-  SetupPhysicalDevice();
+    CreateWindowSurface();
 
-  SetupLogicDevice();
+    SetupPhysicalDevice();
 
-  CreateSwapChain();
+    SetupLogicDevice();
 
-  CreateCommandPoolAndCommandBuffers();
+    CreateSwapChain();
 
-  CreateDescriptorPool();
+    CreateCommandPoolAndCommandBuffers();
 
-  CreateSyncPrimitives();
+    CreateDescriptorPool();
 
-  InitializeFrameIndex();
+    CreateSyncPrimitives();
 
-  totle_frame_count_ = 0;
-  // current_frame_index_ = 0;
+    InitializeFrameIndex();
 
-  PEANUT_LOG_INFO("Vulkan init finished [{0}]",
-                  physical_device_.properties.deviceName);
+    totle_frame_count_ = 0;
+    // current_frame_index_ = 0;
+
+    PEANUT_LOG_INFO("Vulkan init finished [{0}]",
+                    physical_device_.properties.deviceName);
 }
 
 void VulkanRHI::Shutdown() {
@@ -73,55 +76,58 @@ void VulkanRHI::Shutdown() {
 Resource<VkImage> VulkanRHI::CreateImage(uint32_t width, uint32_t height,
                                          uint32_t layers, uint32_t levels,
                                          uint32_t samples, VkFormat format,
-                                         VkImageUsageFlags usage) {
-  assert(width > 0 && height > 0);
-  assert(levels > 0);
-  assert(samples > 0 && samples < 64);
+                                         VkImageUsageFlags usage) 
+{
+    assert(width > 0 && height > 0);
+    assert(levels > 0);
+    assert(samples > 0 && samples < 64);
 
-  Resource<VkImage> vkImage;
+    Resource<VkImage> vkImage;
 
-  VkImageCreateInfo create_info = {VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};
-  create_info.flags = (layers == 6) ? VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : 0;
-  create_info.imageType = VK_IMAGE_TYPE_2D;
-  create_info.format = format;
-  create_info.extent = {width, height, 1};
-  create_info.mipLevels = levels;
-  create_info.arrayLayers = layers;
-  create_info.samples = static_cast<VkSampleCountFlagBits>(samples);
-  create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
-  create_info.usage = usage;
-  create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-  create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    VkImageCreateInfo create_info = {VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};
+    create_info.flags = (layers == 6) ? VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : 0;
+    create_info.imageType = VK_IMAGE_TYPE_2D;
+    create_info.format = format;
+    create_info.extent = {width, height, 1};
+    create_info.mipLevels = levels;
+    create_info.arrayLayers = layers;
+    create_info.samples = static_cast<VkSampleCountFlagBits>(samples);
+    create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
+    create_info.usage = usage;
+    create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
-  if (VKFAILED(vkCreateImage(vk_device_, &create_info, nullptr,
-                             &vkImage.resource))) {
-    PEANUT_LOG_ERROR("Failed to create vulkan image");
+    if (VKFAILED(vkCreateImage(vk_device_, &create_info, nullptr,
+                                &vkImage.resource))) 
+    {
+        PEANUT_LOG_ERROR("Failed to create vulkan image");
+        return vkImage;
+    }
+
+    VkMemoryRequirements requirements;
+    vkGetImageMemoryRequirements(vk_device_, vkImage.resource, &requirements);
+
+    VkMemoryAllocateInfo mem_alloc_info = { VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
+    mem_alloc_info.allocationSize = requirements.size;
+    mem_alloc_info.memoryTypeIndex =
+        FindMemoryType(requirements, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    if (VKFAILED(vkAllocateMemory(vk_device_, &mem_alloc_info, nullptr,
+                                &vkImage.memory))) 
+    {
+        vkDestroyImage(vk_device_, vkImage.resource, nullptr);
+        PEANUT_LOG_FATAL("Failed to allocate memory to image");
+    }
+    if (VKFAILED(vkBindImageMemory(vk_device_, vkImage.resource, vkImage.memory, 0))) 
+    {
+        vkDestroyImage(vk_device_, vkImage.resource, nullptr);
+        vkFreeMemory(vk_device_, vkImage.memory, nullptr);
+        PEANUT_LOG_FATAL("Failed to bind memory to vulkan image");
+    }
+
+    vkImage.allocation_size = mem_alloc_info.allocationSize;
+    vkImage.memory_type_index = mem_alloc_info.memoryTypeIndex;
+
     return vkImage;
-  }
-
-  VkMemoryRequirements requirements;
-  vkGetImageMemoryRequirements(vk_device_, vkImage.resource, &requirements);
-
-  VkMemoryAllocateInfo mem_alloc_info = {
-      VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO};
-  mem_alloc_info.allocationSize = requirements.size;
-  mem_alloc_info.memoryTypeIndex =
-      FindMemoryType(requirements, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-  if (VKFAILED(vkAllocateMemory(vk_device_, &mem_alloc_info, nullptr,
-                                &vkImage.memory))) {
-    vkDestroyImage(vk_device_, vkImage.resource, nullptr);
-    PEANUT_LOG_FATAL("Failed to allocate memory to image");
-  }
-  if (VKFAILED(
-          vkBindImageMemory(vk_device_, vkImage.resource, vkImage.memory, 0))) {
-    vkDestroyImage(vk_device_, vkImage.resource, nullptr);
-    vkFreeMemory(vk_device_, vkImage.memory, nullptr);
-    PEANUT_LOG_FATAL("Failed to bind memory to vulkan image");
-  }
-  vkImage.allocation_size = mem_alloc_info.allocationSize;
-  vkImage.memory_type_index = mem_alloc_info.memoryTypeIndex;
-
-  return vkImage;
 }
 
 VkImageView VulkanRHI::CreateImageView(VkImage image, VkFormat format,

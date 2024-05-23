@@ -2,9 +2,9 @@
 
 namespace peanut
 {
-	void MainRenderPass::Initialize()
+	void MainRenderPass::Initialize(PassInitInfo* init_info)
 	{
-
+		vulkan_rhi_ = static_cast<MainPassInitInfo*>(init_info)->rhi_;
 	}
 
 
@@ -18,6 +18,14 @@ namespace peanut
 		render_attachments[GBufferC_BaseColor].format_ = VK_FORMAT_R8G8B8A8_SRGB;
 		render_attachments[EmissiveColor].format_ = VK_FORMAT_R8G8B8A8_UNORM;
 		render_attachments[DethImage].format_ = VK_FORMAT_R8G8B8A8_UNORM;
+
+		std::shared_ptr<RHI> vulkan_rhi = vulkan_rhi_.lock();
+		int frame_width = static_cast<VulkanRHI*>(vulkan_rhi.get())->GetDisplayWidth();
+		for (uint32_t i = 0; i < AttachmentTypeCount; i++)
+		{
+			s
+			vulkan_rhi->CreateImage();
+		}
 	}
 
 	void MainRenderPass::CreateRenderPass()

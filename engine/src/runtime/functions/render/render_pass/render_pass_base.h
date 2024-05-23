@@ -2,15 +2,21 @@
 
 #include "../render_data.h"
 #include "runtime/functions/rhi/vulkan/vulkan_rhi.h"
+#include <memory>
 
 namespace peanut
 {
+    struct PassInitInfo
+    {
+        std::weak_ptr<RHI> rhi_;
+    };
+
     class IRenderPassBase
     {
     public:
         virtual ~IRenderPassBase() {}
 
-        virtual void Initialize() = 0;
+        virtual void Initialize(PassInitInfo* init_info) = 0;
         virtual void DeInitialize() = 0;
         virtual void Render() = 0;
 

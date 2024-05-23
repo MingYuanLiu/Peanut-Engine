@@ -49,6 +49,11 @@ namespace peanut
 		SubpassTypeCount
 	};
 
+	struct MainPassInitInfo : PassInitInfo
+	{
+
+	};
+
 	class MainRenderPass : public IRenderPassBase
 	{
 	public:
@@ -57,7 +62,7 @@ namespace peanut
 		MainRenderPass() = default;
 		virtual ~MainRenderPass() {}
 
-		void Initialize() override;
+		void Initialize(PassInitInfo* init_info) override;
 		void DeInitialize() override;
 		void Render() override;
 
@@ -75,5 +80,7 @@ namespace peanut
 		std::optional<VkRenderPass> render_pass_;
 		std::optional<RenderPassTarget> render_target_;
 
+
+		std::weak_ptr<RHI> vulkan_rhi_;
 	};
 }
