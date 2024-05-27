@@ -523,7 +523,8 @@ void MainRenderPass::CreateRenderTarget() {
                                                  0, &properties);
 
     for (VkSampleCountFlags max_sample_count = VK_SAMPLE_COUNT_64_BIT;
-         max_sample_count > VK_SAMPLE_COUNT_1_BIT; max_sample_count >>= 1) {
+         max_sample_count > VK_SAMPLE_COUNT_1_BIT; max_sample_count >>= 1)
+    {
       if (properties.sampleCounts & max_sample_count) {
         return static_cast<uint32_t>(max_sample_count);
       }
@@ -566,7 +567,8 @@ void MainRenderPass::CreateRenderTargetInternal(RenderTarget &target,
                                                 uint32_t width, uint32_t height,
                                                 uint32_t samples,
                                                 VkFormat color_format,
-                                                VkFormat depth_format) {
+                                                VkFormat depth_format)
+{
   RenderTarget render_target = {};
   render_target.width = width;
   render_target.height = height;

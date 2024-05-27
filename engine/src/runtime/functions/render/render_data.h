@@ -15,10 +15,10 @@ namespace peanut
     template <class T>
     struct Resource 
     {
-        T resource;
-        VkDeviceMemory memory;
-        VkDeviceSize allocation_size;
-        uint32_t memory_type_index;
+        T resource = VK_NULL_HANDLE;
+        VkDeviceMemory memory = VK_NULL_HANDLE;
+        VkDeviceSize allocation_size = 0;
+        uint32_t memory_type_index = 0;
     };
 
     enum class RenderDataType
@@ -64,15 +64,15 @@ namespace peanut
     // wapper of decriptor set and layout
     struct RenderDescriptorSet
     {
-        VkDescriptorSetLayout* descriptor_set_layout_;
-        VkDescriptorSet* descritptor_set_;
+        VkDescriptorSetLayout descriptor_set_layout_;
+        VkDescriptorSet descritptor_set_;
     };
 
     // wapper of pipeline and pipeline layout
     struct RenderPipeline
     {
-        VkPipelineLayout* pipeline_layout_;
-        VkPipeline* pipeline_;
+        VkPipelineLayout pipeline_layout_;
+        VkPipeline pipeline_;
     };
 
     struct RenderPassAttachment

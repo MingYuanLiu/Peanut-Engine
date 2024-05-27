@@ -54,23 +54,24 @@ void VulkanRHI::Init(const std::shared_ptr<WindowSystem>& window_system)
                     physical_device_.properties.deviceName);
 }
 
-void VulkanRHI::Shutdown() {
-  PEANUT_LOG_INFO("Destroy all vulkan resource");
-  vkDeviceWaitIdle(vk_device_);
+void VulkanRHI::Shutdown()
+{
+    PEANUT_LOG_INFO("Destroy all vulkan resource");
+    vkDeviceWaitIdle(vk_device_);
 
-  vkDestroyDescriptorPool(vk_device_, descriptor_pool_, nullptr);
-  vkDestroyCommandPool(vk_device_, command_pool_, nullptr);
-  vkDestroySwapchainKHR(vk_device_, swapchain_, nullptr);
-  vkDestroySurfaceKHR(vk_instance_, window_surface_, nullptr);
+    vkDestroyDescriptorPool(vk_device_, descriptor_pool_, nullptr);
+    vkDestroyCommandPool(vk_device_, command_pool_, nullptr);
+    vkDestroySwapchainKHR(vk_device_, swapchain_, nullptr);
+    vkDestroySurfaceKHR(vk_instance_, window_surface_, nullptr);
 
-  vkDestroyFence(vk_device_, acquire_next_image_fence_, nullptr);
-  for (int i = 0; i < frame_in_flight_numbers_; ++i) {
+    vkDestroyFence(vk_device_, acquire_next_image_fence_, nullptr);
+    for (int i = 0; i < frame_in_flight_numbers_; ++i) {
     vkDestroyFence(vk_device_, frame_submit_fences_[i], nullptr);
     vkDestroyImageView(vk_device_, swapchain_image_views_[i], nullptr);
-  }
+    }
 
-  vkDestroyDevice(vk_device_, nullptr);
-  vkDestroyInstance(vk_instance_, nullptr);
+    vkDestroyDevice(vk_device_, nullptr);
+    vkDestroyInstance(vk_instance_, nullptr);
 }
 
 Resource<VkImage> VulkanRHI::CreateImage(uint32_t width, uint32_t height,
@@ -344,106 +345,100 @@ void VulkanRHI::CreateDescriptorPool(VkDescriptorPoolCreateInfo* create_info,
 VkDevice VulkanRHI::GetDevice() { return vk_device_; }
 
 VkDescriptorSet VulkanRHI::AllocateDescriptor(VkDescriptorPool pool,
-                                              VkDescriptorSetLayout layout) {
-  VkDescriptorSet descriptorset;
-  VkDescriptorSetAllocateInfo allocate_info = {
-      VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO};
-  allocate_info.descriptorPool = pool;
-  allocate_info.descriptorSetCount = 1;
-  allocate_info.pSetLayouts = &layout;
-  if (VKFAILED(vkAllocateDescriptorSets(vk_device_, &allocate_info,
-                                        &descriptorset))) {
-    PEANUT_LOG_FATAL("Failed to allocate descriptor sets");
-  }
-  return descriptorset;
+                                              VkDescriptorSetLayout layout)
+{
+    VkDescriptorSet descriptorset;
+    VkDescriptorSetAllocateInfo allocate_info = {VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO};
+    allocate_info.descriptorPool = pool;
+    allocate_info.descriptorSetCount = 1;
+    allocate_info.pSetLayouts = &layout;
+    if (VKFAILED(vkAllocateDescriptorSets(vk_device_, &allocate_info, &descriptorset))) 
+    {
+        PEANUT_LOG_FATAL("Failed to allocate descriptor sets");
+    }
+    return descriptorset;
 }
 
-VkDescriptorSet VulkanRHI::AllocateDescriptor(VkDescriptorSetLayout layout) {
-  return AllocateDescriptor(descriptor_pool_, layout);
+VkDescriptorSet VulkanRHI::AllocateDescriptor(VkDescriptorSetLayout layout) 
+{
+    return AllocateDescriptor(descriptor_pool_, layout);
 }
 
-VkDescriptorSetLayout VulkanRHI::CreateDescriptorSetLayout(
-    const std::vector<VkDescriptorSetLayoutBinding>& bindings) {
-  VkDescriptorSetLayout layout;
-  VkDescriptorSetLayoutCreateInfo create_info = {
-      VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO};
-  create_info.bindingCount = bindings.size();
-  create_info.pBindings = bindings.data();
-  if (VKFAILED(vkCreateDescriptorSetLayout(vk_device_, &create_info, nullptr,
-                                           &layout))) {
+VkDescriptorSetLayout VulkanRHI::CreateDescriptorSetLayout(const std::vector<VkDescriptorSetLayoutBinding>& bindings) 
+{
+    VkDescriptorSetLayout layout;
+    VkDescriptorSetLayoutCreateInfo create_info = {VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO};
+    create_info.bindingCount = bindings.size();
+    create_info.pBindings = bindings.data();
+    if (VKFAILED(vkCreateDescriptorSetLayout(vk_device_, &create_info, nullptr,
+                                            &layout))) {
     PEANUT_LOG_FATAL("Failed to create descriptorset layout");
-  }
-  return layout;
+    }
+    return layout;
 }
 
-VkPipelineLayout VulkanRHI::CreatePipelineLayout(
-    const std::vector<VkDescriptorSetLayout>& set_layout,
-    const std::vector<VkPushConstantRange>& push_constants) {
-  VkPipelineLayout layout;
-  VkPipelineLayoutCreateInfo create_info = {
-      VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO};
-  create_info.setLayoutCount = set_layout.size();
-  create_info.pSetLayouts = set_layout.data();
-  if (push_constants.size() > 0) {
-    create_info.pushConstantRangeCount = push_constants.size();
-    create_info.pPushConstantRanges = push_constants.data();
-  }
+VkPipelineLayout VulkanRHI::CreatePipelineLayout(const std::vector<VkDescriptorSetLayout>& set_layout,
+                                                 const std::vector<VkPushConstantRange>& push_constants)
+{
+    VkPipelineLayout layout;
+    VkPipelineLayoutCreateInfo create_info = {VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO};
+    create_info.setLayoutCount = set_layout.size();
+    create_info.pSetLayouts = set_layout.data();
+    if (push_constants.size() > 0)
+    {
+        create_info.pushConstantRangeCount = push_constants.size();
+        create_info.pPushConstantRanges = push_constants.data();
+    }
 
-  if (VKFAILED(
-          vkCreatePipelineLayout(vk_device_, &create_info, nullptr, &layout))) {
-    PEANUT_LOG_FATAL("Failed to create pipeline layout");
-  }
+    if (VKFAILED(vkCreatePipelineLayout(vk_device_, &create_info, nullptr, &layout))) 
+    {
+        PEANUT_LOG_FATAL("Failed to create pipeline layout");
+    }
 
-  return layout;
+    return layout;
 }
 
-void VulkanRHI::UpdateImageDescriptorSet(
-    VkDescriptorSet descriptor_set, uint32_t dst_binding,
-    VkDescriptorType descriptor_type,
-    const std::vector<VkDescriptorImageInfo>& descriptors) {
-  VkWriteDescriptorSet write_descriptor_set = {
-      VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
-  write_descriptor_set.dstSet = descriptor_set;
-  write_descriptor_set.dstBinding = dst_binding;
-  write_descriptor_set.descriptorType = descriptor_type;
-  write_descriptor_set.descriptorCount =
-      static_cast<uint32_t>(descriptors.size());
-  write_descriptor_set.pImageInfo = descriptors.data();
-  vkUpdateDescriptorSets(vk_device_, 1, &write_descriptor_set, 0, nullptr);
+void VulkanRHI::UpdateImageDescriptorSet(VkDescriptorSet descriptor_set, uint32_t dst_binding, 
+                                         VkDescriptorType descriptor_type,const std::vector<VkDescriptorImageInfo>& descriptors) 
+{
+    VkWriteDescriptorSet write_descriptor_set = {VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
+    write_descriptor_set.dstSet = descriptor_set;
+    write_descriptor_set.dstBinding = dst_binding;
+    write_descriptor_set.descriptorType = descriptor_type;
+    write_descriptor_set.descriptorCount = static_cast<uint32_t>(descriptors.size());
+    write_descriptor_set.pImageInfo = descriptors.data();
+    vkUpdateDescriptorSets(vk_device_, 1, &write_descriptor_set, 0, nullptr);
 }
 
-void VulkanRHI::UpdateBufferDescriptorSet(
-    VkDescriptorSet descriptor_set, uint32_t dst_binding,
-    VkDescriptorType descriptor_type,
-    const std::vector<VkDescriptorBufferInfo>& descriptors) {
-  VkWriteDescriptorSet write_descriptor_set = {
-      VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
-  write_descriptor_set.dstSet = descriptor_set;
-  write_descriptor_set.dstBinding = dst_binding;
-  write_descriptor_set.descriptorType = descriptor_type;
-  write_descriptor_set.descriptorCount =
-      static_cast<uint32_t>(descriptors.size());
-  write_descriptor_set.pBufferInfo = descriptors.data();
-  vkUpdateDescriptorSets(vk_device_, 1, &write_descriptor_set, 0, nullptr);
+void VulkanRHI::UpdateBufferDescriptorSet(VkDescriptorSet descriptor_set, uint32_t dst_binding, 
+                                          VkDescriptorType descriptor_type, const std::vector<VkDescriptorBufferInfo>& descriptors) 
+{
+    VkWriteDescriptorSet write_descriptor_set = {VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
+    write_descriptor_set.dstSet = descriptor_set;
+    write_descriptor_set.dstBinding = dst_binding;
+    write_descriptor_set.descriptorType = descriptor_type;
+    write_descriptor_set.descriptorCount = static_cast<uint32_t>(descriptors.size());
+    write_descriptor_set.pBufferInfo = descriptors.data();
+    vkUpdateDescriptorSets(vk_device_, 1, &write_descriptor_set, 0, nullptr);
 }
 
 void VulkanRHI::CreateRenderPass(VkRenderPassCreateInfo* create_info,
-                                 VkRenderPass* out_renderpass) {
-  if (VKFAILED(vkCreateRenderPass(vk_device_, create_info, nullptr,
-                                  out_renderpass))) {
-    PEANUT_LOG_FATAL("Failed to create render pass");
-  }
+                                 VkRenderPass* out_renderpass)
+{
+    if (VKFAILED(vkCreateRenderPass(vk_device_, create_info, nullptr, out_renderpass)))
+    {
+        PEANUT_LOG_FATAL("Failed to create render pass");
+    }
 }
 
-void VulkanRHI::GetPhysicalDeviceImageFormatProperties(
-    VkFormat format, VkImageType type, VkImageTiling tiling,
-    VkImageUsageFlags usage, VkImageCreateFlags flags,
-    VkImageFormatProperties* out_properties) {
-  if (VKFAILED(vkGetPhysicalDeviceImageFormatProperties(
-          physical_device_.physic_device_handle, format, type, tiling, usage,
-          flags, out_properties))) {
-    PEANUT_LOG_FATAL("Failed to Get physical device image format properties");
-  }
+void VulkanRHI::GetPhysicalDeviceImageFormatProperties(VkFormat format, VkImageType type, VkImageTiling tiling,
+                                                        VkImageUsageFlags usage, VkImageCreateFlags flags, VkImageFormatProperties* out_properties) 
+{
+    if (VKFAILED(vkGetPhysicalDeviceImageFormatProperties(physical_device_.physic_device_handle, format, type, 
+                                                          tiling, usage, flags, out_properties)))
+    {
+        PEANUT_LOG_FATAL("Failed to Get physical device image format properties");
+    }
 }
 
 void VulkanRHI::CreateFrameBuffer(VkFramebufferCreateInfo* create_info,
@@ -664,62 +659,66 @@ void VulkanRHI::PopulateDebugMessengerCreateInfo(
   createInfo.pfnUserCallback = DebugCallback;
 }
 
-void VulkanRHI::SetupInstance() {
-  // app information
-  VkApplicationInfo app_info{};
-  app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-  app_info.pApplicationName = "Peanut_Render";
-  app_info.applicationVersion = VK_MAKE_VERSION(0, 0, 1);
-  app_info.pEngineName = "Peanut_Engine";
-  app_info.engineVersion = VK_MAKE_VERSION(0, 0, 1);
-  app_info.apiVersion = VK_API_VERSION_1_0;
-  app_info.pNext = nullptr;
+void VulkanRHI::SetupInstance() 
+{
+    // app information
+    VkApplicationInfo app_info{};
+    app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+    app_info.pApplicationName = "Peanut_Render";
+    app_info.applicationVersion = VK_MAKE_VERSION(0, 0, 1);
+    app_info.pEngineName = "Peanut_Engine";
+    app_info.engineVersion = VK_MAKE_VERSION(0, 0, 1);
+    app_info.apiVersion = VK_API_VERSION_1_0;
+    app_info.pNext = nullptr;
 
-  std::vector<const char*> instance_layers;
-  std::vector<const char*> instance_extensions;
+    std::vector<const char*> instance_layers;
+    std::vector<const char*> instance_extensions;
 
-  uint32_t glfw_required_extensions_num;
-  const char** required_extensions =
-      glfwGetRequiredInstanceExtensions(&glfw_required_extensions_num);
-  if (glfw_required_extensions_num > 0) {
-    instance_extensions = std::vector<const char*>{
-        required_extensions,
-        required_extensions + glfw_required_extensions_num};
-  }
+    uint32_t glfw_required_extensions_num;
+    const char** required_extensions =
+        glfwGetRequiredInstanceExtensions(&glfw_required_extensions_num);
+
+    if (glfw_required_extensions_num > 0) 
+    {
+        instance_extensions = std::vector<const char*>{
+            required_extensions,
+            required_extensions + glfw_required_extensions_num};
+    }
 
 #if _DEBUG
-  instance_layers.push_back("VK_LAYER_KHRONOS_validation");
-  instance_extensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
+    instance_layers.push_back("VK_LAYER_KHRONOS_validation");
+    instance_extensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
 #endif
 
-  // create info
-  VkInstanceCreateInfo instance_info{};
-  instance_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-  instance_info.pApplicationInfo = &app_info;
+    // create info
+    VkInstanceCreateInfo instance_info{};
+    instance_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+    instance_info.pApplicationInfo = &app_info;
 
-  if (!instance_layers.empty()) {
+    if (!instance_layers.empty()) {
     instance_info.enabledLayerCount =
         static_cast<uint32_t>(instance_layers.size());
     instance_info.ppEnabledLayerNames = &instance_layers[0];
-  }
-  if (!instance_extensions.empty()) {
+    }
+    if (!instance_extensions.empty()) {
     instance_info.enabledExtensionCount =
         static_cast<uint32_t>(instance_extensions.size());
     instance_info.ppEnabledExtensionNames = &instance_extensions[0];
-  }
+    }
 
 #ifdef _DEBUG
-  VkDebugUtilsMessengerCreateInfoEXT debug_create_info{};
-  PopulateDebugMessengerCreateInfo(debug_create_info);
-  instance_info.pNext = (VkDebugUtilsMessengerCreateInfoEXT*)&debug_create_info;
+    VkDebugUtilsMessengerCreateInfoEXT debug_create_info{};
+    PopulateDebugMessengerCreateInfo(debug_create_info);
+    instance_info.pNext = (VkDebugUtilsMessengerCreateInfoEXT*)&debug_create_info;
 #endif
 
-  // create instance
-  if (VKFAILED(vkCreateInstance(&instance_info, nullptr, &vk_instance_))) {
-    PEANUT_LOG_FATAL("Failed to Create vulkan instance");
-  }
+    // create instance
+    if (VKFAILED(vkCreateInstance(&instance_info, nullptr, &vk_instance_))) 
+    {
+        PEANUT_LOG_FATAL("Failed to Create vulkan instance");
+    }
 
-  // volkLoadInstance(vk_instance_);
+    // volkLoadInstance(vk_instance_);
 }
 
 VkImageView VulkanRHI::CreateTextureView(
@@ -992,50 +991,71 @@ void VulkanRHI::FindPhysicalDeviceQueueFamily(VkPhysicalDevice handle,
   }
 }
 
-void VulkanRHI::QuerySurfaceCapabilities(
-    VulkanPhysicalDevice& in_physical_device, VkSurfaceKHR surface) {
-  if (VKFAILED(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
-          in_physical_device.physic_device_handle, surface,
-          &in_physical_device.surface_capabilities))) {
-    PEANUT_LOG_FATAL("Get surface capability failed");
-    return;
-  }
-
-  bool has_surface_format = false;
-  uint32_t surface_format_numbers = 0;
-  if (VKSUCCESS(vkGetPhysicalDeviceSurfaceFormatsKHR(
-          in_physical_device.physic_device_handle, surface,
-          &surface_format_numbers, nullptr)) &&
-      surface_format_numbers > 0) {
-    in_physical_device.surface_formats.resize(surface_format_numbers);
-    if (VKSUCCESS(vkGetPhysicalDeviceSurfaceFormatsKHR(
-            in_physical_device.physic_device_handle, surface,
-            &surface_format_numbers, &in_physical_device.surface_formats[0]))) {
-      has_surface_format = true;
+void VulkanRHI::QuerySurfaceCapabilities(VulkanPhysicalDevice& in_physical_device, VkSurfaceKHR surface)
+{
+    if (VKFAILED(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(in_physical_device.physic_device_handle, surface, &in_physical_device.surface_capabilities)))
+    {
+        PEANUT_LOG_FATAL("Get surface capability failed");
+        return;
     }
-  }
 
-  if (!has_surface_format) {
-    PEANUT_LOG_FATAL("Failed to get surface formats");
-  }
-
-  bool has_present_modes = false;
-  uint32_t present_mode_numbers = 0;
-  if (VKSUCCESS(vkGetPhysicalDeviceSurfacePresentModesKHR(
-          in_physical_device.physic_device_handle, surface,
-          &present_mode_numbers, nullptr)) &&
-      present_mode_numbers > 0) {
-    in_physical_device.present_modes.resize(present_mode_numbers);
-    if (VKSUCCESS(vkGetPhysicalDeviceSurfacePresentModesKHR(
-            in_physical_device.physic_device_handle, surface,
-            &present_mode_numbers, &in_physical_device.present_modes[0]))) {
-      has_present_modes = true;
+    bool has_surface_format = false;
+    uint32_t surface_format_numbers = 0;
+    if (VKSUCCESS(vkGetPhysicalDeviceSurfaceFormatsKHR(in_physical_device.physic_device_handle, surface, &surface_format_numbers, nullptr)) 
+                && surface_format_numbers > 0)
+    {
+        in_physical_device.surface_formats.resize(surface_format_numbers);
+        if (VKSUCCESS(vkGetPhysicalDeviceSurfaceFormatsKHR(
+                in_physical_device.physic_device_handle, surface,
+                &surface_format_numbers, &in_physical_device.surface_formats[0])))
+        {
+            has_surface_format = true;
+        }
     }
-  }
 
-  if (!has_present_modes) {
-    PEANUT_LOG_FATAL("Failed to retrieve physical device support present mod");
-  }
+    if (!has_surface_format)
+    {
+        PEANUT_LOG_FATAL("Failed to get surface formats");
+    }
+
+    bool has_present_modes = false;
+    uint32_t present_mode_numbers = 0;
+    if (VKSUCCESS(vkGetPhysicalDeviceSurfacePresentModesKHR(in_physical_device.physic_device_handle, surface, &present_mode_numbers, nullptr)) 
+                && present_mode_numbers > 0)
+    {
+        in_physical_device.present_modes.resize(present_mode_numbers);
+        if (VKSUCCESS(vkGetPhysicalDeviceSurfacePresentModesKHR(in_physical_device.physic_device_handle, surface,
+                &present_mode_numbers, &in_physical_device.present_modes[0])))
+        {
+            has_present_modes = true;
+        }
+    }
+
+    if (!has_present_modes) 
+    {
+        PEANUT_LOG_FATAL("Failed to retrieve physical device support present mod");
+    }
+}
+
+VkFormat VulkanRHI::FindSuitableDepthFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags feature_flag)
+{
+    for (auto format : candidates)
+    {
+		VkFormatProperties props;
+		vkGetPhysicalDeviceFormatProperties(physical_device_.physic_device_handle, format, &props);
+
+        if ((tiling == VK_IMAGE_TILING_OPTIMAL && (props.optimalTilingFeatures & feature_flag) == feature_flag) ||
+            (tiling == VK_IMAGE_TILING_LINEAR && (props.linearTilingFeatures & feature_flag) == feature_flag))
+        {
+			return format;
+		}
+	    
+        
+        
+    }
+
+    PEANUT_LOG_ERROR("Failed to find suitable depth image");
+    return VK_FORMAT_UNDEFINED;
 }
 
 void VulkanRHI::CreateWindowSurface() {
@@ -1094,85 +1114,94 @@ void VulkanRHI::SetupLogicDevice() {
                    0, &present_queue_);
 }
 
-void VulkanRHI::CreateSwapChain() {
-  VkPresentModeKHR present_mode = VkPresentModeKHR::VK_PRESENT_MODE_FIFO_KHR;
-  // not find in physical device present mode
-  if (std::find(physical_device_.present_modes.begin(),
+void VulkanRHI::CreateSwapChain()
+{
+    VkPresentModeKHR present_mode = VkPresentModeKHR::VK_PRESENT_MODE_FIFO_KHR;
+    // not find in physical device present mode
+    if (std::find(physical_device_.present_modes.begin(),
                 physical_device_.present_modes.end(),
-                present_mode) == physical_device_.present_modes.end()) {
-    present_mode = physical_device_.present_modes[0];
-  }
-
-  // get image counts
-  uint32_t image_counts =
-      physical_device_.surface_capabilities.minImageCount + 1;
-
-  if (physical_device_.surface_capabilities.maxImageCount > 0 &&
-      image_counts > physical_device_.surface_capabilities.maxImageCount)
-    image_counts = physical_device_.surface_capabilities.maxImageCount;
-
-  VkSwapchainCreateInfoKHR swapchain_create_info = {
-      VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR};
-  swapchain_create_info.surface = window_surface_;
-  swapchain_create_info.minImageCount = image_counts;
-  swapchain_create_info.imageFormat = VK_FORMAT_B8G8R8A8_UNORM;
-  swapchain_create_info.imageColorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
-  swapchain_create_info.imageExtent =
-      physical_device_.surface_capabilities.currentExtent;
-  swapchain_create_info.imageArrayLayers = 1;
-  swapchain_create_info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-  swapchain_create_info.preTransform =
-      physical_device_.surface_capabilities.currentTransform;
-
-  if (physical_device_.queue_family_indices.graphics_family !=
-      physical_device_.queue_family_indices.present_family) {
-    swapchain_create_info.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
-    swapchain_create_info.queueFamilyIndexCount = 2;
-
-    uint32_t queue_family_indices[] = {
-        physical_device_.queue_family_indices.graphics_family.value(),
-        physical_device_.queue_family_indices.present_family.value()};
-    swapchain_create_info.pQueueFamilyIndices = queue_family_indices;
-  } else {
-    swapchain_create_info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
-  }
-
-  swapchain_create_info.presentMode = present_mode;
-  swapchain_create_info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-  swapchain_create_info.clipped = VK_TRUE;
-  swapchain_create_info.oldSwapchain = VK_NULL_HANDLE;
-  if (VKFAILED(vkCreateSwapchainKHR(vk_device_, &swapchain_create_info, nullptr,
-                                    &swapchain_))) {
-    PEANUT_LOG_FATAL("Failed to create swapchain");
-  }
-
-  if (VKSUCCESS(vkGetSwapchainImagesKHR(vk_device_, swapchain_,
-                                        &frame_in_flight_numbers_, nullptr)) &&
-      frame_in_flight_numbers_ > 0) {
-    swapchain_images_.resize(frame_in_flight_numbers_);
-    if (VKFAILED(vkGetSwapchainImagesKHR(vk_device_, swapchain_,
-                                         &frame_in_flight_numbers_,
-                                         &swapchain_images_[0]))) {
-      PEANUT_LOG_FATAL("Failed to retrieve swapchain image handles");
+                present_mode) == physical_device_.present_modes.end()) 
+    {
+        present_mode = physical_device_.present_modes[0];
     }
-  }
 
-  swapchain_image_views_.resize(frame_in_flight_numbers_);
-  for (int i = 0; i < frame_in_flight_numbers_; ++i) {
-    VkImageViewCreateInfo view_create_info = {
-        VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO};
-    view_create_info.image = swapchain_images_[i];
-    view_create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
-    view_create_info.format = VK_FORMAT_B8G8R8A8_UNORM;
-    view_create_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    view_create_info.subresourceRange.levelCount = 1;
-    view_create_info.subresourceRange.layerCount = 1;
+    // get image counts
+    uint32_t image_counts = physical_device_.surface_capabilities.minImageCount + 1;
 
-    if (VKFAILED(vkCreateImageView(vk_device_, &view_create_info, nullptr,
-                                   &swapchain_image_views_[i]))) {
-      PEANUT_LOG_FATAL("Failed to create image view with index {0}", i);
+    if (physical_device_.surface_capabilities.maxImageCount > 0 &&
+        image_counts > physical_device_.surface_capabilities.maxImageCount)
+    {
+       image_counts = physical_device_.surface_capabilities.maxImageCount;
     }
-  }
+   
+
+    VkSwapchainCreateInfoKHR swapchain_create_info = {VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR};
+    swapchain_create_info.surface = window_surface_;
+    swapchain_create_info.minImageCount = image_counts;
+    swapchain_create_info.imageFormat = VK_FORMAT_B8G8R8A8_UNORM;
+    swapchain_create_info.imageColorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
+    swapchain_create_info.imageExtent =
+        physical_device_.surface_capabilities.currentExtent;
+    swapchain_create_info.imageArrayLayers = 1;
+    swapchain_create_info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+    swapchain_create_info.preTransform =
+        physical_device_.surface_capabilities.currentTransform;
+
+    if (physical_device_.queue_family_indices.graphics_family !=
+        physical_device_.queue_family_indices.present_family)
+    {
+        swapchain_create_info.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
+        swapchain_create_info.queueFamilyIndexCount = 2;
+
+        uint32_t queue_family_indices[] = {
+            physical_device_.queue_family_indices.graphics_family.value(),
+            physical_device_.queue_family_indices.present_family.value()};
+        swapchain_create_info.pQueueFamilyIndices = queue_family_indices;
+        } else {
+        swapchain_create_info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    }
+
+    swapchain_create_info.presentMode = present_mode;
+    swapchain_create_info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+    swapchain_create_info.clipped = VK_TRUE;
+    swapchain_create_info.oldSwapchain = VK_NULL_HANDLE;
+    if (VKFAILED(vkCreateSwapchainKHR(vk_device_, &swapchain_create_info, nullptr,
+                                    &swapchain_))) 
+    {
+        PEANUT_LOG_FATAL("Failed to create swapchain");
+    }
+
+    if (VKSUCCESS(vkGetSwapchainImagesKHR(vk_device_, swapchain_, &frame_in_flight_numbers_, nullptr))
+                    && frame_in_flight_numbers_ > 0) 
+    {
+        swapchain_images_.resize(frame_in_flight_numbers_);
+        if (VKFAILED(vkGetSwapchainImagesKHR(vk_device_, swapchain_,
+                                                &frame_in_flight_numbers_,
+                                                &swapchain_images_[0])))
+        {
+            PEANUT_LOG_FATAL("Failed to retrieve swapchain image handles");
+        }
+    }
+
+    swapchain_image_views_.resize(frame_in_flight_numbers_);
+    for (int i = 0; i < frame_in_flight_numbers_; ++i) 
+    {
+        VkImageViewCreateInfo view_create_info = {VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO};
+        view_create_info.image = swapchain_images_[i];
+        view_create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        view_create_info.format = VK_FORMAT_B8G8R8A8_UNORM;
+        view_create_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        view_create_info.subresourceRange.levelCount = 1;
+        view_create_info.subresourceRange.layerCount = 1;
+
+        if (VKFAILED(vkCreateImageView(vk_device_, &view_create_info, nullptr,
+                                        &swapchain_image_views_[i]))) {
+            PEANUT_LOG_FATAL("Failed to create image view with index {0}", i);
+        }
+    }
+
+    std::vector<VkFormat> depth_format_candidates = { VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT };
+    depth_image_format_ = FindSuitableDepthFormat(depth_format_candidates, VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
 }
 
 void VulkanRHI::CreateCommandPoolAndCommandBuffers() {

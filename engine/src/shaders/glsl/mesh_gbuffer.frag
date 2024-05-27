@@ -3,11 +3,11 @@
 
 #include "structs.h"
 
-layout(binding = 0) uniform _MaterialPCO { MaterialPCO material_pco; };
-layout(binding = 1) uniform sampler2D base_color_texture_sampler;
-layout(binding = 2) uniform sampler2D normal_texture_sampler;
-layout(binding = 3) uniform sampler2D metallic_roughness_occlusion_texture_sampler;
-layout(binding = 5) uniform sampler2D emissive_color_texture_sampler;
+layout(binding = 1) uniform _MaterialPCO { MaterialPCO material_pco; };
+layout(binding = 2) uniform sampler2D base_color_texture_sampler;
+layout(binding = 3) uniform sampler2D normal_texture_sampler;
+layout(binding = 4) uniform sampler2D metallic_roughness_occlusion_texture_sampler;
+// todo: layout(binding = 5) uniform sampler2D emissive_color_texture_sampler;
 
 // input data from vertex shader
 layout(location = 0) in highp vec3 in_position;
@@ -19,7 +19,7 @@ layout(location = 3) in highp vec2 in_texcoord;
 layout(location = 0) out highp vec4 out_gbuffer_a; // normal
 layout(location = 1) out highp vec4 out_gbuffer_b; // metallic, roughness, occlusion
 layout(location = 2) out highp vec4 out_gbuffer_c; // base color
-layout(location = 3) out highp vec4 out_emissive_color;
+// todo: layout(location = 3) out highp vec4 out_emissive_color;
 
 highp vec3 calculate_normal()
 {
@@ -48,11 +48,11 @@ void main()
     }
 
     // emissive color
-    out_emissive_color = material_pco.emissive_factor;
-    if (bool(material_pco.has_emissive_texture))
-    {
-        out_emissive_color = texture(emissive_color_texture_sampler, in_texcoord);
-    }
+    // out_emissive_color = material_pco.emissive_factor;
+    // if (bool(material_pco.has_emissive_texture))
+    // {
+    //    out_emissive_color = texture(emissive_color_texture_sampler, in_texcoord);
+    // }
     
     // metallic roughness and occlusion
     vec3 metallic_roughness_occlusion = vec3(material_pco.metallic_factor, material_pco.roughness_factor, 1.0);

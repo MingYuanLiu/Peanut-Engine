@@ -2,26 +2,29 @@
 
 #include "render_pass_base.h"
 
+#include <array>
+
 namespace peanut
 {
 	enum RenderPipelineType : uint8_t
 	{
-		MeshGBuffer = 0,
+		MeshGbuffer = 0,
 		DeferredLighting,
-		MeshLighting,
+		ForwardLighting,
 		Skybox,
-		Axis,
+		// Axis,
 		PipelineTypeCount
 	};
 
 	enum DescriptorLayoutType : uint8_t
 	{
-		MeshGlobal = 0,
-		PerMesh,
-		PerMaterial,
+		MeshGbuffer = 0,
+		// SkeletalMeshGbuffer,
+		// PerMaterial,
 		DeferredLighting,
+		ForwardLighting,
 		Skybox,
-		Axis,
+		// Axis,
 		DescriptorLayoutTypeCount
 	};
 
@@ -30,8 +33,7 @@ namespace peanut
 		GBufferA_Normal = 0, // normal
 		GBufferB_Metallic_Occlusion_Roughness,	  // metallic, occlusion, roughness
 		GBufferC_BaseColor,	  // albedo (base color)
-		EmissiveColor,
-		DethImage,
+		DepthImage,
 		BackupBufferOdd,
 		BackupBufferEven,
 		AttachmentTypeCount
@@ -81,6 +83,6 @@ namespace peanut
 		std::optional<RenderPassTarget> render_target_;
 
 
-		std::weak_ptr<RHI> vulkan_rhi_;
+		std::weak_ptr<RHI> rhi_;
 	};
 }
