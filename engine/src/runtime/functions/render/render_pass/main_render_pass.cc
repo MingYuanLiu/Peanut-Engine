@@ -4,41 +4,41 @@ namespace peanut
 {
 	void MainRenderPass::Initialize(PassInitInfo* init_info)
 	{
-		rhi_ = static_cast<MainPassInitInfo*>(init_info)->rhi_;
+		rhi_ = init_info->rhi_;
 	}
 
 
 	void MainRenderPass::CreateRenderTargets()
 	{
 		std::vector<RenderPassAttachment>& render_attachments = render_target_->attchments_;
-		render_attachments.resize(AttachmentTypeCount);
+		render_attachments.resize(AttachmentType::AttachmentTypeCount);
 
 		std::shared_ptr<RHI> vulkan_rhi = rhi_.lock();
 		int frame_width = static_cast<VulkanRHI*>(vulkan_rhi.get())->GetDisplayWidth();
 		int frame_height = static_cast<VulkanRHI*>(vulkan_rhi.get())->GetDisplayHeight();
 
-		render_attachments[GBufferA_Normal].format_ = VK_FORMAT_R8G8B8A8_UNORM;
-		render_attachments[GBufferB_Metallic_Occlusion_Roughness].format_ = VK_FORMAT_R8G8B8A8_UNORM;
-		render_attachments[GBufferC_BaseColor].format_ = VK_FORMAT_R8G8B8A8_SRGB;
-		render_attachments[DepthImage].format_ = static_cast<VulkanRHI*>(vulkan_rhi.get())->GetDepthImageFormat();
-		render_attachments[BackupBufferOdd].format_ = VK_FORMAT_R16G16B16A16_SFLOAT;
-		render_attachments[BackupBufferEven].format_ = VK_FORMAT_R16G16B16A16_SFLOAT;
+		render_attachments[AttachmentType::GBufferA_Normal].format_ = VK_FORMAT_R8G8B8A8_UNORM;
+		render_attachments[AttachmentType::GBufferB_Metallic_Occlusion_Roughness].format_ = VK_FORMAT_R8G8B8A8_UNORM;
+		render_attachments[AttachmentType::GBufferC_BaseColor].format_ = VK_FORMAT_R8G8B8A8_SRGB;
+		render_attachments[AttachmentType::DepthImage].format_ = static_cast<VulkanRHI*>(vulkan_rhi.get())->GetDepthImageFormat();
+		render_attachments[AttachmentType::BackupBufferOdd].format_ = VK_FORMAT_R16G16B16A16_SFLOAT;
+		render_attachments[AttachmentType::BackupBufferEven].format_ = VK_FORMAT_R16G16B16A16_SFLOAT;
 
-		for (uint32_t i = 0; i < AttachmentTypeCount; i++)
+		for (uint32_t i = 0; i < AttachmentType::AttachmentTypeCount; i++)
 		{
 			// create image
 			Resource<VkImage> image;
-			if (i == GBufferA_Normal)
+			if (i == AttachmentType::GBufferA_Normal)
 			{
-				image = vulkan_rhi->CreateImage(frame_width, frame_height, 0, 1, 1, render_attachments[GBufferA_Normal].format_,
+				image = vulkan_rhi->CreateImage(frame_width, frame_height, 0, 1, 1, render_attachments[AttachmentType::GBufferA_Normal].format_,
 					VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT);
-				render_attachments[GBufferA_Normal].image_ = image;
+				render_attachments[AttachmentType::GBufferA_Normal].image_ = image;
 			}
-			else if (i == DepthImage)
+			else if (i == AttachmentType::DepthImage)
 			{
-				image = vulkan_rhi->CreateImage(frame_width, frame_height, 0, 1, 1, render_attachments[GBufferA_Normal].format_,
+				image = vulkan_rhi->CreateImage(frame_width, frame_height, 0, 1, 1, render_attachments[AttachmentType::GBufferA_Normal].format_,
 					VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
-				render_attachments[GBufferA_Normal].image_ = image;
+				render_attachments[AttachmentType::GBufferA_Normal].image_ = image;
 			}
 			else
 			{
@@ -58,15 +58,15 @@ namespace peanut
 	{
 		std::vector<RenderPassAttachment>& render_attachments = render_target_->attchments_;
 
-		std::array<VkAttachmentDescription, AttachmentTypeCount> attachments{};
-		std::array<VkAttachmentReference, AttachmentTypeCount> color_attachment_refs{};
-		std::array<VkAttachmentReference, AttachmentTypeCount> input_attachment_refs{};
+		std::array<VkAttachmentDescription, AttachmentType::AttachmentTypeCount> attachments{};
+		std::array<VkAttachmentReference, AttachmentType::AttachmentTypeCount> color_attachment_refs{};
+		std::array<VkAttachmentReference, AttachmentType::AttachmentTypeCount> input_attachment_refs{};
 
 		// setup attachment description
-		attachments[GBufferA_Normal] =
+		attachments[AttachmentType::GBufferA_Normal] =
 		{
 			0, // flag
-			render_attachments[GBufferA_Normal].format_,
+			render_attachments[AttachmentType::GBufferA_Normal].format_,
 			VK_SAMPLE_COUNT_1_BIT,
 			VK_ATTACHMENT_LOAD_OP_CLEAR, // load op
 			VK_ATTACHMENT_STORE_OP_STORE,
@@ -76,10 +76,10 @@ namespace peanut
 			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
 		};
 
-		attachments[GBufferB_Metallic_Occlusion_Roughness] =
+		attachments[AttachmentType::GBufferB_Metallic_Occlusion_Roughness] =
 		{
 			0,
-			render_attachments[GBufferB_Metallic_Occlusion_Roughness].format_,
+			render_attachments[AttachmentType::GBufferB_Metallic_Occlusion_Roughness].format_,
 			VK_SAMPLE_COUNT_1_BIT,
 			VK_ATTACHMENT_LOAD_OP_CLEAR,
 			VK_ATTACHMENT_STORE_OP_DONT_CARE,
@@ -89,10 +89,10 @@ namespace peanut
 			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
 		};
 
-		attachments[GBufferC_BaseColor] =
+		attachments[AttachmentType::GBufferC_BaseColor] =
 		{
 			0,
-			render_attachments[GBufferC_BaseColor].format_,
+			render_attachments[AttachmentType::GBufferC_BaseColor].format_,
 			VK_SAMPLE_COUNT_1_BIT,
 			VK_ATTACHMENT_LOAD_OP_CLEAR,
 			VK_ATTACHMENT_STORE_OP_DONT_CARE,
@@ -102,10 +102,10 @@ namespace peanut
 			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
 		};
 
-		attachments[DepthImage] =
+		attachments[AttachmentType::DepthImage] =
 		{
 			0,
-			render_attachments[DepthImage].format_,
+			render_attachments[AttachmentType::DepthImage].format_,
 			VK_SAMPLE_COUNT_1_BIT,
 			VK_ATTACHMENT_LOAD_OP_CLEAR,
 			VK_ATTACHMENT_STORE_OP_STORE,
@@ -115,10 +115,10 @@ namespace peanut
 			VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
 		};
 
-		attachments[BackupBufferOdd] =
+		attachments[AttachmentType::BackupBufferOdd] =
 		{
 			0,
-			render_attachments[BackupBufferOdd].format_,
+			render_attachments[AttachmentType::BackupBufferOdd].format_,
 			VK_SAMPLE_COUNT_1_BIT,
 			VK_ATTACHMENT_LOAD_OP_CLEAR,
 			VK_ATTACHMENT_STORE_OP_DONT_CARE,
@@ -128,10 +128,10 @@ namespace peanut
 			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
 		};
 
-		attachments[BackupBufferEven] =
+		attachments[AttachmentType::BackupBufferEven] =
 		{
 			0,
-			render_attachments[BackupBufferEven].format_,
+			render_attachments[AttachmentType::BackupBufferEven].format_,
 			VK_SAMPLE_COUNT_1_BIT,
 			VK_ATTACHMENT_LOAD_OP_CLEAR,
 			VK_ATTACHMENT_STORE_OP_DONT_CARE,
@@ -144,24 +144,24 @@ namespace peanut
 		// todo: create swapchain image description
 
 		// setup subpass information
-		std::array<VkSubpassDescription, SubpassTypeCount> subpasses_desc{};
+		std::array<VkSubpassDescription, SubpassType::SubpassTypeCount> subpasses_desc{};
 
 		// create base subpass (gbuffer pass) decription
 		std::array<VkAttachmentReference, 3> base_pass_color_attchment_refs{};
-		base_pass_color_attchment_refs[0].attachment = GBufferA_Normal;
+		base_pass_color_attchment_refs[0].attachment = AttachmentType::GBufferA_Normal;
 		base_pass_color_attchment_refs[0].layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
-		base_pass_color_attchment_refs[1].attachment = GBufferB_Metallic_Occlusion_Roughness;
+		base_pass_color_attchment_refs[1].attachment = AttachmentType::GBufferB_Metallic_Occlusion_Roughness;
 		base_pass_color_attchment_refs[1].layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
-		base_pass_color_attchment_refs[2].attachment = GBufferC_BaseColor;
+		base_pass_color_attchment_refs[2].attachment = AttachmentType::GBufferC_BaseColor;
 		base_pass_color_attchment_refs[2].layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
 		VkAttachmentReference base_pass_depth_attchment_refs{};
-		base_pass_depth_attchment_refs.attachment = DepthImage;
+		base_pass_depth_attchment_refs.attachment = AttachmentType::DepthImage;
 		base_pass_depth_attchment_refs.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
-		subpasses_desc[BasePass] =
+		subpasses_desc[SubpassType::BasePass] =
 		{
 			0,
 			VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -177,23 +177,23 @@ namespace peanut
 
 		// create deferred lighting subpass decription
 		std::array<VkAttachmentReference, 4> deferred_lighting_input_attchment_refs{};
-		deferred_lighting_input_attchment_refs[0].attachment = GBufferA_Normal;
+		deferred_lighting_input_attchment_refs[0].attachment = AttachmentType::GBufferA_Normal;
 		deferred_lighting_input_attchment_refs[0].layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
-		deferred_lighting_input_attchment_refs[1].attachment = GBufferB_Metallic_Occlusion_Roughness;
+		deferred_lighting_input_attchment_refs[1].attachment = AttachmentType::GBufferB_Metallic_Occlusion_Roughness;
 		deferred_lighting_input_attchment_refs[1].layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
-		deferred_lighting_input_attchment_refs[2].attachment = GBufferC_BaseColor;
+		deferred_lighting_input_attchment_refs[2].attachment = AttachmentType::GBufferC_BaseColor;
 		deferred_lighting_input_attchment_refs[2].layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
-		deferred_lighting_input_attchment_refs[3].attachment = DepthImage;
+		deferred_lighting_input_attchment_refs[3].attachment = AttachmentType::DepthImage;
 		deferred_lighting_input_attchment_refs[3].layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
 		VkAttachmentReference deferred_lighting_color_attchment_refs;
-		deferred_lighting_color_attchment_refs.attachment = BackupBufferOdd;
+		deferred_lighting_color_attchment_refs.attachment = AttachmentType::BackupBufferOdd;
 		deferred_lighting_color_attchment_refs.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
-		subpasses_desc[DeferredLightingPass] =
+		subpasses_desc[SubpassType::DeferredLightingPass] =
 		{
 			0,
 			VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -209,14 +209,14 @@ namespace peanut
 
 		// create forward lighting subpass description
 		VkAttachmentReference forward_lighting_color_attchment_refs;
-		forward_lighting_color_attchment_refs.attachment = BackupBufferOdd;
+		forward_lighting_color_attchment_refs.attachment = AttachmentType::BackupBufferOdd;
 		forward_lighting_color_attchment_refs.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
 		VkAttachmentReference forward_lighting_depth_attchment_refs;
-		forward_lighting_depth_attchment_refs.attachment = DepthImage;
+		forward_lighting_depth_attchment_refs.attachment = AttachmentType::DepthImage;
 		forward_lighting_depth_attchment_refs.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
-		subpasses_desc[ForwardLightingPass] =
+		subpasses_desc[SubpassType::ForwardLightingPass] =
 		{
 			0,
 			VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -232,14 +232,14 @@ namespace peanut
 
 		// create tone mapping subpass description
 		VkAttachmentReference tone_mapping_input_attchment_refs;
-		tone_mapping_input_attchment_refs.attachment = BackupBufferOdd; // from lighting pass
+		tone_mapping_input_attchment_refs.attachment = AttachmentType::BackupBufferOdd; // from lighting pass
 		tone_mapping_input_attchment_refs.layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
 		VkAttachmentReference tone_mapping_color_attchment_refs;
-		tone_mapping_color_attchment_refs.attachment = BackupBufferEven; // to color grading
+		tone_mapping_color_attchment_refs.attachment = AttachmentType::BackupBufferEven; // to color grading
 		tone_mapping_color_attchment_refs.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
-		subpasses_desc[ToneMappingPass] =
+		subpasses_desc[SubpassType::ToneMappingPass] =
 		{
 			0,
 			VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -255,14 +255,14 @@ namespace peanut
 
 		// create color grading subpass description
 		VkAttachmentReference color_grading_input_attchment_refs;
-		color_grading_input_attchment_refs.attachment = BackupBufferEven; // from tone mapping pass
+		color_grading_input_attchment_refs.attachment = AttachmentType::BackupBufferEven; // from tone mapping pass
 		color_grading_input_attchment_refs.layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
 		VkAttachmentReference color_grading_color_attchment_refs;
-		color_grading_color_attchment_refs.attachment = BackupBufferOdd; // todo: to swapchain
+		color_grading_color_attchment_refs.attachment = AttachmentType::BackupBufferOdd; // todo: to swapchain
 		color_grading_color_attchment_refs.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
-		subpasses_desc[ColorGradingPass] =
+		subpasses_desc[SubpassType::ColorGradingPass] =
 		{
 			0,
 			VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -277,11 +277,12 @@ namespace peanut
 		};
 
 		// create subpass dependency
-		std::array<VkSubpassDependency, SubpassTypeCount> subpass_dependencies{};
+		std::array<VkSubpassDependency, SubpassType::SubpassTypeCount> subpass_dependencies{};
+		// fixme: need it?
 		subpass_dependencies[0] =
 		{
 			VK_SUBPASS_EXTERNAL,
-			DeferredLighting,
+			SubpassType::DeferredLightingPass,
 			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
 			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
 			VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
@@ -291,8 +292,8 @@ namespace peanut
 
 		subpass_dependencies[1] =
 		{
-			BasePass,
-			DeferredLighting,
+			SubpassType::BasePass,
+			SubpassType::DeferredLightingPass,
 			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
 			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
 			VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
@@ -302,8 +303,8 @@ namespace peanut
 
 		subpass_dependencies[2] =
 		{
-			DeferredLighting,
-			ForwardLightingPass,
+			SubpassType::DeferredLightingPass,
+			SubpassType::ForwardLightingPass,
 			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
 			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
 			VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
@@ -313,8 +314,8 @@ namespace peanut
 
 		subpass_dependencies[3] =
 		{
-			ForwardLightingPass,
-			ToneMappingPass,
+			SubpassType::ForwardLightingPass,
+			SubpassType::ToneMappingPass,
 			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
 			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
 			VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
@@ -324,8 +325,8 @@ namespace peanut
 
 		subpass_dependencies[4] =
 		{
-			ToneMappingPass,
-			ColorGradingPass,
+			SubpassType::ToneMappingPass,
+			SubpassType::ColorGradingPass,
 			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
 			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
 			VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
@@ -355,7 +356,7 @@ namespace peanut
 
 	void MainRenderPass::CreateDescriptorSetLayouts()
 	{
-		render_descriptors_.resize(DescriptorLayoutTypeCount);
+		render_descriptors_.resize(DescriptorLayoutType::DescriptorLayoutTypeCount);
 
 		auto rhi = rhi_.lock();
 		if (!rhi)
@@ -367,11 +368,9 @@ namespace peanut
 		// gbuffer descriptor layout
 		std::vector<VkDescriptorSetLayoutBinding> gbuffer_descriptor_layout_binding =
 		{
-			{0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT, nullptr },
-			{1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT, nullptr },
-			{2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr},
-			{3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr},
-			{4, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}
+			{0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr},
+			{1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr},
+			{2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}
 		};
 
 		render_descriptors_[DescriptorLayoutType::MeshGbuffer].descriptor_set_layout_ = 
@@ -385,12 +384,12 @@ namespace peanut
 			{1, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}, // gbuffer b
 			{2, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}, // gbuffer c
 			{3, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}, // depth image
-			{6, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}, // irradiance
-			{7, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}, // prefiltered
-			{8, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}, // brdf lut
-			{9, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}, // directonal light shadow
-			{10, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}, // point light shadow
-			{12, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}, // light uniform buffer
+			{4, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}, // irradiance
+			{5, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}, // prefiltered
+			{6, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}, // brdf lut
+			{7, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}, // directonal light shadow
+			{8, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}, // point light shadow
+			{9, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}, // light uniform buffer
 		};
 
 		render_descriptors_[DescriptorLayoutType::DeferredLighting].descriptor_set_layout_ =
@@ -405,6 +404,9 @@ namespace peanut
 			{3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr},
 			{4, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}
 		};
+
+		render_descriptors_[DescriptorLayoutType::ForwardLighting].descriptor_set_layout_ =
+			rhi->CreateDescriptorSetLayout(forward_lighting_descriptor_layout_binding);
 
 		// skybox layout
 		std::vector<VkDescriptorSetLayoutBinding> skybox_descriptor_layout_binding =
@@ -427,13 +429,23 @@ namespace peanut
 		}
 
 		// mesh gbuffer pipeline layout
-		std::vector<VkPushConstantRange> push_constant_range;
+		std::vector<VkPushConstantRange> push_constant_range =
+		{
+			// transform ubo
+			{VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(TransformUBO)},
+			// material ubo
+			{VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(TransformUBO), sizeof(MaterialPCO)}
+		};
+		
+		all_push_constant_range_.insert(std::make_pair(RenderPipelineType::MeshGbuffer, push_constant_range));
+		
 		std::vector<VkDescriptorSetLayout> set_layouts;
 		set_layouts.push_back(render_descriptors_[DescriptorLayoutType::MeshGbuffer].descriptor_set_layout_);
 		render_pipelines_[RenderPipelineType::MeshGbuffer].pipeline_layout_ =
 			rhi->CreatePipelineLayout(set_layouts, push_constant_range);
 
 		set_layouts.clear();
+		push_constant_range.clear();
 
 		// deferred lighting pipeline layout
 		set_layouts.push_back(render_descriptors_[DescriptorLayoutType::DeferredLighting].descriptor_set_layout_);
@@ -441,12 +453,16 @@ namespace peanut
 			rhi->CreatePipelineLayout(set_layouts, push_constant_range);
 
 		set_layouts.clear();
-
+		push_constant_range.clear();
+		
 		// forward lighting pipeline layout
 		set_layouts.push_back(render_descriptors_[DescriptorLayoutType::ForwardLighting].descriptor_set_layout_);
 		render_pipelines_[RenderPipelineType::ForwardLighting].pipeline_layout_ =
 			rhi->CreatePipelineLayout(set_layouts, push_constant_range);
 
+		set_layouts.clear();
+		push_constant_range.clear();
+		
 		// skybox pipeline layout
 		set_layouts.push_back(render_descriptors_[DescriptorLayoutType::Skybox].descriptor_set_layout_);
 		render_pipelines_[RenderPipelineType::Skybox].pipeline_layout_ =
@@ -455,6 +471,23 @@ namespace peanut
 
 	void MainRenderPass::CreateDescriptorSets()
 	{
+		CreateDeferredLightDescriptor();
+		CreateForwardLightDescriptor();
+		CreateSkyboxDescriptor();
+	}
 
+	void MainRenderPass::CreateDeferredLightDescriptor()
+	{
+		
+	}
+
+	void MainRenderPass::CreateForwardLightDescriptor()
+	{
+		
+	}
+
+	void MainRenderPass::CreateSkyboxDescriptor()
+	{
+		
 	}
 }

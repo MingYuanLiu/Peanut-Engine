@@ -10,6 +10,9 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/euler_angles.hpp>
 
+// shader data structures
+#include "host_device_structs.h"
+
 namespace peanut 
 {
     template <class T>

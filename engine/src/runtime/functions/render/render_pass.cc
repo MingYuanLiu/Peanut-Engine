@@ -633,8 +633,7 @@ void MainRenderPass::CreateFrameBuffer() {
       attachments.push_back(g_resolve_render_targets_[i].color_view);
     }
 
-    VkFramebufferCreateInfo framebuffer_create_info = {
-        VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO};
+    VkFramebufferCreateInfo framebuffer_create_info = {VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO};
     framebuffer_create_info.renderPass = g_render_pass_;
     framebuffer_create_info.attachmentCount =
         static_cast<uint32_t>(attachments.size());
@@ -646,7 +645,8 @@ void MainRenderPass::CreateFrameBuffer() {
   }
 }
 
-void MainRenderPass::SetupPBRPipeline() {
+void MainRenderPass::SetupPBRPipeline()
+{
   const std::vector<VkVertexInputBindingDescription> vertex_input_bindings = {
       {0, sizeof(Mesh::Vertex), VK_VERTEX_INPUT_RATE_VERTEX},
   };
@@ -749,7 +749,8 @@ void MainRenderPass::SetupPBRPipeline() {
   rhi_->DestroyShaderModule(pbr_fs);
 }
 
-void MainRenderPass::SetupToneMapPipeline() {
+void MainRenderPass::SetupToneMapPipeline()
+{
   const std::vector<VkDescriptorSetLayoutBinding>
       descriptorset_layout_bindings = {{0, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT,
                                         1, VK_SHADER_STAGE_FRAGMENT_BIT,
@@ -790,7 +791,8 @@ void MainRenderPass::SetupToneMapPipeline() {
   rhi_->DestroyShaderModule(tonemap_vs);
   rhi_->DestroyShaderModule(tonemap_fs);
 }
-void MainRenderPass::SetupSkyboxPipeline() {
+void MainRenderPass::SetupSkyboxPipeline()
+{
   const std::vector<VkVertexInputBindingDescription> vertex_input_bindings = {
       {0, sizeof(Mesh::Vertex), VK_VERTEX_INPUT_RATE_VERTEX},
   };
