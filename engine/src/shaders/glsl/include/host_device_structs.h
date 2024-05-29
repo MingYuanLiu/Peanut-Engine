@@ -1,6 +1,8 @@
 #ifndef _STRUCT_H_
 #define _STRUCT_H_
 
+#include "constants.h"
+
 #ifdef __cplusplus
 #include <glm/glm.hpp>
 using vec2 = glm::vec2;
@@ -33,6 +35,35 @@ struct MaterialPCO // push constant
     int has_normal_texture;
     int is_blend;
     int is_double_sided;
+};
+
+struct SkyLight
+{
+    vec3 color;
+    float prefilter_mip_levels;
+};
+
+struct DirectionalLight
+{
+    vec3 direction;
+    int cast_shadow;
+    vec3 color;
+    float padding0;
+    mat4 cascade_view_projs[SHADOW_CASCADE_NUM];
+    vec4 cascade_splits;
+};
+
+struct PointLight
+{
+    vec3 position;
+    float padding0;
+    vec3 color;
+    float padding1;
+
+    float radius;
+    float linear_attenuation;
+    float quadratice_attenuation;
+    int cast_shadow;
 };
 
 #endif
