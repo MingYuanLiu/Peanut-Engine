@@ -23,7 +23,7 @@ layout(location = 2) out highp vec4 out_gbuffer_c; // base color
 
 highp vec3 calculate_normal()
 {
-    highp vec3 tagent_normal = texture(normal_texture_sampler, in_texcoord).xyz * 2 - 1.0;
+    highp vec3 tagent_normal = texture(normal_texture_sampler, in_texcoord).xyz * 2 - 1.0; // clap the normal value to [0, 1]
 
     highp vec3 N = normalize(in_normal);
     highp vec3 T = normalize(in_tangent.xyz/* maybe not need 'xyz' */);
