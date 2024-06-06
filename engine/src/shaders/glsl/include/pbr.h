@@ -46,10 +46,10 @@ vec3 CalDiffuseColor(vec3 diffuse_color)
 }
 
 // GGX（Trowbridge-Reitz) normal distribution
-float CalMicrofacetNormalDistribution(PbrInfo pbr_info)
+float CalMicrofacetNormalDistribution(float NdotH, float alpha_roughness)
 {
-    float sqaure_roughness = pbr_info.alpha_roughness * pbr_info.alpha_roughness;
-    float denominator = (pbr_info.NdotH * sqaure_roughness - pbr_info.NdotH) * pbr_info.NdotH + 1.0;
+    float sqaure_roughness = alpha_roughness * alpha_roughness;
+    float denominator = (NdotH * sqaure_roughness - NdotH) * NdotH + 1.0;
 
     return sqaure_roughness / (PI * denominator * denominator);
 }
@@ -58,11 +58,20 @@ float CalMicrofacetNormalDistribution(PbrInfo pbr_info)
 // F = F0 + (1 - F0) * (1 - cos(thea))^5
 // rapid version from epic game:
 // Karis B, Games E. Real shading in unreal engine 4[J]. Proc. Physically Based Shading Theory Practice, 2013, 4. https://cdn2.unrealengine.com/Resources/files/2013SiggraphPresentationsNotes-26915738.pdf
-float CalFreshReflection(PbrInfo pbr_info)
+float CalFreshReflection(vec3 F0, vec3 F90, float VdotH)
 {
-    vec3 F0 = pbr_info.reflection;
-    vec3 F90 = pbr_info.reflectance_90_angle;
-    return F0 + (F90 - F0) * exp2(-5.55473 * pbr_info.VdotH - 6.98316 * pbr_info.VdotH );
+    // return F0 + (F90 - F0) * exp2(-5.55473 * pbr_info.VdotH - 6.98316 * pbr_info.VdotH );
+    return F0 + (F90 - F0) * pow(clamp(1 - VdotH, 0.0, 1.0), 5);
+}
+
+// Calculate geometric attenuation for specular BRDF.
+float CalGeometricAttenuation(float NdotL, float NdotV, float roughness)
+{
+    float r = roughness + 1.0;
+    float k = (r * r) / 8.0;
+    float GL = NdotL / (NdotL * (1.0 - k) + k);
+    float GV = NdotV / (NdotV * (1.0 - k) + k);
+    return GL * GV;
 }
 
 // Specular color of pbr
@@ -75,13 +84,25 @@ vec3 CalSpecularColor(PbrInfo pbr_info, vec3 n, vec3 v, vec3 l, vec3 radiance)
 {
     // half vector
     vec3 h = normalize(v + l);
+
+    // calculate cos angle
     pbr_info.NdotL = clamp(dot(n, l), 0,001, 1.0);
     pbr_info.NdotV = clamp(dot(n, v), 0,0, 1.0);
     pbr_info.NdotH = clamp(dot(n, h), 0,0, 1.0);
     pbr_info.VdotL = clamp(dot(v, l), 0,0, 1.0);
+    pbr_info.VdotH = clamp(dot(v, h), 0,0, 1.0);
 
     // calculate Normal Distribution Function
-    float D = CalMicrofacetNormalDistribution(pbr_info);
+    float D = CalMicrofacetNormalDistribution(pbr_info.NdotH, pbr_info.alpha_roughness);
+    float F = CalFreshReflection(pbr_info.reflection, pbr_info.reflectance_90_angle);
+    float G = CalGeometricAttenuation(pbr_info.NdotL, pbr_info.NdotV, pbr_info.roughness);
+
+    return F * G * D / (4.0 * pbr_info.NdotL * pbr_info.NdotV);
+}
+
+vec4 GetLightByCookTorrance(PbrInfo pbr_info, )
+{
+    // di
 }
 
 
