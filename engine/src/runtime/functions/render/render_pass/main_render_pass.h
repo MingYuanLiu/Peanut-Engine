@@ -40,7 +40,7 @@ namespace peanut
 		enum Type : uint8_t
 		{
 			GBufferA_Normal = 0, // normal
-			GBufferB_Metallic_Occlusion_Roughness,	  // metallic, occlusion, roughness
+			GBufferB_Metallic_Roughness_Occlusion,	  // metallic, occlusion, roughness
 			GBufferC_BaseColor,	  // albedo (base color)
 			DepthImage,
 			BackupBufferOdd,
@@ -70,6 +70,11 @@ namespace peanut
 
 	};
 
+	struct RenderMaterialData : RenderData
+	{
+
+	};
+
 	class MainRenderPass : public IRenderPassBase
 	{
 	public:
@@ -89,21 +94,23 @@ namespace peanut
 		void CreatePipelineLayouts() override;
 		void CreatePipelines() override;
 
+		void UpdateMaterialData(const RenderMaterialData& material_data);
+
 	protected:
-		void CreateGbufferDescriptor();
+		VkDescriptorSet CreateGbufferDescriptor();
 		void CreateDeferredLightDescriptor();
 		void CreateForwardLightDescriptor();
 		void CreateSkyboxDescriptor();
 
+		void UpdateGbufferDescriptor(VkCommandBuffer command_buffer, const PbrMaterial& material_data, VkDescriptorSet dst_descriptor_set);
+		void UpdateDeferredLightDescriptor();
+		void UpdateForwardLightDescriptor();
+
+		void RenderMesh(const std::shared_ptr<RenderData>& render_data, RenderDataType render_type);
+		void RenderDeferredLighting();
+
+
 	private:
-		std::vector<RenderDescriptorSet> render_descriptors_;
-		std::vector<RenderPipeline> render_pipelines_;
-
-		std::optional<VkRenderPass> render_pass_;
-		std::optional<RenderPassTarget> render_target_;
-
 		std::map<RenderPipelineType::Type, std::vector<VkPushConstantRange> > all_push_constant_range_;
-
-		std::weak_ptr<RHI> rhi_;
 	};
 }

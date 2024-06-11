@@ -32,12 +32,31 @@ namespace peanut
         SkeletalMesh
     };
 
-    class RenderData
+    struct RenderData
     {
-    protected:
-        RenderDataType data_type_;
+        RenderDataType data_type_ = RenderDataType::Base;
     };
 
+    struct MeshRenderData : public RenderData
+    {
+        Resource<VkBuffer> vertex_buffer;
+        Resource<VkBuffer> index_buffer;
+        Resource<VkBuffer> transform_ub;
+        TransformUBO transform_ubo_data;
+
+        std::vector<uint32_t> index_counts;
+        std::vector<uint32_t> index_offsets;
+    };
+
+    struct StaticMeshRenderData : public MeshRenderData
+    {
+        StaticMeshRenderData() { data_type_ = RenderDataType::StaticMesh; }
+
+        std::vector<MaterialPCO> material_pcos;
+        std::vector<PbrMaterial> pbr_materials;
+    };
+
+    // ========================================================================
     struct QueueFamilyIndices 
     {
         std::optional<uint32_t> graphics_family;
@@ -129,10 +148,10 @@ namespace peanut
 
     struct PbrMaterial 
     {
-        std::shared_ptr<TextureData> albedo_texture_;
-        std::shared_ptr<TextureData> metallic_texture_;
-        std::shared_ptr<TextureData> normal_texture_;
-        std::shared_ptr<TextureData> roughness_texture_;
+        std::shared_ptr<TextureData> base_color_texture;
+        std::shared_ptr<TextureData> metallic_roughness_occlusion_texture;
+        std::shared_ptr<TextureData> normal_texture;
+        std::shared_ptr<TextureData> emissive_texture;
     };
 
 struct TextureMemoryBarrier 

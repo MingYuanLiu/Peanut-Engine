@@ -7,7 +7,7 @@ layout(push_constant) uniform _MaterialPCO { MaterialPCO material_pco; };
 layout(set = 0, binding = 0) uniform sampler2D base_color_texture_sampler;
 layout(set = 0, binding = 1) uniform sampler2D normal_texture_sampler;
 layout(set = 0, binding = 2) uniform sampler2D metallic_roughness_occlusion_texture_sampler;
-// todo: layout(binding = 5) uniform sampler2D emissive_color_texture_sampler;
+layout(set = 0, binding = 3) uniform sampler2D emissive_color_texture_sampler;
 
 // input data from vertex shader
 layout(location = 0) in highp vec3 in_position;

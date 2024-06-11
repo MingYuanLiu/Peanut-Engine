@@ -45,44 +45,46 @@ void MainRenderPass::Initialize() {
   ComputeCookTorranceLut();
 }
 
-void MainRenderPass::DeInitialize() {
-  PEANUT_LOG_INFO("DeInitialize main render pass");
+void MainRenderPass::DeInitialize() 
+{
+    PEANUT_LOG_INFO("DeInitialize main render pass");
 
-  rhi_->DestroyTexture(environment_map_);
-  rhi_->DestroyTexture(irradiance_map_);
-  rhi_->DestroyTexture(brdf_lut_);
-  rhi_->DestroyTexture(albedo_texture_);
-  rhi_->DestroyTexture(normal_texture_);
-  rhi_->DestroyTexture(metalness_texture_);
-  rhi_->DestroyTexture(roughness_texture_);
+    rhi_->DestroyTexture(environment_map_);
+    rhi_->DestroyTexture(irradiance_map_);
+    rhi_->DestroyTexture(brdf_lut_);
+    rhi_->DestroyTexture(albedo_texture_);
+    rhi_->DestroyTexture(normal_texture_);
+    rhi_->DestroyTexture(metalness_texture_);
+    rhi_->DestroyTexture(roughness_texture_);
 
-  AssetsManager::GetInstance().DestroyMeshBuffer(*pbr_mesh_);
-  AssetsManager::GetInstance().DestroyMeshBuffer(*skybox_mesh_);
+    AssetsManager::GetInstance().DestroyMeshBuffer(*pbr_mesh_);
+    AssetsManager::GetInstance().DestroyMeshBuffer(*skybox_mesh_);
 
-  DestroyUniformBuffer(uniform_buffer_);
+    DestroyUniformBuffer(uniform_buffer_);
 
-  // destroy sampler
-  rhi_->DestroySampler(&default_sampler_);
-  rhi_->DestroySampler(&brdf_sampler_);
+    // destroy sampler
+    rhi_->DestroySampler(&default_sampler_);
+    rhi_->DestroySampler(&brdf_sampler_);
 
-  rhi_->DestroyPipelineLayout(g_pipeline_layouts_[Pbr]);
-  rhi_->DestroyPipeline(pbr_pipeline_);
+    rhi_->DestroyPipelineLayout(g_pipeline_layouts_[Pbr]);
+    rhi_->DestroyPipeline(pbr_pipeline_);
 
-  rhi_->DestroyPipelineLayout(g_pipeline_layouts_[Skybox]);
-  rhi_->DestroyPipeline(skybox_pipeline_);
+    rhi_->DestroyPipelineLayout(g_pipeline_layouts_[Skybox]);
+    rhi_->DestroyPipeline(skybox_pipeline_);
 
-  rhi_->DestroyPipelineLayout(g_pipeline_layouts_[ToneMap]);
-  rhi_->DestroyPipeline(tonemap_pipeline_);
+    rhi_->DestroyPipelineLayout(g_pipeline_layouts_[ToneMap]);
+    rhi_->DestroyPipeline(tonemap_pipeline_);
 
-  rhi_->DestroyRenderPass(g_render_pass_);
+    rhi_->DestroyRenderPass(g_render_pass_);
 
-  // destroy render target
-  int32_t num_frames = rhi_->GetNumberFrames();
-  for (int32_t i = 0; i < num_frames; ++i) {
-    DestroyRenderTarget(g_render_targets_[i]);
+    // destroy render target
+    int32_t num_frames = rhi_->GetNumberFrames();
+    for (int32_t i = 0; i < num_frames; ++i) 
+    {
+        DestroyRenderTarget(g_render_targets_[i]);
 
-    rhi_->DestroyFrameBuffer(g_frame_buffers_[i]);
-  }
+        rhi_->DestroyFrameBuffer(g_frame_buffers_[i]);
+    }
 }
 
 void MainRenderPass::RenderTick(const ViewSettings &view,

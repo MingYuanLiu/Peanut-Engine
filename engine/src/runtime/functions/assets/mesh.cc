@@ -38,8 +38,6 @@ Mesh::Mesh(const aiMesh* mesh) {
     if (mesh->HasTangentsAndBitangents()) {
       vertex.tangent = {mesh->mTangents[i].x, mesh->mTangents[i].y,
                         mesh->mTangents[i].z};
-      vertex.bitangent = {mesh->mBitangents[i].x, mesh->mBitangents[i].y,
-                          mesh->mBitangents[i].z};
     }
     if (mesh->HasTextureCoords(0)) {
       vertex.texcoord = {mesh->mTextureCoords[0][i].x,

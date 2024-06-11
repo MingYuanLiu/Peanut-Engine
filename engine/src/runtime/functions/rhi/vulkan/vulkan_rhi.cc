@@ -4,6 +4,7 @@
 #include <array>
 #include <map>
 #include <iostream>
+#include <math.h>
 #include <set>
 #include <glm/glm.hpp>
 
@@ -46,6 +47,9 @@ void VulkanRHI::Init(const std::shared_ptr<WindowSystem>& window_system)
     CreateSyncPrimitives();
 
     InitializeFrameIndex();
+
+    GetOrCreateSampler(Linear);
+    GetOrCreateSampler(Nearest);
 
     totle_frame_count_ = 0;
     // current_frame_index_ = 0;
@@ -216,16 +220,22 @@ void VulkanRHI::CopyMemToDevice(VkDeviceMemory memory, const void* data,
   vkUnmapMemory(vk_device_, memory);
 }
 
-VkCommandBuffer VulkanRHI::BeginImmediateCommandBuffer() {
-  VkCommandBufferBeginInfo begin_info = {
-      VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
-  begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-  if (VKFAILED(vkBeginCommandBuffer(command_buffers_[current_frame_index_],
-                                    &begin_info))) {
-    PEANUT_LOG_FATAL(
-        "Failed to begin immediate command buffer (still in recording state?)");
-  }
-  return command_buffers_[current_frame_index_];
+VkCommandBuffer VulkanRHI::BeginImmediateCommandBuffer() 
+{
+    VkCommandBufferBeginInfo begin_info = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
+    begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+    if (VKFAILED(vkBeginCommandBuffer(command_buffers_[current_frame_index_], &begin_info))) 
+    {
+        PEANUT_LOG_FATAL("Failed to begin immediate command buffer (still in recording state?)");
+    }
+
+    return command_buffers_[current_frame_index_];
+}
+
+VkCommandBuffer VulkanRHI::GetCommandBuffer()
+{
+    return command_buffers_[current_frame_index_];
 }
 
 void VulkanRHI::CmdPipelineBarrier(
@@ -458,37 +468,37 @@ bool VulkanRHI::MemoryTypeNeedsStaging(uint32_t memory_type_index) {
   return (flags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) == 0;
 }
 
-VkPipeline VulkanRHI::CreateGraphicsPipeline(
-    VkRenderPass renderpass, uint32_t subpass, VkShaderModule vs_shader_module,
-    VkShaderModule fs_shader_module, VkPipelineLayout pipeline_layout,
-    const std::vector<VkVertexInputBindingDescription>* vertex_input_bindings,
-    const std::vector<VkVertexInputAttributeDescription>* vertex_attributes,
-    const VkPipelineMultisampleStateCreateInfo* multisample_state,
-    const VkPipelineDepthStencilStateCreateInfo* depth_stencil_stat) {
-  const VkViewport default_viewport = {
-      0.0f, 0.0f, (float)window_width_, (float)window_height_, 0.0f, 1.0f};
-  const VkRect2D default_scissor = {0, 0, window_width_, window_height_};
-  const VkPipelineMultisampleStateCreateInfo default_multisample_state = {
-      VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
-      nullptr,
-      0,
-      VK_SAMPLE_COUNT_1_BIT,
-  };
+VkPipeline VulkanRHI::CreateGraphicsPipeline(VkRenderPass renderpass, uint32_t subpass, VkShaderModule vs_shader_module,
+                                            VkShaderModule fs_shader_module, VkPipelineLayout pipeline_layout,
+                                            const std::vector<VkVertexInputBindingDescription>* vertex_input_bindings,
+                                            const std::vector<VkVertexInputAttributeDescription>* vertex_attributes,
+                                            const VkPipelineMultisampleStateCreateInfo* multisample_state,
+                                            const VkPipelineDepthStencilStateCreateInfo* depth_stencil_stat) 
+{
+    const VkViewport default_viewport = {0.0f, 0.0f, (float)window_width_, (float)window_height_, 0.0f, 1.0f};
+    const VkRect2D default_scissor = {0, 0, window_width_, window_height_};
+    const VkPipelineMultisampleStateCreateInfo default_multisample_state = 
+    {
+        VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
+        nullptr,
+        0,
+        VK_SAMPLE_COUNT_1_BIT,
+    };
 
-  VkPipelineColorBlendAttachmentState default_color_blend_attachment_state = {};
-  default_color_blend_attachment_state.blendEnable = VK_FALSE;
-  default_color_blend_attachment_state.colorWriteMask =
-      VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
-      VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+    VkPipelineColorBlendAttachmentState default_color_blend_attachment_state = {};
+    default_color_blend_attachment_state.blendEnable = VK_FALSE;
+    default_color_blend_attachment_state.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
+                                                          VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
 
-  const VkPipelineShaderStageCreateInfo shader_stage_create_info[] = {
-      {VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0,
-       VK_SHADER_STAGE_VERTEX_BIT, vs_shader_module, "main", nullptr},
-      {VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0,
-       VK_SHADER_STAGE_FRAGMENT_BIT, fs_shader_module, "main", nullptr}};
+    const VkPipelineShaderStageCreateInfo shader_stage_create_info[] = 
+    {
+        {VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0,
+        VK_SHADER_STAGE_VERTEX_BIT, vs_shader_module, "main", nullptr},
+        {VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0,
+        VK_SHADER_STAGE_FRAGMENT_BIT, fs_shader_module, "main", nullptr}
+    };
 
-  VkPipelineVertexInputStateCreateInfo vertex_input_state_create_info = {
-      VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO};
+  VkPipelineVertexInputStateCreateInfo vertex_input_state_create_info = { VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
   if (vertex_input_bindings) {
     vertex_input_state_create_info.vertexBindingDescriptionCount =
         static_cast<uint32_t>(vertex_input_bindings->size());
@@ -559,29 +569,50 @@ VkPipeline VulkanRHI::CreateGraphicsPipeline(
   }
 
   return pipeline;
+
 }
 
-VkShaderModule VulkanRHI::CreateShaderModule(
-    const std::string& shader_file_path) {
-  std::vector<char> shader_code;
-  if (!RenderUtils::ReadBinaryFile(shader_file_path, shader_code)) {
-    PEANUT_LOG_FATAL("Failed to read shader file {0}",
-                     shader_file_path.c_str());
-  }
+VkPipeline VulkanRHI::CreateGraphicsPipeline(VkPipelineCache pipeline_cache, uint32_t createinfo_counts, VkGraphicsPipelineCreateInfo* pcreate_infos)
+{
+    VkPipeline pipeline = VK_NULL_HANDLE;
+    if (VKFAILED(vkCreateGraphicsPipelines(vk_device_, pipeline_cache, createinfo_counts, pcreate_infos, nullptr, &pipeline)))
+    {
+        PEANUT_LOG_ERROR("Failed to create graphics render pipeline by pipeline create info");
 
-  VkShaderModuleCreateInfo create_info = {
-      VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO};
-  create_info.codeSize = shader_code.size();
-  create_info.pCode = reinterpret_cast<uint32_t*>(&shader_code[0]);
+    }
+    return pipeline;
+}
 
-  VkShaderModule shader_module = VK_NULL_HANDLE;
-  if (VKFAILED(vkCreateShaderModule(vk_device_, &create_info, nullptr,
-                                    &shader_module))) {
-    PEANUT_LOG_FATAL("Failed to create shader module with file {0}",
-                     shader_file_path);
-  }
+VkPipelineCache VulkanRHI::CreatePipelineCache(VkPipelineCacheCreateInfo* pcreate_info)
+{
+    VkPipelineCache pipeline_cache = VK_NULL_HANDLE;
+    if (VKFAILED(vkCreatePipelineCache(vk_device_, pcreate_info, nullptr, &pipeline_cache)))
+    {
+        PEANUT_LOG_ERROR("Failed to create pipeline cache");
+    }
 
-  return shader_module;
+    return pipeline_cache;
+}
+
+VkShaderModule VulkanRHI::CreateShaderModule(const std::string& shader_file_path) 
+{
+    std::vector<char> shader_code;
+    if (!RenderUtils::ReadBinaryFile(shader_file_path, shader_code)) 
+    {
+        PEANUT_LOG_FATAL("Failed to read shader file {0}", shader_file_path.c_str());
+    }
+
+    VkShaderModuleCreateInfo create_info = { VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO };
+    create_info.codeSize = shader_code.size();
+    create_info.pCode = reinterpret_cast<uint32_t*>(&shader_code[0]);
+
+    VkShaderModule shader_module = VK_NULL_HANDLE;
+    if (VKFAILED(vkCreateShaderModule(vk_device_, &create_info, nullptr, &shader_module)))
+    {
+        PEANUT_LOG_FATAL("Failed to create shader module with file {0}", shader_file_path);
+    }
+
+    return shader_module;
 }
 
 void VulkanRHI::DestroyShaderModule(VkShaderModule shader_module) {
@@ -1134,11 +1165,12 @@ void VulkanRHI::CreateSwapChain()
        image_counts = physical_device_.surface_capabilities.maxImageCount;
     }
    
+    swapchain_image_format_ = VK_FORMAT_B8G8R8A8_UNORM;
 
     VkSwapchainCreateInfoKHR swapchain_create_info = {VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR};
     swapchain_create_info.surface = window_surface_;
     swapchain_create_info.minImageCount = image_counts;
-    swapchain_create_info.imageFormat = VK_FORMAT_B8G8R8A8_UNORM;
+    swapchain_create_info.imageFormat = swapchain_image_format_;
     swapchain_create_info.imageColorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
     swapchain_create_info.imageExtent =
         physical_device_.surface_capabilities.currentExtent;
@@ -1189,7 +1221,7 @@ void VulkanRHI::CreateSwapChain()
         VkImageViewCreateInfo view_create_info = {VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO};
         view_create_info.image = swapchain_images_[i];
         view_create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
-        view_create_info.format = VK_FORMAT_B8G8R8A8_UNORM;
+        view_create_info.format = swapchain_image_format_;
         view_create_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         view_create_info.subresourceRange.levelCount = 1;
         view_create_info.subresourceRange.layerCount = 1;
@@ -1266,17 +1298,20 @@ void VulkanRHI::DestroyResource(Resource<VkImage>& image) {
   }
 }
 
-void VulkanRHI::DestroyRenderTarget(RenderTarget& render_target) {
-  DestroyResource(render_target.color_image);
-  DestroyResource(render_target.depth_image);
+void VulkanRHI::DestroyRenderTarget(RenderTarget& render_target)
+{
+    DestroyResource(render_target.color_image);
+    DestroyResource(render_target.depth_image);
 
-  if (render_target.color_view != VK_NULL_HANDLE) {
-    vkDestroyImageView(vk_device_, render_target.color_view, nullptr);
-  }
+    if (render_target.color_view != VK_NULL_HANDLE)
+    {
+        vkDestroyImageView(vk_device_, render_target.color_view, nullptr);
+    }
 
-  if (render_target.depth_view != VK_NULL_HANDLE) {
-    vkDestroyImageView(vk_device_, render_target.depth_view, nullptr);
-  }
+    if (render_target.depth_view != VK_NULL_HANDLE) 
+    {
+        vkDestroyImageView(vk_device_, render_target.depth_view, nullptr);
+    }
 }
 
 void VulkanRHI::CreateSyncPrimitives() {
@@ -1334,6 +1369,110 @@ uint32_t VulkanRHI::FindMemoryType(
   }
 
   return -1;
+}
+
+VkSampler VulkanRHI::GetOrCreateSampler(ImageSamplerType sampler_type)
+{
+    switch (sampler_type)
+    {
+    default:
+    case Linear:
+    {
+        if (!linear_sampler_)
+        {
+            VkSamplerCreateInfo sampler_ci{ VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
+            sampler_ci.magFilter = VK_FILTER_LINEAR;
+            sampler_ci.minFilter = VK_FILTER_LINEAR;
+            sampler_ci.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+            sampler_ci.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+            sampler_ci.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+            sampler_ci.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+            sampler_ci.mipLodBias = 0.0f;
+            sampler_ci.anisotropyEnable = VK_FALSE;
+            sampler_ci.maxAnisotropy = physical_device_.properties.limits.maxSamplerAnisotropy;
+            sampler_ci.compareEnable = VK_FALSE;
+            sampler_ci.compareOp = VK_COMPARE_OP_ALWAYS;
+            sampler_ci.minLod = 0.0f;
+            sampler_ci.maxLod = 8.0f;
+            sampler_ci.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+            sampler_ci.unnormalizedCoordinates = VK_FALSE;
+
+            if (VKFAILED(vkCreateSampler(vk_device_, &sampler_ci, nullptr, &linear_sampler_)))
+            {
+                PEANUT_LOG_ERROR("Create linear sampler failed");
+                return nullptr;
+            }
+        }
+
+        return linear_sampler_;
+    }
+    case Nearest:
+    {
+        if (!nearest_sampler_)
+        {
+            VkSamplerCreateInfo sampler_ci{ VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
+            sampler_ci.magFilter = VK_FILTER_NEAREST;
+            sampler_ci.minFilter = VK_FILTER_NEAREST;
+            sampler_ci.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+            sampler_ci.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+            sampler_ci.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+            sampler_ci.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+            sampler_ci.mipLodBias = 0.0f;
+            sampler_ci.anisotropyEnable = VK_FALSE;
+            sampler_ci.maxAnisotropy = physical_device_.properties.limits.maxSamplerAnisotropy;
+            sampler_ci.compareEnable = VK_FALSE;
+            sampler_ci.compareOp = VK_COMPARE_OP_ALWAYS;
+            sampler_ci.minLod = 0.0f;
+            sampler_ci.maxLod = 8.0f;
+            sampler_ci.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+            sampler_ci.unnormalizedCoordinates = VK_FALSE;
+
+            if (VKFAILED(vkCreateSampler(vk_device_, &sampler_ci, nullptr, &nearest_sampler_)))
+            {
+                PEANUT_LOG_ERROR("Create linear sampler failed");
+                return nullptr;
+            }
+        }
+
+        return nearest_sampler_;
+    }
+    }
+}
+
+VkSampler VulkanRHI::GetMipmapSampler(uint32_t width, uint32_t height)
+{
+    assert(width > 0 && height > 0);
+
+    uint32_t mip_levels = std::floor(std::log2(std::max(width, height))) + 1;
+    auto find_iter = mipmap_samplers_.find(mip_levels);
+    if (find_iter != mipmap_samplers_.end())
+    {
+        return find_iter->second;
+    }
+
+    VkSampler result = VK_NULL_HANDLE;
+    VkSamplerCreateInfo sampler_ci{ VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
+    sampler_ci.magFilter = VK_FILTER_LINEAR;
+    sampler_ci.minFilter = VK_FILTER_LINEAR;
+    sampler_ci.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    sampler_ci.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    sampler_ci.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    sampler_ci.anisotropyEnable = VK_FALSE;
+    sampler_ci.maxAnisotropy = physical_device_.properties.limits.maxSamplerAnisotropy;
+    sampler_ci.compareEnable = VK_FALSE;
+    sampler_ci.compareOp = VK_COMPARE_OP_ALWAYS;
+    sampler_ci.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+    sampler_ci.unnormalizedCoordinates = VK_FALSE;
+    sampler_ci.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+    sampler_ci.maxLod = mip_levels - 1;
+    if (VKFAILED(vkCreateSampler(vk_device_, &sampler_ci, nullptr, &result)))
+    {
+        PEANUT_LOG_ERROR("Create mipmap sampler failed");
+        return VK_NULL_HANDLE;
+    }
+
+    mipmap_samplers_[mip_levels] = result;
+    return result;
 }
 
 }  // namespace peanut

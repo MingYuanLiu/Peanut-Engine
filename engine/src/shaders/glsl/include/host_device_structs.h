@@ -66,4 +66,55 @@ struct PointLight
     int cast_shadow;
 };
 
+struct LightingUBO
+{
+    // camera
+    vec3 camera_pos;
+    float exposure;
+    mat4 camera_view;
+    mat4 inv_camera_view_proj;
+
+    // lights
+    SkyLight sky_light;
+    DirectionalLight directional_light;
+    // PointLight point_lights[MAX_POINT_LIGHT_NUM];
+    // SpotLight spot_lights[MAX_SPOT_LIGHT_NUM];
+
+    int has_sky_light;
+    int has_directional_light;
+    int point_light_num;
+    int spot_light_num;
+
+    // debug
+    vec3 camera_dir;
+    int shader_debug_option;
+};
+
+struct PbrMaterialInfo
+{
+    vec3 position;
+    vec3 normal;
+    vec4 base_color;
+    vec4 emissive_color;
+    float metallic;
+    float roughness;
+    float occlusion;
+};
+
+enum ShaderDebugOption : uint32_t
+{
+    Debug_Light = 0,
+    Debug_Unlit,
+    Debug_Wireframe,
+    Debug_LightOnly,
+    Debbug_Depth,
+    Debug_Normal,
+    Debug_BaseColor,
+    Debug_EmissiveColor,
+    Debug_Metallic,
+    Debug_Roughness,
+    Debug_Occulsion,
+    Debug_Opacity
+};
+
 #endif

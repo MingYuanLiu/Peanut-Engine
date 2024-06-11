@@ -8,10 +8,18 @@
 #include "runtime/functions/rhi/rhi.h"
 #include "runtime/functions/render/render_data.h"
 
-namespace peanut {
+namespace peanut 
+{
 
 class VulkanRHI : public RHI 
 {
+public:
+    enum ImageSamplerType : uint8_t
+    {
+        Linear,
+        Nearest
+    };
+
 public:
     VulkanRHI() = default;
     virtual ~VulkanRHI() {}
@@ -67,6 +75,8 @@ public:
 
     virtual VkCommandBuffer BeginImmediateCommandBuffer() override;
 
+    virtual VkCommandBuffer GetCommandBuffer() override;
+
     void CmdPipelineBarrier(VkCommandBuffer command_buffer, VkPipelineStageFlags src_stage_mask,
         VkPipelineStageFlags dst_stage_mask,const std::vector<TextureMemoryBarrier>& barriers) override;
 
@@ -76,8 +86,7 @@ public:
                                     uint32_t image_width, uint32_t image_height,
                                     VkImageLayout layout);
 
-    virtual void ExecImmediateCommandBuffer(
-        VkCommandBuffer command_buffer) override;
+    virtual void ExecImmediateCommandBuffer(VkCommandBuffer command_buffer) override;
 
     virtual void GenerateMipmaps(const TextureData& texture) override;
 
@@ -121,10 +130,15 @@ public:
             PEANUT_LOG_FATAL("Failed to Map memory");
         }
     }
+
     virtual void UnMapMemory(VkDeviceMemory memory) override 
     {
         vkUnmapMemory(vk_device_, memory);
     }
+
+    virtual void UpdateDescriptorSets(uint32_t descriptor_write_count, const VkWriteDescriptorSet* write_descriptor_sets,
+        uint32_t copy_descriptor_count, const VkCopyDescriptorSet* copy_descriptor_sets) override;
+
     virtual void UpdateImageDescriptorSet(
         VkDescriptorSet descriptor_set, uint32_t dst_binding,
         VkDescriptorType descriptor_type,
@@ -161,6 +175,10 @@ public:
         const std::vector<VkVertexInputAttributeDescription>* vertex_attributes,
         const VkPipelineMultisampleStateCreateInfo* multisample_state,
         const VkPipelineDepthStencilStateCreateInfo* depth_stencil_stat) override;
+
+    virtual VkPipeline CreateGraphicsPipeline(VkPipelineCache pipeline_cache, uint32_t createinfo_counts, VkGraphicsPipelineCreateInfo* pcreate_infos) override;
+
+    virtual VkPipelineCache CreatePipelineCache(VkPipelineCacheCreateInfo* pcreate_info) override;
 
     virtual VkPipeline CreateComputePipeline(
         VkShaderModule cs_shader, VkPipelineLayout layout,
@@ -212,6 +230,10 @@ public:
     uint32_t GetDisplayHeight() { return window_height_; }
 
     VkFormat GetDepthImageFormat() { return depth_image_format_; }
+    VkFormat GetSwapChainImageFormat() { return swapchain_image_format_; }
+
+    VkSampler GetOrCreateSampler(ImageSamplerType sampler_type);
+    VkSampler GetMipmapSampler(uint32_t width, uint32_t height);
 
 protected:
     void PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& create_info);
@@ -251,9 +273,8 @@ private:
     // the physical device must contains the required features
     VkPhysicalDeviceFeatures required_device_features_ = {};
 
-    private:
-    GLFWwindow* native_window_;
-    VkSurfaceKHR window_surface_;
+    GLFWwindow* native_window_ = nullptr;
+    VkSurfaceKHR window_surface_ = VK_NULL_HANDLE;
     uint32_t window_width_;
     uint32_t window_height_;
     uint32_t current_frame_index_;
@@ -273,8 +294,13 @@ private:
     std::vector<VkImage> swapchain_images_;
     std::vector<VkImageView> swapchain_image_views_;
     std::vector<VkFramebuffer> swapchain_frame_buffers_;
+    VkFormat swapchain_image_format_;
 
     VkFormat depth_image_format_;
+    
+    VkSampler nearest_sampler_ = VK_NULL_HANDLE;
+    VkSampler linear_sampler_ = VK_NULL_HANDLE;
+    std::unordered_map<uint32_t, VkSampler> mipmap_samplers_;
 
     VkCommandPool command_pool_;
     std::vector<VkCommandBuffer> command_buffers_;
