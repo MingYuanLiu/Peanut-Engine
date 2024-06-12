@@ -2,6 +2,14 @@
 
 namespace peanut
 {
+	void IRenderPassBase::Initialize(PassInitInfo* init_info)
+	{
+		rhi_ = init_info->rhi_;
+
+		CreateRenderTargets();
+		CreateDescriptorSetLayouts();
+	}
+
 	void IRenderPassBase::CreatePipelineCache()
 	{
 		auto rhi = rhi_.lock();

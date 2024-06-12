@@ -15,6 +15,8 @@
 
 namespace peanut 
 {
+    struct PbrMaterial;
+
     template <class T>
     struct Resource 
     {
@@ -54,6 +56,17 @@ namespace peanut
 
         std::vector<MaterialPCO> material_pcos;
         std::vector<PbrMaterial> pbr_materials;
+    };
+
+    struct LightingRenderData : public RenderData
+    {
+        LightingRenderData() { data_type_ = RenderDataType::Light; }
+
+        LightingUBO lighting_ubo_data;
+        Resource<VkBuffer> lighting_ub;
+
+        // ibl textures
+        
     };
 
     // ========================================================================
@@ -109,7 +122,7 @@ namespace peanut
         uint16_t width_;
         uint16_t height_;
 
-        std::vector<RenderPassAttachment> attchments_;
+        std::vector<RenderPassAttachment> attachments_;
     };
 
     struct RenderTarget 

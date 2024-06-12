@@ -16,7 +16,7 @@ namespace peanut
     public:
         virtual ~IRenderPassBase() {}
 
-        virtual void Initialize(PassInitInfo* init_info) = 0;
+        virtual void Initialize(PassInitInfo* init_info);
         virtual void DeInitialize() = 0;
         virtual void Render() = 0;
 
@@ -26,8 +26,10 @@ namespace peanut
         virtual void CreatePipelineLayouts() = 0;
         virtual void CreatePipelines() = 0;
         virtual void CreateRenderTargets() = 0;
+        virtual void CreateFramebuffer() = 0;
+        virtual void ResizeSwapchainObject() = 0;
         virtual void CreatePipelineCache();
-
+        
         void PrepareRenderPassData(const std::vector<std::shared_ptr<RenderData> >& render_data) { render_data_ = render_data; }
 
         void SetViewSettings(const ViewSettings& view_settings) { view_settings_ = view_settings; }
@@ -44,6 +46,7 @@ namespace peanut
 
         std::optional<RenderPassTarget> render_target_;
         std::optional<VkRenderPass> render_pass_;
+        std::vector<VkFramebuffer> render_pass_framebuffer_;
 
         std::vector<std::shared_ptr<RenderData> > render_data_;
 
@@ -59,6 +62,5 @@ namespace peanut
         std::vector<VkPipelineColorBlendAttachmentState> color_blend_attachment_states{};
         VkPipelineDynamicStateCreateInfo dynamic_state_ci{};
         std::vector<VkDynamicState> dynamic_states{};
-
     };
 }  // namespace peanut

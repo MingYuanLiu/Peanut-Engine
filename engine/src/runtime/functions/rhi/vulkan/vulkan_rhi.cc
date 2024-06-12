@@ -51,7 +51,7 @@ void VulkanRHI::Init(const std::shared_ptr<WindowSystem>& window_system)
     GetOrCreateSampler(Linear);
     GetOrCreateSampler(Nearest);
 
-    totle_frame_count_ = 0;
+    tole_frame_count_ = 0;
     // current_frame_index_ = 0;
 
     PEANUT_LOG_INFO("Vulkan init finished [{0}]",
@@ -408,6 +408,12 @@ VkPipelineLayout VulkanRHI::CreatePipelineLayout(const std::vector<VkDescriptorS
     return layout;
 }
 
+void VulkanRHI::UpdateDescriptorSets(uint32_t descriptor_write_count, const VkWriteDescriptorSet* write_descriptor_sets,
+        uint32_t copy_descriptor_count, const VkCopyDescriptorSet* copy_descriptor_sets)
+{
+    vkUpdateDescriptorSets(vk_device_,  descriptor_write_count, write_descriptor_sets, copy_descriptor_count, copy_descriptor_sets);
+}
+
 void VulkanRHI::UpdateImageDescriptorSet(VkDescriptorSet descriptor_set, uint32_t dst_binding, 
                                          VkDescriptorType descriptor_type,const std::vector<VkDescriptorImageInfo>& descriptors) 
 {
@@ -451,20 +457,18 @@ void VulkanRHI::GetPhysicalDeviceImageFormatProperties(VkFormat format, VkImageT
     }
 }
 
-void VulkanRHI::CreateFrameBuffer(VkFramebufferCreateInfo* create_info,
-                                  VkFramebuffer* out_framebuffer) {
-  if (VKFAILED(vkCreateFramebuffer(vk_device_, create_info, nullptr,
-                                   out_framebuffer))) {
-    PEANUT_LOG_FATAL("Failed to create frame buffer");
-  }
+void VulkanRHI::CreateFrameBuffer(VkFramebufferCreateInfo* create_info, VkFramebuffer* out_framebuffer)
+{
+    if (VKFAILED(vkCreateFramebuffer(vk_device_, create_info, nullptr, out_framebuffer)))
+    {
+        PEANUT_LOG_FATAL("Failed to create frame buffer");
+    }
 }
 
-bool VulkanRHI::MemoryTypeNeedsStaging(uint32_t memory_type_index) {
-  assert(memory_type_index <
-         physical_device_.memory_properties.memoryTypeCount);
-  const VkMemoryPropertyFlags flags =
-      physical_device_.memory_properties.memoryTypes[memory_type_index]
-          .propertyFlags;
+bool VulkanRHI::MemoryTypeNeedsStaging(uint32_t memory_type_index)
+{
+  assert(memory_type_index < physical_device_.memory_properties.memoryTypeCount);
+  const VkMemoryPropertyFlags flags = physical_device_.memory_properties.memoryTypes[memory_type_index].propertyFlags;
   return (flags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) == 0;
 }
 
@@ -776,37 +780,38 @@ VkImageView VulkanRHI::CreateTextureView(
   return view;
 }
 
-void VulkanRHI::PresentFrame() {
-  VkResult result;
+void VulkanRHI::PresentFrame()
+{
+    VkResult result;
 
-  VkPresentInfoKHR present_info = {VK_STRUCTURE_TYPE_PRESENT_INFO_KHR};
-  present_info.swapchainCount = 1;
-  present_info.pSwapchains = &swapchain_;
-  present_info.pImageIndices = &current_frame_index_;
-  present_info.pResults = &result;
-  if (VKFAILED(vkQueuePresentKHR(present_queue_, &present_info)) ||
-      VKFAILED(result)) {
-    PEANUT_LOG_FATAL("Failed to queue swapchain image presentation");
-    return;
-  }
+    VkPresentInfoKHR present_info = {VK_STRUCTURE_TYPE_PRESENT_INFO_KHR};
+    present_info.swapchainCount = 1;
+    present_info.pSwapchains = &swapchain_;
+    present_info.pImageIndices = &current_frame_index_;
+    present_info.pResults = &result;
+    if (VKFAILED(vkQueuePresentKHR(present_queue_, &present_info)) || VKFAILED(result))
+    {
+        PEANUT_LOG_FATAL("Failed to queue swapchain image presentation");
+        return;
+    }
 
-  if (VKFAILED(vkAcquireNextImageKHR(vk_device_, swapchain_, UINT64_MAX,
+    if (VKFAILED(vkAcquireNextImageKHR(vk_device_, swapchain_, UINT64_MAX,
                                      VK_NULL_HANDLE, acquire_next_image_fence_,
-                                     &current_frame_index_))) {
-    PEANUT_LOG_FATAL("Failed to acquire next swapchain image");
-    return;
-  }
+                                     &current_frame_index_)))
+    {
+        PEANUT_LOG_FATAL("Failed to acquire next swapchain image");
+        return;
+    }
 
-  const VkFence fences[] = {acquire_next_image_fence_,
-                            frame_submit_fences_[current_frame_index_]};
-  const uint32_t fence_num_wait =
-      (totle_frame_count_ < current_frame_index_) ? 1 : 2;
-  vkWaitForFences(vk_device_, fence_num_wait, fences, VK_TRUE, UINT64_MAX);
-  vkResetFences(vk_device_, fence_num_wait, fences);
+    const VkFence fences[] = {acquire_next_image_fence_, frame_submit_fences_[current_frame_index_]};
+    const uint32_t fence_num_wait = (tole_frame_count_ < current_frame_index_) ? 1 : 2;
+    vkWaitForFences(vk_device_, fence_num_wait, fences, VK_TRUE, UINT64_MAX);
+    vkResetFences(vk_device_, fence_num_wait, fences);
 
-  if (totle_frame_count_ <= UINT16_MAX) {
-    ++totle_frame_count_;
-  }
+    if (tole_frame_count_ <= UINT16_MAX)
+    {
+        ++tole_frame_count_;
+    }
 }
 
 void VulkanRHI::SetupPhysicalDevice() {

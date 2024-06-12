@@ -37,7 +37,7 @@ public:
                                         uint32_t num_mip_levels,
                                         uint32_t layers) override;
 
-    virtual void DestroyImage(Resource<VkImage> image) 
+    virtual void DestroyImage(Resource<VkImage> image) override
     {
         if (image.resource != VK_NULL_HANDLE)
             vkDestroyImage(vk_device_, image.resource, nullptr);
@@ -46,7 +46,7 @@ public:
             vkFreeMemory(vk_device_, image.memory, nullptr);
     }
 
-    virtual void DestroyImageView(VkImageView image_view) 
+    virtual void DestroyImageView(VkImageView image_view) override
     {
         if (image_view != VK_NULL_HANDLE)
             vkDestroyImageView(vk_device_, image_view, nullptr);
@@ -62,7 +62,7 @@ public:
     VkImageView CreateTextureView(const std::shared_ptr<TextureData>& texture,
                                 VkFormat format, VkImageAspectFlags aspect_mask,
                                 uint32_t base_mip_level,
-                                uint32_t num_mip_levels);
+                                uint32_t num_mip_levels) override;
 
     virtual void DestroyTexture(std::shared_ptr<TextureData>& texture) override 
     {
@@ -214,23 +214,23 @@ public:
         // }
     }
 
-    uint32_t GetCurrentFrameIndex() { return current_frame_index_; }
-    uint32_t GetRenderSamples() { return render_samples_; }
+    uint32_t GetCurrentFrameIndex() const { return current_frame_index_; }
+    uint32_t GetRenderSamples() const { return render_samples_; }
     const std::vector<VkImageView>& GetSwapchainImageView()
     {
         return swapchain_image_views_;
     }
 
-    VkImage GetCurrentSwapchainImage()
+    VkImage GetCurrentSwapchainImage() const
     {
         return swapchain_images_[current_frame_index_];
     }
 
-    uint32_t GetDisplayWidth() { return window_width_; }
-    uint32_t GetDisplayHeight() { return window_height_; }
+    uint32_t GetDisplayWidth() const { return window_width_; }
+    uint32_t GetDisplayHeight() const { return window_height_; }
 
-    VkFormat GetDepthImageFormat() { return depth_image_format_; }
-    VkFormat GetSwapChainImageFormat() { return swapchain_image_format_; }
+    VkFormat GetDepthImageFormat() const { return depth_image_format_; }
+    VkFormat GetSwapChainImageFormat() const { return swapchain_image_format_; }
 
     VkSampler GetOrCreateSampler(ImageSamplerType sampler_type);
     VkSampler GetMipmapSampler(uint32_t width, uint32_t height);
@@ -267,10 +267,10 @@ protected:
     VkFormat FindSuitableDepthFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags feature_flag);
 
 private:
-    // the physical device must contains these externsions
+    // the physical device must contain these extensions
     const std::vector<std::string> required_device_extensions_ = {"VK_KHR_swapchain"};
 
-    // the physical device must contains the required features
+    // the physical device must contain the required features
     VkPhysicalDeviceFeatures required_device_features_ = {};
 
     GLFWwindow* native_window_ = nullptr;
@@ -278,7 +278,7 @@ private:
     uint32_t window_width_;
     uint32_t window_height_;
     uint32_t current_frame_index_;
-    uint64_t totle_frame_count_;
+    uint64_t tole_frame_count_;
 
     VulkanPhysicalDevice physical_device_;
 

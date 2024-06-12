@@ -127,12 +127,11 @@ public:
         VkImageUsageFlags usage, VkImageCreateFlags flags,
         VkImageFormatProperties* out_properties) = 0;
 
-    virtual void CreateFrameBuffer(VkFramebufferCreateInfo* create_info,
-                                    VkFramebuffer* out_framebuffer) = 0;
+    virtual void CreateFrameBuffer(VkFramebufferCreateInfo* create_info, VkFramebuffer* out_framebuffer) = 0;
 
     virtual void DestroyFrameBuffer(VkFramebuffer& framebuffer) = 0;
 
-    // memory whether or not can support host visible type
+    // whether memory can support host visible type
     virtual bool MemoryTypeNeedsStaging(uint32_t memory_type_index) = 0;
 
     // shader module
