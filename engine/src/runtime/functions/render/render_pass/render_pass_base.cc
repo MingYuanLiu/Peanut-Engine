@@ -1,4 +1,5 @@
 #include "render_pass_base.h"
+#include "../render_utils.h"
 
 namespace peanut
 {
@@ -80,5 +81,78 @@ namespace peanut
 		pipeline_create_info_.pDynamicState = &dynamic_state_ci;
 
 	}
+
+	void IRenderPassBase::UpdatePushConstants(VkCommandBuffer command_buffer, VkPipelineLayout pipeline_layout,
+		const std::vector<const void*>& pcos, std::vector<VkPushConstantRange> push_constant_ranges)
+	{
+		for (size_t i = 0; i < push_constant_ranges.size(); i++)
+		{
+			const VkPushConstantRange& push_constant_range = push_constant_ranges[i];
+			vkCmdPushConstants(command_buffer, pipeline_layout, push_constant_range.stageFlags, 
+				push_constant_range.offset, push_constant_range.size, pcos[i]);
+		}
+	}
+
+	void IRenderPassBase::CreateUniformBuffer(uint32_t buffer_size)
+	{
+		std::shared_ptr<VulkanRHI> vulkan_rhi = std::static_pointer_cast<VulkanRHI>(rhi_.lock());
+		if (!uniform_buffer_.has_value())
+		{
+			uniform_buffer_ = std::optional<UniformBuffer>();
+		}
+
+		uniform_buffer_->buffer = vulkan_rhi->CreateBuffer(buffer_size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+		uniform_buffer_->capacity = buffer_size;
+		uniform_buffer_->cursor = 0;
+		vulkan_rhi->MapMemory(uniform_buffer_->buffer.memory, 0, VK_WHOLE_SIZE, 0,&uniform_buffer_->host_mem_ptr);
+	}
+
+	void IRenderPassBase::DestoryUniformBuffer()
+	{
+		std::shared_ptr<VulkanRHI> vulkan_rhi = std::static_pointer_cast<VulkanRHI>(rhi_.lock());
+		if (uniform_buffer_->host_mem_ptr != nullptr &&
+			uniform_buffer_->buffer.memory != VK_NULL_HANDLE)
+		{
+			vulkan_rhi->UnMapMemory(uniform_buffer_->buffer.memory);
+		}
+
+		vulkan_rhi->DestroyBuffer(uniform_buffer_->buffer);
+	}
+
+	template<typename T>
+	SubstorageUniformBuffer IRenderPassBase::AllocateSubstorageFromUniformBuffer()
+	{
+		uint32_t buffer_size = sizeof(T);
+		auto rhi = rhi_.lock();
+		assert(rhi.get() != nullptr);
+
+		const auto& properties = rhi->GetPhysicalDevice().properties;
+		const VkDeviceSize min_alignment = properties.limits.minUniformBufferOffsetAlignment;
+		const VkDeviceSize align_size = RenderUtils::RoundToPowerOfTwo(size, min_alignment);
+		if (align_size > properties.limits.maxUniformBufferRange)
+		{
+			PEANUT_LOG_FATAL(
+				"Request uniform buffer sub-allocation size exceeds "
+				"maxUniformBufferRange of current physical device");
+		}
+
+		if (buffer.cursor + align_size > buffer.capacity)
+		{
+			PEANUT_LOG_FATAL("Failed to allocate with out-of-capacity unifor buffer");
+		}
+
+		SubstorageUniformBuffer substorage;
+		substorage.descriptor_info.buffer = buffer.buffer.resource;
+		substorage.descriptor_info.offset = buffer.cursor;
+		substorage.descriptor_info.range = align_size;
+		substorage.host_mem_ptr = reinterpret_cast<uint8_t*>(buffer.host_mem_ptr) + buffer.cursor;
+
+		buffer.cursor += align_size;
+		return substorage;
+	}
+
+	
 
 } // namespace peanut

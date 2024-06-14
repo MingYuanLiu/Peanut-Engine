@@ -88,6 +88,22 @@ struct LightingUBO
     // debug
     vec3 camera_dir;
     int shader_debug_option;
+
+    void CopyFrom(const LightingUBO& data)
+    {
+        this->camera_pos = data.camera_pos;
+        this->camera_dir = data.camera_dir;
+        this->exposure = data.exposure;
+        this->camera_view = data.camera_view;
+        this->inv_camera_view_proj = data.inv_camera_view_proj;
+        this->sky_light = data.sky_light;
+        this->directional_light = data.directional_light;
+        this->point_light_num = data.point_light_num;
+        this->spot_light_num = data.spot_light_num;
+        this->has_sky_light = data.has_sky_light;
+        this->has_directional_light = data.has_directional_light;
+        this->shader_debug_option = data.shader_debug_option;
+    }
 };
 
 struct PbrMaterialInfo

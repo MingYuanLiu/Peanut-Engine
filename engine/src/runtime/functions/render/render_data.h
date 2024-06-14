@@ -169,57 +169,80 @@ namespace peanut
 
 struct TextureMemoryBarrier 
 {
-  TextureMemoryBarrier(const TextureData &texture, VkAccessFlags srcAccessMask,
-                       VkAccessFlags dstAccessMask, VkImageLayout oldLayout,
-                       VkImageLayout newLayout) {
-    barrier.srcAccessMask = srcAccessMask;
-    barrier.dstAccessMask = dstAccessMask;
-    barrier.oldLayout = oldLayout;
-    barrier.newLayout = newLayout;
-    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.image = texture.image.resource;
-    barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    barrier.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
-    barrier.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
-  }
-  operator VkImageMemoryBarrier() const { return barrier; }
-  VkImageMemoryBarrier barrier = {VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
+    TextureMemoryBarrier(const TextureData &texture, VkAccessFlags srcAccessMask,
+                        VkAccessFlags dstAccessMask, VkImageLayout oldLayout,
+                        VkImageLayout newLayout) 
+    {
+        barrier.srcAccessMask = srcAccessMask;
+        barrier.dstAccessMask = dstAccessMask;
+        barrier.oldLayout = oldLayout;
+        barrier.newLayout = newLayout;
+        barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        barrier.image = texture.image.resource;
+        barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        barrier.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
+        barrier.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
+    }
 
-  TextureMemoryBarrier &AspectMask(VkImageAspectFlags aspectMask) {
-    barrier.subresourceRange.aspectMask = aspectMask;
-    return *this;
-  }
-  TextureMemoryBarrier &MipLevels(
-      uint32_t baseMipLevel, uint32_t levelCount = VK_REMAINING_MIP_LEVELS) {
-    barrier.subresourceRange.baseMipLevel = baseMipLevel;
-    barrier.subresourceRange.levelCount = levelCount;
-    return *this;
-  }
-  TextureMemoryBarrier &ArrayLayers(
-      uint32_t baseArrayLayer,
-      uint32_t layerCount = VK_REMAINING_ARRAY_LAYERS) {
-    barrier.subresourceRange.baseArrayLayer = baseArrayLayer;
-    barrier.subresourceRange.layerCount = layerCount;
-    return *this;
-  }
+    operator VkImageMemoryBarrier() const { return barrier; }
+    VkImageMemoryBarrier barrier = {VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
+
+    TextureMemoryBarrier &AspectMask(VkImageAspectFlags aspectMask) 
+    {
+        barrier.subresourceRange.aspectMask = aspectMask;
+        return *this;
+    }
+    TextureMemoryBarrier &MipLevels(uint32_t baseMipLevel, uint32_t levelCount = VK_REMAINING_MIP_LEVELS) 
+    {
+        barrier.subresourceRange.baseMipLevel = baseMipLevel;
+        barrier.subresourceRange.levelCount = levelCount;
+        return *this;
+    }
+    TextureMemoryBarrier &ArrayLayers(uint32_t baseArrayLayer, uint32_t layerCount = VK_REMAINING_ARRAY_LAYERS) 
+    {
+        barrier.subresourceRange.baseArrayLayer = baseArrayLayer;
+        barrier.subresourceRange.layerCount = layerCount;
+        return *this;
+    }
 };
 
-struct UniformBuffer {
-  Resource<VkBuffer> buffer;
-  VkDeviceSize capacity;
-  VkDeviceSize cursor;
-  void *host_mem_ptr;
+struct UniformBuffer 
+{
+    Resource<VkBuffer> buffer;
+    VkDeviceSize capacity;
+    VkDeviceSize cursor;
+    void *host_mem_ptr;
+
+    template <typename T>
+    T* as() const
+    {
+        return reinterpret_cast<T*>(host_mem_ptr);
+    }
 };
 
-struct UniformBufferAllocation {
-  VkDescriptorBufferInfo descriptor_info;
-  void *host_mem_ptr;
+struct SubstorageUniformBuffer
+{
+    VkDescriptorBufferInfo descriptor_info;
+    void *host_mem_ptr;
 
-  template <typename T>
-  T *as() const {
-    return reinterpret_cast<T *>(host_mem_ptr);
-  }
+    template <typename T>
+    T *as() const 
+    {
+        return reinterpret_cast<T *>(host_mem_ptr);
+    }
+};
+
+struct UniformBufferAllocation 
+{
+    VkDescriptorBufferInfo descriptor_info;
+    void *host_mem_ptr;
+
+    template <typename T>
+    T *as() const 
+    {
+        return reinterpret_cast<T *>(host_mem_ptr);
+    }
 };
 
 struct SpecularFilterPushConstants {

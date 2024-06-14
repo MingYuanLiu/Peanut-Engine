@@ -228,51 +228,55 @@ void MainRenderPass::RenderTick(const ViewSettings &view,
   rhi_->PresentFrame();
 }
 
-void MainRenderPass::preparePassData() {
-  // load pbr model's assets
-  auto &asset_manager = AssetsManager::GetInstance();
+void MainRenderPass::preparePassData() 
+{
+    // load pbr model's assets
+    auto &asset_manager = AssetsManager::GetInstance();
 
-  pbr_mesh_ = asset_manager.LoadMeshBuffer(kPBRModelFile);
-  skybox_mesh_ = asset_manager.LoadMeshBuffer(kSkyBoxModelFile);
+    pbr_mesh_ = asset_manager.LoadMeshBuffer(kPBRModelFile);
+    skybox_mesh_ = asset_manager.LoadMeshBuffer(kSkyBoxModelFile);
 
-  albedo_texture_ = asset_manager.LoadTextureData(kPbrAlbedoTextureFile,
-                                                  VK_FORMAT_R8G8B8A8_SRGB);
-  normal_texture_ = asset_manager.LoadTextureData(kPbrNormalTextureFile,
-                                                  VK_FORMAT_R8G8B8A8_UNORM);
-  metalness_texture_ = asset_manager.LoadTextureData(kMetalnessTextureFile,
-                                                     VK_FORMAT_R8_UNORM, 1);
-  roughness_texture_ = asset_manager.LoadTextureData(kRoughnessTextureFile,
-                                                     VK_FORMAT_R8_UNORM, 1);
+    albedo_texture_ = asset_manager.LoadTextureData(kPbrAlbedoTextureFile,
+                                                    VK_FORMAT_R8G8B8A8_SRGB);
+    normal_texture_ = asset_manager.LoadTextureData(kPbrNormalTextureFile,
+                                                    VK_FORMAT_R8G8B8A8_UNORM);
+    metalness_texture_ = asset_manager.LoadTextureData(kMetalnessTextureFile,
+                                                        VK_FORMAT_R8_UNORM, 1);
+    roughness_texture_ = asset_manager.LoadTextureData(kRoughnessTextureFile,
+                                                        VK_FORMAT_R8_UNORM, 1);
 
-  environment_map_ = rhi_->CreateTexture(kEnvMapSize, kEnvMapSize, 6, 0,
-                                         VK_FORMAT_R16G16B16A16_SFLOAT,
-                                         VK_IMAGE_USAGE_STORAGE_BIT);
-  irradiance_map_ = rhi_->CreateTexture(kIrradianceMapSize, kIrradianceMapSize,
+    environment_map_ = rhi_->CreateTexture(kEnvMapSize, kEnvMapSize, 6, 0,
+                                            VK_FORMAT_R16G16B16A16_SFLOAT,
+                                            VK_IMAGE_USAGE_STORAGE_BIT);
+    irradiance_map_ = rhi_->CreateTexture(kIrradianceMapSize, kIrradianceMapSize,
                                         6, 1, VK_FORMAT_R16G16B16A16_SFLOAT,
                                         VK_IMAGE_USAGE_STORAGE_BIT);
-  brdf_lut_ =
-      rhi_->CreateTexture(kBrdfLutSize, kBrdfLutSize, 1, 1,
-                          VK_FORMAT_R16G16_SFLOAT, VK_IMAGE_USAGE_STORAGE_BIT);
+    brdf_lut_ =
+        rhi_->CreateTexture(kBrdfLutSize, kBrdfLutSize, 1, 1,
+                            VK_FORMAT_R16G16_SFLOAT, VK_IMAGE_USAGE_STORAGE_BIT);
 }
 
-void MainRenderPass::CreateUniformBuffer() {
-  uniform_buffer_.buffer =
-      rhi_->CreateBuffer(kUniformBufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                             VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-  uniform_buffer_.capacity = kUniformBufferSize;
-  uniform_buffer_.cursor = 0;
-  rhi_->MapMemory(uniform_buffer_.buffer.memory, 0, VK_WHOLE_SIZE, 0,
-                  &uniform_buffer_.host_mem_ptr);
+void MainRenderPass::CreateUniformBuffer() 
+{
+    uniform_buffer_.buffer =
+        rhi_->CreateBuffer(kUniformBufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                                VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+    uniform_buffer_.capacity = kUniformBufferSize;
+    uniform_buffer_.cursor = 0;
+    rhi_->MapMemory(uniform_buffer_.buffer.memory, 0, VK_WHOLE_SIZE, 0,
+                    &uniform_buffer_.host_mem_ptr);
 }
 
-void MainRenderPass::DestroyUniformBuffer(UniformBuffer uniform_buffer) {
-  if (uniform_buffer.host_mem_ptr != nullptr &&
-      uniform_buffer.buffer.memory != VK_NULL_HANDLE) {
-    rhi_->UnMapMemory(uniform_buffer.buffer.memory);
-  }
+void MainRenderPass::DestroyUniformBuffer(UniformBuffer uniform_buffer) 
+{
+    if (uniform_buffer.host_mem_ptr != nullptr &&
+        uniform_buffer.buffer.memory != VK_NULL_HANDLE) 
+    {
+        rhi_->UnMapMemory(uniform_buffer.buffer.memory);
+    }
 
-  rhi_->DestroyBuffer(uniform_buffer.buffer);
+    rhi_->DestroyBuffer(uniform_buffer.buffer);
 }
 
 void MainRenderPass::SetupSamplers() {
@@ -337,7 +341,8 @@ void MainRenderPass::SetupComputeDescriptorSets() {
 }
 
 // uniform buffer for rendering viewport and light input
-void MainRenderPass::SetupUniformDescriptorSets() {
+void MainRenderPass::SetupUniformDescriptorSets()
+{
   const std::vector<VkDescriptorSetLayoutBinding>
       descriptorset_layout_bindings = {
           {BindingsTransformUniforms, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1,
@@ -374,32 +379,34 @@ void MainRenderPass::SetupUniformDescriptorSets() {
 }
 
 UniformBufferAllocation MainRenderPass::AllocateSubStorageFromUniformBuffer(
-    UniformBuffer &buffer, VkDeviceSize size) {
-  const auto &properties = rhi_->GetPhysicalDevice().properties;
-  const VkDeviceSize min_alignment =
-      properties.limits.minUniformBufferOffsetAlignment;
-  const VkDeviceSize align_size =
-      RenderUtils::RoundToPowerOfTwo(size, min_alignment);
-  if (align_size > properties.limits.maxUniformBufferRange) {
-    PEANUT_LOG_FATAL(
-        "Request uniform buffer sub-allocation size exceeds "
-        "maxUniformBufferRange of current physical device");
-  }
+    UniformBuffer &buffer, VkDeviceSize size)
+{
+    const auto &properties = rhi_->GetPhysicalDevice().properties;
+    const VkDeviceSize min_alignment =
+        properties.limits.minUniformBufferOffsetAlignment;
+    const VkDeviceSize align_size =
+        RenderUtils::RoundToPowerOfTwo(size, min_alignment);
+    if (align_size > properties.limits.maxUniformBufferRange) 
+    {
+        PEANUT_LOG_FATAL(
+            "Request uniform buffer sub-allocation size exceeds "
+            "maxUniformBufferRange of current physical device");
+    }
 
-  if (buffer.cursor + align_size > buffer.capacity) {
-    PEANUT_LOG_FATAL("Failed to allocate with out-of-capacity unifor buffer");
-  }
+    if (buffer.cursor + align_size > buffer.capacity) 
+    {
+        PEANUT_LOG_FATAL("Failed to allocate with out-of-capacity unifor buffer");
+    }
 
-  UniformBufferAllocation allocation;
-  allocation.descriptor_info.buffer = buffer.buffer.resource;
-  allocation.descriptor_info.offset = buffer.cursor;
-  allocation.descriptor_info.range = align_size;
-  allocation.host_mem_ptr =
-      reinterpret_cast<uint8_t *>(buffer.host_mem_ptr) + buffer.cursor;
+    UniformBufferAllocation allocation;
+    allocation.descriptor_info.buffer = buffer.buffer.resource;
+    allocation.descriptor_info.offset = buffer.cursor;
+    allocation.descriptor_info.range = align_size;
+    allocation.host_mem_ptr = reinterpret_cast<uint8_t *>(buffer.host_mem_ptr) + buffer.cursor;
 
-  buffer.cursor += align_size;
+    buffer.cursor += align_size;
 
-  return allocation;
+    return allocation;
 }
 
 void MainRenderPass::SetupRenderpass() {

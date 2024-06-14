@@ -8,7 +8,9 @@ namespace peanut
 {
 	void MainRenderPass::Initialize(PassInitInfo* init_info)
 	{
-		
+		IRenderPassBase::Initialize(init_info);
+
+
 	}
 
 	void MainRenderPass::Render()
@@ -66,9 +68,20 @@ namespace peanut
 		vkCmdNextSubpass(command_buffer, VK_SUBPASS_CONTENTS_INLINE);
 		if (!render_data_.empty())
 		{
-			RenderDeferredLighting();
+			RenderDeferredLighting(command_buffer, current_frame_index);
 		}
 		
+		// skybox light render pass
+		vkCmdNextSubpass(command_buffer, VK_SUBPASS_CONTENTS_INLINE);
+		{
+			// update skybox uniform buffer
+			vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, render_pipelines_[RenderPipelineType::Skybox].pipeline_);
+
+		}
+		
+		// transparency objects render pass
+		vkCmdNextSubpass(command_buffer, VK_SUBPASS_CONTENTS_INLINE);
+
 	}
 
 	void MainRenderPass::RenderMesh(VkCommandBuffer command_buffer, const std::shared_ptr<RenderData>& render_data)
@@ -79,6 +92,8 @@ namespace peanut
 		std::shared_ptr<StaticMeshRenderData> static_mesh_render_data = std::static_pointer_cast<StaticMeshRenderData>(render_data);
 
 		VkPipeline pipeline = render_pipelines_[RenderPipelineType::MeshGbuffer].pipeline_;
+		VkPipelineLayout pipeline_layout = render_pipelines_[RenderPipelineType::MeshGbuffer].pipeline_layout_;
+
 		vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 
 		// bind vertex bufer and index buffer
@@ -90,6 +105,10 @@ namespace peanut
 		uint32_t submesh_counts = static_mesh_render_data->index_counts.size();
 		for (uint32_t i = 0; i < submesh_counts; ++i)
 		{
+			UpdatePushConstants(command_buffer, pipeline_layout, 
+				{&static_mesh_render_data->transform_ubo_data, &static_mesh_render_data->material_pcos[i]}, 
+				all_push_constant_range_[RenderPipelineType::MeshGbuffer]);
+
 			const PbrMaterial& material = static_mesh_render_data->pbr_materials[i];
 
 			// allocate descriptor set
@@ -108,8 +127,23 @@ namespace peanut
 		
 	}
 
-	void MainRenderPass::RenderDeferredLighting()
+	void MainRenderPass::RenderDeferredLighting(VkCommandBuffer command_buffer, uint32_t current_frame_index)
 	{
+		VkPipeline deferred_lighting_pipeline = render_pipelines_[RenderPipelineType::DeferredLighting].pipeline_;
+		VkPipelineLayout pipeline_layout = render_pipelines_[RenderPipelineType::DeferredLighting].pipeline_layout_;
+
+		vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, deferred_lighting_pipeline);
+
+		// update lighting uniform buffer
+		auto lighting_data = lighting_render_data_[current_frame_index].lighting_ubo_data;
+		LightingUBO* light_ubo_data = lighting_data_uniform_buffer_->as<LightingUBO>(); // get uniform buffer
+		light_ubo_data->CopyFrom(lighting_data);
+
+		// bind descriptor set
+		vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, 
+			&render_descriptors_[DescriptorLayoutType::DeferredLighting].descritptor_set_, 0, nullptr);
+
+		vkCmdDraw(command_buffer, 3, 1, 0, 0);
 
 	}
 
@@ -471,7 +505,7 @@ namespace peanut
 
 		subpass_dependencies[2] =
 		{
-			VK_SUBPASS_EXTERNAL,
+			SubpassType::DeferredLightingPass,
 			SubpassType::ForwardLightingPass,
 			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
 			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
@@ -823,7 +857,41 @@ namespace peanut
 		depth_image_info.imageView = render_target_->attachments_[AttachmentType::DepthImage].image_view_;
 		depth_image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
-		std::array<VkWriteDescriptorSet, 4> descriptor_writes = {};
+		// ibl irradiance texture
+		VkDescriptorImageInfo irradiance_texture_info = {};
+		irradiance_texture_info.sampler = vulkan_rhi->GetOrCreateSampler(VulkanRHI::Nearest);
+		irradiance_texture_info.imageView = VK_NULL_HANDLE; // todo: get irradiance texture image view
+		irradiance_texture_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+		// ibl prefiltered texture
+		VkDescriptorImageInfo prefiltered_texture_info = {};
+		prefiltered_texture_info.sampler = vulkan_rhi->GetOrCreateSampler(VulkanRHI::Nearest);
+		prefiltered_texture_info.imageView = VK_NULL_HANDLE; // todo: get prefiltered texture image view
+		prefiltered_texture_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+		// ibl brdf lut
+		VkDescriptorImageInfo brdf_lut_info = {};
+		brdf_lut_info.sampler = vulkan_rhi->GetOrCreateSampler(VulkanRHI::Nearest);
+		brdf_lut_info.imageView = VK_NULL_HANDLE;
+		brdf_lut_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+		// directional light shadow texture
+		VkDescriptorImageInfo directional_light_shadow_info = {};
+		directional_light_shadow_info.sampler = vulkan_rhi->GetOrCreateSampler(VulkanRHI::Nearest);
+		directional_light_shadow_info.imageView = VK_NULL_HANDLE;
+		directional_light_shadow_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+		// point light shadow texture
+		VkDescriptorImageInfo point_light_shadow_info = {};
+		point_light_shadow_info.sampler = vulkan_rhi->GetOrCreateSampler(VulkanRHI::Nearest);
+		point_light_shadow_info.imageView = VK_NULL_HANDLE;
+		point_light_shadow_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+		// light uniform buffer
+		lighting_data_uniform_buffer_ = AllocateSubstorageFromUniformBuffer<LightingUBO>();
+		VkDescriptorBufferInfo& light_uniform_buffer_info = lighting_data_uniform_buffer_->descriptor_info;
+
+		std::array<VkWriteDescriptorSet, 10> descriptor_writes = {};
 
 		descriptor_writes[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 		descriptor_writes[0].dstSet = render_descriptors_[DescriptorLayoutType::DeferredLighting].descritptor_set_;
@@ -856,6 +924,36 @@ namespace peanut
 		descriptor_writes[3].descriptorType = VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
 		descriptor_writes[3].descriptorCount = 1;
 		descriptor_writes[3].pImageInfo = &depth_image_info;
+
+		descriptor_writes[4] = descriptor_writes[3];
+		descriptor_writes[4].dstBinding = 4;
+		descriptor_writes[4].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		descriptor_writes[4].descriptorCount = 1;
+		descriptor_writes[4].pImageInfo = &irradiance_texture_info;
+
+		descriptor_writes[5] = descriptor_writes[4];
+		descriptor_writes[5].dstBinding = 5;
+		descriptor_writes[5].pImageInfo = &prefiltered_texture_info;
+
+		descriptor_writes[6] = descriptor_writes[4];
+		descriptor_writes[6].dstBinding = 6;
+		descriptor_writes[6].pImageInfo = &brdf_lut_info;
+
+		descriptor_writes[7] = descriptor_writes[4];
+		descriptor_writes[7].dstBinding = 7;
+		descriptor_writes[7].pImageInfo = &directional_light_shadow_info;
+
+		descriptor_writes[8] = descriptor_writes[4];
+		descriptor_writes[8].dstBinding = 8;
+		descriptor_writes[8].pImageInfo = &point_light_shadow_info;
+
+		descriptor_writes[9].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		descriptor_writes[9].dstSet = render_descriptors_[DescriptorLayoutType::DeferredLighting].descritptor_set_;
+		descriptor_writes[9].dstBinding = 9;
+		descriptor_writes[9].dstArrayElement = 0;
+		descriptor_writes[9].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		descriptor_writes[9].descriptorCount = 1;
+		descriptor_writes[9].pBufferInfo = &light_uniform_buffer_info;
 
 		vulkan_rhi->UpdateDescriptorSets(descriptor_writes.size(), descriptor_writes.data(), 0, nullptr);
 	}

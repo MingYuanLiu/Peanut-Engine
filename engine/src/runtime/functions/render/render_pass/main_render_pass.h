@@ -105,11 +105,12 @@ namespace peanut
 		void UpdateLightingUniformbuffer();
 
 		void RenderMesh(VkCommandBuffer command_buffer, const std::shared_ptr<RenderData>& render_data);
-		void RenderDeferredLighting();
+		void RenderDeferredLighting(VkCommandBuffer command_buffer, uint32_t current_frame_index);
 
 		std::vector<LightingRenderData> lighting_render_data_;
 	
 	private:
+		std::optional<SubstorageUniformBuffer> lighting_data_uniform_buffer_;
 		std::map<RenderPipelineType::Type, std::vector<VkPushConstantRange> > all_push_constant_range_;
 	};
 }

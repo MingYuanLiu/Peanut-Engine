@@ -161,38 +161,38 @@ VkImageView VulkanRHI::CreateImageView(VkImage image, VkFormat format,
 
 Resource<VkBuffer> VulkanRHI::CreateBuffer(VkDeviceSize size,
                                            VkBufferUsageFlags usage,
-                                           VkMemoryPropertyFlags memoryFlags) {
-  Resource<VkBuffer> buffer;
+                                           VkMemoryPropertyFlags memoryFlags) 
+{
+    Resource<VkBuffer> buffer;
 
-  VkBufferCreateInfo create_info = {VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
-  create_info.size = size;
-  create_info.usage = usage;
-  create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-  if (VKFAILED(vkCreateBuffer(vk_device_, &create_info, nullptr,
-                              &buffer.resource))) {
-    PEANUT_LOG_FATAL("Failed to create buffer");
-  }
+    VkBufferCreateInfo create_info = {VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
+    create_info.size = size;
+    create_info.usage = usage;
+    create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    if (VKFAILED(vkCreateBuffer(vk_device_, &create_info, nullptr, &buffer.resource))) 
+    {
+        PEANUT_LOG_FATAL("Failed to create buffer");
+    }
 
-  VkMemoryRequirements memory_requirements;
-  vkGetBufferMemoryRequirements(vk_device_, buffer.resource,
-                                &memory_requirements);
+    VkMemoryRequirements memory_requirements;
+    vkGetBufferMemoryRequirements(vk_device_, buffer.resource, &memory_requirements);
 
-  VkMemoryAllocateInfo allocate_info = {VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO};
-  allocate_info.allocationSize = memory_requirements.size;
-  allocate_info.memoryTypeIndex =
-      FindMemoryType(memory_requirements, memoryFlags);
-  if (VKFAILED(vkAllocateMemory(vk_device_, &allocate_info, nullptr,
-                                &buffer.memory))) {
-    PEANUT_LOG_FATAL("Failed to allocate device memory for buffer");
-  }
-  if (VKFAILED(
-          vkBindBufferMemory(vk_device_, buffer.resource, buffer.memory, 0))) {
-    PEANUT_LOG_FATAL("Failed to bind device memory to buffer");
-  }
+    VkMemoryAllocateInfo allocate_info = {VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO};
+    allocate_info.allocationSize = memory_requirements.size;
+    allocate_info.memoryTypeIndex = FindMemoryType(memory_requirements, memoryFlags);
 
-  buffer.allocation_size = allocate_info.allocationSize;
-  buffer.memory_type_index = allocate_info.memoryTypeIndex;
-  return buffer;
+    if (VKFAILED(vkAllocateMemory(vk_device_, &allocate_info, nullptr, &buffer.memory))) 
+    {
+        PEANUT_LOG_FATAL("Failed to allocate device memory for buffer");
+    }
+    if (VKFAILED(vkBindBufferMemory(vk_device_, buffer.resource, buffer.memory, 0))) 
+    {
+        PEANUT_LOG_FATAL("Failed to bind device memory to buffer");
+    }
+
+    buffer.allocation_size = allocate_info.allocationSize;
+    buffer.memory_type_index = allocate_info.memoryTypeIndex;
+    return buffer;
 }
 
 void VulkanRHI::DestroyBuffer(Resource<VkBuffer> buffer) {
