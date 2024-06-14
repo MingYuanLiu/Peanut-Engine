@@ -1448,7 +1448,8 @@ VkSampler VulkanRHI::GetMipmapSampler(uint32_t width, uint32_t height)
 {
     assert(width > 0 && height > 0);
 
-    uint32_t mip_levels = std::floor(std::log2(std::max(width, height))) + 1;
+    uint32_t max_border = static_cast<uint32_t>(std::floor(std::log2(std::max(width, height))));
+    uint32_t mip_levels = max_border + 1;
     auto find_iter = mipmap_samplers_.find(mip_levels);
     if (find_iter != mipmap_samplers_.end())
     {
@@ -1469,7 +1470,7 @@ VkSampler VulkanRHI::GetMipmapSampler(uint32_t width, uint32_t height)
     sampler_ci.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
     sampler_ci.unnormalizedCoordinates = VK_FALSE;
     sampler_ci.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-    sampler_ci.maxLod = mip_levels - 1;
+    sampler_ci.maxLod = static_cast<float>(mip_levels - 1);
     if (VKFAILED(vkCreateSampler(vk_device_, &sampler_ci, nullptr, &result)))
     {
         PEANUT_LOG_ERROR("Create mipmap sampler failed");

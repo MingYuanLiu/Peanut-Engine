@@ -102,12 +102,14 @@ namespace peanut
 		void UpdateGbufferDescriptor(VkCommandBuffer command_buffer, const PbrMaterial& material_data, VkDescriptorSet dst_descriptor_set);
 		void UpdateDeferredLightDescriptor();
 		void UpdateForwardLightDescriptor();
+		void UpdateSkyboxDescriptor();
 		void UpdateLightingUniformbuffer();
-
-		void RenderMesh(VkCommandBuffer command_buffer, const std::shared_ptr<RenderData>& render_data);
+		
+		void RenderMesh(VkCommandBuffer command_buffer, const std::shared_ptr<RenderData>& render_data, bool IsForward = false);
 		void RenderDeferredLighting(VkCommandBuffer command_buffer, uint32_t current_frame_index);
 
 		std::vector<LightingRenderData> lighting_render_data_;
+		std::optional<SkyboxRenderData> skybox_render_data_;
 	
 	private:
 		std::optional<SubstorageUniformBuffer> lighting_data_uniform_buffer_;

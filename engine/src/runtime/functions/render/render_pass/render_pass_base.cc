@@ -85,6 +85,8 @@ namespace peanut
 	void IRenderPassBase::UpdatePushConstants(VkCommandBuffer command_buffer, VkPipelineLayout pipeline_layout,
 		const std::vector<const void*>& pcos, std::vector<VkPushConstantRange> push_constant_ranges)
 	{
+		assert(pcos.size() == push_constant_ranges.size());
+		
 		for (size_t i = 0; i < push_constant_ranges.size(); i++)
 		{
 			const VkPushConstantRange& push_constant_range = push_constant_ranges[i];

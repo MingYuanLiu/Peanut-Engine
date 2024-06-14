@@ -31,7 +31,19 @@ namespace peanut
         Base,
         StaticMesh,
         Light,
-        SkeletalMesh
+        SkeletalMesh,
+        Skybox
+    };
+
+    // VkImage + VkImageView + VkSampler
+    struct ImageViewSampler
+    {
+        Resource<VkImage> image;
+        VkImageView view;
+        VkSampler sampler;
+
+        uint32_t width;
+        uint32_t height;
     };
 
     struct RenderData
@@ -65,8 +77,19 @@ namespace peanut
         LightingUBO lighting_ubo_data;
         Resource<VkBuffer> lighting_ub;
 
-        // ibl textures
+        // todo: ibl textures
         
+    };
+
+    struct SkyboxRenderData : public RenderData
+    {
+        SkyboxRenderData() { data_type_ = RenderDataType::Skybox; }
+
+        Resource<VkBuffer> vertex_buffer;
+        Resource<VkBuffer> index_buffer;
+        uint32_t index_counts;
+        TransformUBO transform_ubo_data;
+        ImageViewSampler skybox_env_texture;
     };
 
     // ========================================================================
@@ -167,120 +190,120 @@ namespace peanut
         std::shared_ptr<TextureData> emissive_texture;
     };
 
-struct TextureMemoryBarrier 
-{
-    TextureMemoryBarrier(const TextureData &texture, VkAccessFlags srcAccessMask,
-                        VkAccessFlags dstAccessMask, VkImageLayout oldLayout,
-                        VkImageLayout newLayout) 
+    struct TextureMemoryBarrier 
     {
-        barrier.srcAccessMask = srcAccessMask;
-        barrier.dstAccessMask = dstAccessMask;
-        barrier.oldLayout = oldLayout;
-        barrier.newLayout = newLayout;
-        barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        barrier.image = texture.image.resource;
-        barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        barrier.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
-        barrier.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
-    }
+        TextureMemoryBarrier(const TextureData &texture, VkAccessFlags srcAccessMask,
+                            VkAccessFlags dstAccessMask, VkImageLayout oldLayout,
+                            VkImageLayout newLayout) 
+        {
+            barrier.srcAccessMask = srcAccessMask;
+            barrier.dstAccessMask = dstAccessMask;
+            barrier.oldLayout = oldLayout;
+            barrier.newLayout = newLayout;
+            barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            barrier.image = texture.image.resource;
+            barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            barrier.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
+            barrier.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
+        }
 
-    operator VkImageMemoryBarrier() const { return barrier; }
-    VkImageMemoryBarrier barrier = {VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
+        operator VkImageMemoryBarrier() const { return barrier; }
+        VkImageMemoryBarrier barrier = {VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
 
-    TextureMemoryBarrier &AspectMask(VkImageAspectFlags aspectMask) 
+        TextureMemoryBarrier &AspectMask(VkImageAspectFlags aspectMask) 
+        {
+            barrier.subresourceRange.aspectMask = aspectMask;
+            return *this;
+        }
+        TextureMemoryBarrier &MipLevels(uint32_t baseMipLevel, uint32_t levelCount = VK_REMAINING_MIP_LEVELS) 
+        {
+            barrier.subresourceRange.baseMipLevel = baseMipLevel;
+            barrier.subresourceRange.levelCount = levelCount;
+            return *this;
+        }
+        TextureMemoryBarrier &ArrayLayers(uint32_t baseArrayLayer, uint32_t layerCount = VK_REMAINING_ARRAY_LAYERS) 
+        {
+            barrier.subresourceRange.baseArrayLayer = baseArrayLayer;
+            barrier.subresourceRange.layerCount = layerCount;
+            return *this;
+        }
+    };
+
+    struct UniformBuffer 
     {
-        barrier.subresourceRange.aspectMask = aspectMask;
-        return *this;
-    }
-    TextureMemoryBarrier &MipLevels(uint32_t baseMipLevel, uint32_t levelCount = VK_REMAINING_MIP_LEVELS) 
+        Resource<VkBuffer> buffer;
+        VkDeviceSize capacity;
+        VkDeviceSize cursor;
+        void *host_mem_ptr;
+
+        template <typename T>
+        T* as() const
+        {
+            return reinterpret_cast<T*>(host_mem_ptr);
+        }
+    };
+
+    struct SubstorageUniformBuffer
     {
-        barrier.subresourceRange.baseMipLevel = baseMipLevel;
-        barrier.subresourceRange.levelCount = levelCount;
-        return *this;
-    }
-    TextureMemoryBarrier &ArrayLayers(uint32_t baseArrayLayer, uint32_t layerCount = VK_REMAINING_ARRAY_LAYERS) 
+        VkDescriptorBufferInfo descriptor_info;
+        void *host_mem_ptr;
+
+        template <typename T>
+        T *as() const 
+        {
+            return reinterpret_cast<T *>(host_mem_ptr);
+        }
+    };
+
+    struct UniformBufferAllocation 
     {
-        barrier.subresourceRange.baseArrayLayer = baseArrayLayer;
-        barrier.subresourceRange.layerCount = layerCount;
-        return *this;
-    }
-};
+        VkDescriptorBufferInfo descriptor_info;
+        void *host_mem_ptr;
 
-struct UniformBuffer 
-{
-    Resource<VkBuffer> buffer;
-    VkDeviceSize capacity;
-    VkDeviceSize cursor;
-    void *host_mem_ptr;
+        template <typename T>
+        T *as() const 
+        {
+            return reinterpret_cast<T *>(host_mem_ptr);
+        }
+    };
 
-    template <typename T>
-    T* as() const
-    {
-        return reinterpret_cast<T*>(host_mem_ptr);
-    }
-};
+    struct SpecularFilterPushConstants {
+      uint32_t level;
+      float roughness;
+    };
 
-struct SubstorageUniformBuffer
-{
-    VkDescriptorBufferInfo descriptor_info;
-    void *host_mem_ptr;
+    struct TransformUniforms {
+      glm::mat4 viewProjectionMatrix;
+      glm::mat4 skyProjectionMatrix;
+      glm::mat4 sceneRotationMatrix;
+    };
 
-    template <typename T>
-    T *as() const 
-    {
-        return reinterpret_cast<T *>(host_mem_ptr);
-    }
-};
+    struct ViewSettings {
+      float pitch = 0.0f;
+      float yaw = 0.0f;
+      float distance = 0.0f;
+      float fov = 0.0f;
+    };
 
-struct UniformBufferAllocation 
-{
-    VkDescriptorBufferInfo descriptor_info;
-    void *host_mem_ptr;
+    struct SceneSettings {
+      float pitch = 0.0f;
+      float yaw = 0.0f;
 
-    template <typename T>
-    T *as() const 
-    {
-        return reinterpret_cast<T *>(host_mem_ptr);
-    }
-};
+      static const int kNumLights = 3;
+      struct Light {
+        glm::vec3 direction;
+        glm::vec3 radiance;
+        bool enabled = false;
+      } lights[kNumLights];
+    };
 
-struct SpecularFilterPushConstants {
-  uint32_t level;
-  float roughness;
-};
-
-struct TransformUniforms {
-  glm::mat4 viewProjectionMatrix;
-  glm::mat4 skyProjectionMatrix;
-  glm::mat4 sceneRotationMatrix;
-};
-
-struct ViewSettings {
-  float pitch = 0.0f;
-  float yaw = 0.0f;
-  float distance = 0.0f;
-  float fov = 0.0f;
-};
-
-struct SceneSettings {
-  float pitch = 0.0f;
-  float yaw = 0.0f;
-
-  static const int kNumLights = 3;
-  struct Light {
-    glm::vec3 direction;
-    glm::vec3 radiance;
-    bool enabled = false;
-  } lights[kNumLights];
-};
-
-struct ShadingUniforms {
-  struct {
-    glm::vec4 direction;
-    glm::vec4 radiance;
-  } lights[SceneSettings::kNumLights];
-  glm::vec4 eye_position;
-};
+    struct ShadingUniforms {
+      struct {
+        glm::vec4 direction;
+        glm::vec4 radiance;
+      } lights[SceneSettings::kNumLights];
+      glm::vec4 eye_position;
+    };
 
 }  // namespace peanut

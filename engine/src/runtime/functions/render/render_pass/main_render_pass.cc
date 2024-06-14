@@ -71,20 +71,41 @@ namespace peanut
 			RenderDeferredLighting(command_buffer, current_frame_index);
 		}
 		
-		// skybox light render pass
+		// forward lighting pass [skybox light]
 		vkCmdNextSubpass(command_buffer, VK_SUBPASS_CONTENTS_INLINE);
+
+		// draw skybox
+		if (skybox_render_data_)
 		{
 			// update skybox uniform buffer
 			vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, render_pipelines_[RenderPipelineType::Skybox].pipeline_);
+			// bind vertex
+			VkBuffer vertex_buffer[] = {skybox_render_data_->vertex_buffer.resource};
+			vkCmdBindVertexBuffers(command_buffer, 0, 1, vertex_buffer, nullptr);
+			vkCmdBindIndexBuffer(command_buffer, skybox_render_data_->index_buffer.resource, 0, VK_INDEX_TYPE_UINT32);
 
+			// bind skybox descriptor
+			vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+				render_pipelines_[RenderPipelineType::Skybox].pipeline_layout_, 0, 1,
+				&render_descriptors_[DescriptorLayoutType::Skybox].descritptor_set_, 0, nullptr);
+			
+			// update push constant
+			std::vector<VkPushConstantRange> skybox_push_constant_range = { {VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(TransformUBO)} };
+			UpdatePushConstants(command_buffer, render_pipelines_[RenderPipelineType::Skybox].pipeline_layout_,
+				{&skybox_render_data_->transform_ubo_data},skybox_push_constant_range);
+
+			vkCmdDrawIndexed(command_buffer, skybox_render_data_->index_counts, 1, 0, 0, 0);
 		}
-		
-		// transparency objects render pass
-		vkCmdNextSubpass(command_buffer, VK_SUBPASS_CONTENTS_INLINE);
 
+		// draw transparency objects
+		{
+			vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, render_pipelines_[RenderPipelineType::ForwardLighting].pipeline_);
+
+			
+		}
 	}
 
-	void MainRenderPass::RenderMesh(VkCommandBuffer command_buffer, const std::shared_ptr<RenderData>& render_data)
+	void MainRenderPass::RenderMesh(VkCommandBuffer command_buffer, const std::shared_ptr<RenderData>& render_data, bool IsForward)
 	{
 		auto rhi = rhi_.lock();
 		assert(rhi.get() != nullptr);
@@ -98,9 +119,9 @@ namespace peanut
 
 		// bind vertex bufer and index buffer
 		VkBuffer vertex_buffer[] = { static_mesh_render_data->vertex_buffer.resource };
-		const VkDeviceSize vertex_buffer_offset = { 0 };
+		constexpr VkDeviceSize vertex_buffer_offset = { 0 };
 		vkCmdBindVertexBuffers(command_buffer, 0, 1, vertex_buffer, vertex_buffer_offset);
-		vkCmdBindIndexBuffer(command_buffer, static_mesh_render_data->vertex_buffer.resource, 0, VK_INDEX_TYPE_UINT32);
+		vkCmdBindIndexBuffer(command_buffer, static_mesh_render_data->index_buffer.resource, 0, VK_INDEX_TYPE_UINT32);
 
 		uint32_t submesh_counts = static_mesh_render_data->index_counts.size();
 		for (uint32_t i = 0; i < submesh_counts; ++i)
@@ -1015,5 +1036,26 @@ namespace peanut
 		write_descriptor_set[3].pImageInfo = &emissive_image_info;
 
 		vulkan_rhi->UpdateDescriptorSets(4, write_descriptor_set, 0, nullptr);
+	}
+
+	void MainRenderPass::UpdateSkyboxDescriptor()
+	{
+		std::shared_ptr<VulkanRHI> vulkan_rhi = std::static_pointer_cast<VulkanRHI>(rhi_.lock());
+		VkDescriptorImageInfo skybox_image_info = {};
+        skybox_image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        skybox_image_info.imageView = skybox_render_data_->skybox_env_texture.view;
+        skybox_image_info.sampler = vulkan_rhi->GetMipmapSampler(skybox_render_data_->skybox_env_texture.width,
+																	skybox_render_data_->skybox_env_texture.height);
+
+		VkWriteDescriptorSet descriptor_writes[1] = {};
+        descriptor_writes[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptor_writes[0].dstSet = render_descriptors_[DescriptorLayoutType::Skybox].descritptor_set_;
+        descriptor_writes[0].dstBinding = 0;
+        descriptor_writes[0].dstArrayElement = 0;
+        descriptor_writes[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        descriptor_writes[0].descriptorCount = 1;
+        descriptor_writes[0].pImageInfo = &skybox_image_info;
+
+		vulkan_rhi->UpdateDescriptorSets(1, descriptor_writes, 0, nullptr);
 	}
 }
