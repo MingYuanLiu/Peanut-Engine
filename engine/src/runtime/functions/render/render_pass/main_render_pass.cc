@@ -1,6 +1,5 @@
 #include "main_render_pass.h"
 
-#include "../../../../../3rdparty/assimp/contrib/openddlparser/include/openddlparser/OpenDDLCommon.h"
 #include "functions/assets/mesh.h"
 #include "functions/render/shader_manager.h"
 
@@ -10,32 +9,44 @@ namespace peanut
 	{
 		IRenderPassBase::Initialize(init_info);
 
+		CreateUniformBuffer(sizeof(LightingUBO) + 128);
 
+		UpdateDeferredLightDescriptor();
+		UpdateSkyboxDescriptor();
+		UpdateColorGradingDescriptor();
+
+		// temp: load static mesh render data
+
+		// temp: load ibl texture data
+
+		// temp: load skybox render data
+
+		// temp: load color grading render data
 	}
 
 	void MainRenderPass::Render()
 	{
-		// begin render pass
 		std::shared_ptr<VulkanRHI> vulkan_rhi = std::static_pointer_cast<VulkanRHI>(rhi_.lock());
 		assert(vulkan_rhi.get() != nullptr);
 		
 		uint32_t current_frame_index = vulkan_rhi->GetCurrentFrameIndex();
 		uint32_t frame_width = vulkan_rhi->GetDisplayWidth();
 		uint32_t frame_height = vulkan_rhi->GetDisplayHeight();
-		
+
+		// begin render pass
 		VkRenderPassBeginInfo render_pass_begin_info{ VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
 		render_pass_begin_info.renderPass = render_pass_.value();
 		render_pass_begin_info.framebuffer = render_pass_framebuffer_[current_frame_index];
 		render_pass_begin_info.renderArea.offset = { 0, 0 };
 		render_pass_begin_info.renderArea.extent = { frame_width, frame_height };
 
+		// clear render target
 		std::array<VkClearValue, AttachmentType::AttachmentTypeCount> clear_values;
 		clear_values[AttachmentType::GBufferA_Normal].color							= { { 0.0f, 0.0f, 0.0f, 0.0f } };
 		clear_values[AttachmentType::GBufferB_Metallic_Roughness_Occlusion].color = { { 0.0f, 0.0f, 0.0f, 0.0f } };
 		clear_values[AttachmentType::GBufferC_BaseColor].color						= { { 0.0f, 0.0f, 0.0f, 0.0f } };
 		clear_values[AttachmentType::DepthImage].depthStencil						= { 1.0f, 0 };
-		clear_values[AttachmentType::BackupBufferOdd].color							= { { 0.0f, 0.0f, 0.0f, 0.0f } };
-		clear_values[AttachmentType::BackupBufferEven].color						  = { { 0.0f, 0.0f, 0.0f, 0.0f } };
+		clear_values[AttachmentType::BackupBuffer].color							= { { 0.0f, 0.0f, 0.0f, 0.0f } };
 		clear_values[AttachmentType::SwapChain].color								  = { { 0.0f, 0.0f, 0.0f, 0.0f } };
 
 		render_pass_begin_info.clearValueCount = static_cast<uint32_t>(clear_values.size());
@@ -59,7 +70,7 @@ namespace peanut
 		vkCmdSetScissor(command_buffer, 0, 1, &scissor);
 
 		// mesh gbuffer render pass
-		for (auto render_data : render_data_)
+		for (const auto& render_data : render_data_)
         {
             RenderMesh(command_buffer, render_data);
         }
@@ -79,6 +90,7 @@ namespace peanut
 		{
 			// update skybox uniform buffer
 			vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, render_pipelines_[RenderPipelineType::Skybox].pipeline_);
+
 			// bind vertex
 			VkBuffer vertex_buffer[] = {skybox_render_data_->vertex_buffer.resource};
 			vkCmdBindVertexBuffers(command_buffer, 0, 1, vertex_buffer, nullptr);
@@ -99,21 +111,45 @@ namespace peanut
 
 		// draw transparency objects
 		{
-			vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, render_pipelines_[RenderPipelineType::ForwardLighting].pipeline_);
-
-			
+			for (const auto& render_data : transparency_render_data_)
+			{
+				RenderMesh(command_buffer, render_data, true);
+			}
 		}
+
+		// color grading post process -- todo: remove to an single render pass
+		{
+			vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, render_pipelines_[RenderPipelineType::ColorGrading].pipeline_);
+
+			vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+				render_pipelines_[RenderPipelineType::ColorGrading].pipeline_layout_, 0, 1,
+				&render_descriptors_[RenderPipelineType::ColorGrading].descritptor_set_, 0, nullptr);
+
+			vkCmdDraw(command_buffer, 3, 1, 0, 0);
+		}
+
+		vkCmdEndRenderPass(command_buffer);
 	}
 
-	void MainRenderPass::RenderMesh(VkCommandBuffer command_buffer, const std::shared_ptr<RenderData>& render_data, bool IsForward)
+	void MainRenderPass::RenderMesh(VkCommandBuffer command_buffer, const std::shared_ptr<RenderData>& render_data, bool is_forward)
 	{
 		auto rhi = rhi_.lock();
 		assert(rhi.get() != nullptr);
 
 		std::shared_ptr<StaticMeshRenderData> static_mesh_render_data = std::static_pointer_cast<StaticMeshRenderData>(render_data);
 
-		VkPipeline pipeline = render_pipelines_[RenderPipelineType::MeshGbuffer].pipeline_;
-		VkPipelineLayout pipeline_layout = render_pipelines_[RenderPipelineType::MeshGbuffer].pipeline_layout_;
+		VkPipeline pipeline = VK_NULL_HANDLE;
+		VkPipelineLayout pipeline_layout = VK_NULL_HANDLE;
+		if (!is_forward)
+		{
+			pipeline = render_pipelines_[RenderPipelineType::MeshGbuffer].pipeline_;
+			pipeline_layout = render_pipelines_[RenderPipelineType::MeshGbuffer].pipeline_layout_;
+		}
+		else
+		{
+			pipeline = render_pipelines_[RenderPipelineType::ForwardLighting].pipeline_;
+			pipeline_layout = render_pipelines_[RenderPipelineType::ForwardLighting].pipeline_layout_;
+		}
 
 		vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 
@@ -126,21 +162,41 @@ namespace peanut
 		uint32_t submesh_counts = static_mesh_render_data->index_counts.size();
 		for (uint32_t i = 0; i < submesh_counts; ++i)
 		{
-			UpdatePushConstants(command_buffer, pipeline_layout, 
-				{&static_mesh_render_data->transform_ubo_data, &static_mesh_render_data->material_pcos[i]}, 
-				all_push_constant_range_[RenderPipelineType::MeshGbuffer]);
+			if (!is_forward)
+			{
+				UpdatePushConstants(command_buffer, pipeline_layout,
+					{ &static_mesh_render_data->transform_ubo_data, &static_mesh_render_data->material_pcos[i] },
+					all_push_constant_range_[RenderPipelineType::MeshGbuffer]);
+			}
+			else
+			{
+
+				UpdatePushConstants(command_buffer, pipeline_layout,
+					{ &static_mesh_render_data->transform_ubo_data, &static_mesh_render_data->material_pcos[i] },
+					all_push_constant_range_[RenderPipelineType::ForwardLighting]);
+			}
 
 			const PbrMaterial& material = static_mesh_render_data->pbr_materials[i];
-
-			// allocate descriptor set
-			VkDescriptorSet mesh_descriptor_set = CreateGbufferDescriptor();
-			// update descriptor set
-			UpdateGbufferDescriptor(command_buffer, material, mesh_descriptor_set);
-
-			// bind descriptor set
-			vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-				render_pipelines_[RenderPipelineType::MeshGbuffer].pipeline_layout_,
-				0, 1, &mesh_descriptor_set, 0, nullptr);
+			
+			if (!is_forward)
+			{
+				// allocate descriptor set
+				VkDescriptorSet mesh_descriptor_set = CreateGbufferDescriptor();
+				// update descriptor set
+				UpdateGbufferDescriptor(command_buffer, material, mesh_descriptor_set);
+				// bind descriptor set
+				vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+					render_pipelines_[RenderPipelineType::MeshGbuffer].pipeline_layout_,
+					0, 1, &mesh_descriptor_set, 0, nullptr);
+			}
+			else
+			{
+				VkDescriptorSet forward_descriptor_set = CreateForwardLightDescriptor();
+				UpdateForwardLightDescriptor(command_buffer, material, forward_descriptor_set);
+				vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, 
+					render_pipelines_[RenderPipelineType::ForwardLighting].pipeline_layout_,
+					0, 1, &forward_descriptor_set, 0, nullptr);
+			}
 
 			// command draw
 			vkCmdDrawIndexed(command_buffer, static_mesh_render_data->index_counts[i], 1, static_mesh_render_data->index_offsets[i], 0, 0);
@@ -156,7 +212,7 @@ namespace peanut
 		vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, deferred_lighting_pipeline);
 
 		// update lighting uniform buffer
-		auto lighting_data = lighting_render_data_[current_frame_index].lighting_ubo_data;
+		auto lighting_data = lighting_render_data_.lighting_ubo_data[current_frame_index];
 		LightingUBO* light_ubo_data = lighting_data_uniform_buffer_->as<LightingUBO>(); // get uniform buffer
 		light_ubo_data->CopyFrom(lighting_data);
 
@@ -165,12 +221,6 @@ namespace peanut
 			&render_descriptors_[DescriptorLayoutType::DeferredLighting].descritptor_set_, 0, nullptr);
 
 		vkCmdDraw(command_buffer, 3, 1, 0, 0);
-
-	}
-
-	void MainRenderPass::UpdateLightingUniformbuffer()
-	{
-		
 	}
 
 	void MainRenderPass::CreateRenderTargets()
@@ -178,8 +228,7 @@ namespace peanut
 		std::vector<RenderPassAttachment>& render_attachments = render_target_->attachments_;
 		render_attachments.resize(AttachmentType::AttachmentTypeCount);
 
-		std::shared_ptr<RHI> rhi = rhi_.lock();
-		std::shared_ptr<VulkanRHI> vulkan_rhi = std::static_pointer_cast<VulkanRHI>(rhi);
+		std::shared_ptr<VulkanRHI> vulkan_rhi = std::static_pointer_cast<VulkanRHI>(rhi_.lock());
 		uint32_t frame_width = vulkan_rhi->GetDisplayWidth();
 		uint32_t frame_height = vulkan_rhi->GetDisplayHeight();
 
@@ -187,8 +236,7 @@ namespace peanut
 		render_attachments[AttachmentType::GBufferB_Metallic_Roughness_Occlusion].format_ = VK_FORMAT_R8G8B8A8_UNORM;
 		render_attachments[AttachmentType::GBufferC_BaseColor].format_ = VK_FORMAT_R8G8B8A8_UNORM;
 		render_attachments[AttachmentType::DepthImage].format_ = vulkan_rhi->GetDepthImageFormat();
-		render_attachments[AttachmentType::BackupBufferOdd].format_ = VK_FORMAT_R16G16B16A16_SFLOAT;
-		render_attachments[AttachmentType::BackupBufferEven].format_ = VK_FORMAT_R16G16B16A16_SFLOAT;
+		render_attachments[AttachmentType::BackupBuffer].format_ = VK_FORMAT_R8G8B8A8_UNORM;
 
 		for (uint32_t i = 0; i < AttachmentType::AttachmentTypeCount; i++)
 		{
@@ -204,7 +252,7 @@ namespace peanut
 			{
 				image = vulkan_rhi->CreateImage(frame_width, frame_height, 0, 1, 1, render_attachments[AttachmentType::GBufferA_Normal].format_,
 					VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
-				render_attachments[AttachmentType::GBufferA_Normal].image_ = image;
+				render_attachments[AttachmentType::DepthImage].image_ = image;
 			}
 			else if (i == AttachmentType::SwapChain)
 			{
@@ -244,8 +292,8 @@ namespace peanut
 				render_attachments[AttachmentType::GBufferB_Metallic_Roughness_Occlusion].image_view_,
 				render_attachments[AttachmentType::GBufferC_BaseColor].image_view_,
 				render_attachments[AttachmentType::DepthImage].image_view_,
-				render_attachments[AttachmentType::BackupBufferOdd].image_view_,
-				render_attachments[AttachmentType::BackupBufferEven].image_view_,
+				render_attachments[AttachmentType::BackupBuffer].image_view_,
+				// render_attachments[AttachmentType::BackupBufferEven].image_view_,
 				swapchain_image_view[i]
 			};
 
@@ -320,10 +368,10 @@ namespace peanut
 			VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
 		};
 
-		attachments[AttachmentType::BackupBufferOdd] =
+		attachments[AttachmentType::BackupBuffer] =
 		{
 			0,
-			render_attachments[AttachmentType::BackupBufferOdd].format_,
+			render_attachments[AttachmentType::BackupBuffer].format_,
 			VK_SAMPLE_COUNT_1_BIT,
 			VK_ATTACHMENT_LOAD_OP_CLEAR,
 			VK_ATTACHMENT_STORE_OP_DONT_CARE,
@@ -333,18 +381,18 @@ namespace peanut
 			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
 		};
 
-		attachments[AttachmentType::BackupBufferEven] =
-		{
-			0,
-			render_attachments[AttachmentType::BackupBufferEven].format_,
-			VK_SAMPLE_COUNT_1_BIT,
-			VK_ATTACHMENT_LOAD_OP_CLEAR,
-			VK_ATTACHMENT_STORE_OP_DONT_CARE,
-			VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-			VK_ATTACHMENT_STORE_OP_DONT_CARE,
-			VK_IMAGE_LAYOUT_UNDEFINED,
-			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-		};
+		//attachments[AttachmentType::BackupBufferEven] =
+		//{
+		//	0,
+		//	render_attachments[AttachmentType::BackupBufferEven].format_,
+		//	VK_SAMPLE_COUNT_1_BIT,
+		//	VK_ATTACHMENT_LOAD_OP_CLEAR,
+		//	VK_ATTACHMENT_STORE_OP_DONT_CARE,
+		//	VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+		//	VK_ATTACHMENT_STORE_OP_DONT_CARE,
+		//	VK_IMAGE_LAYOUT_UNDEFINED,
+		//	VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+		//};
 
 		// create swapchain image description
 		auto rhi = rhi_.lock();
@@ -411,7 +459,7 @@ namespace peanut
 		deferred_lighting_input_attachment_refs[3].layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
 		VkAttachmentReference deferred_lighting_color_attachment_refs;
-		deferred_lighting_color_attachment_refs.attachment = AttachmentType::BackupBufferOdd;
+		deferred_lighting_color_attachment_refs.attachment = AttachmentType::BackupBuffer;
 		deferred_lighting_color_attachment_refs.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
 		subpasses_desc[SubpassType::DeferredLightingPass] =
@@ -430,7 +478,7 @@ namespace peanut
 
 		// create forward lighting subpass description to draw transparent objects
 		VkAttachmentReference forward_lighting_color_attachment_refs;
-		forward_lighting_color_attachment_refs.attachment = AttachmentType::BackupBufferOdd;
+		forward_lighting_color_attachment_refs.attachment = AttachmentType::BackupBuffer;
 		forward_lighting_color_attachment_refs.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
 		VkAttachmentReference forward_lighting_depth_attachment_refs;
@@ -452,31 +500,31 @@ namespace peanut
 		};
 
 		// create tone mapping subpass description
-		VkAttachmentReference tone_mapping_input_attachment_refs;
-		tone_mapping_input_attachment_refs.attachment = AttachmentType::BackupBufferOdd; // from lighting pass
-		tone_mapping_input_attachment_refs.layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		//VkAttachmentReference tone_mapping_input_attachment_refs;
+		//tone_mapping_input_attachment_refs.attachment = AttachmentType::BackupBufferOdd; // from lighting pass
+		//tone_mapping_input_attachment_refs.layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
-		VkAttachmentReference tone_mapping_color_attachment_refs;
-		tone_mapping_color_attachment_refs.attachment = AttachmentType::BackupBufferEven; // to color grading pass
-		tone_mapping_color_attachment_refs.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		//VkAttachmentReference tone_mapping_color_attachment_refs;
+		//tone_mapping_color_attachment_refs.attachment = AttachmentType::BackupBufferEven; // to color grading pass
+		//tone_mapping_color_attachment_refs.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
-		subpasses_desc[SubpassType::ToneMappingPass] =
-		{
-			0,
-			VK_PIPELINE_BIND_POINT_GRAPHICS,
-			1,		 // input attachment counts
-			&tone_mapping_input_attachment_refs, // input attachment
-			1,		// color attachment counts
-			&tone_mapping_color_attachment_refs,
-			nullptr, // resolve attachment
-			nullptr,  // depth attachment
-			0,		 // reserve attachment counts
-			nullptr // reserve attachment
-		};
+		//subpasses_desc[SubpassType::ToneMappingPass] =
+		//{
+		//	0,
+		//	VK_PIPELINE_BIND_POINT_GRAPHICS,
+		//	1,		 // input attachment counts
+		//	&tone_mapping_input_attachment_refs, // input attachment
+		//	1,		// color attachment counts
+		//	&tone_mapping_color_attachment_refs,
+		//	nullptr, // resolve attachment
+		//	nullptr,  // depth attachment
+		//	0,		 // reserve attachment counts
+		//	nullptr // reserve attachment
+		//};
 
 		// create color grading subpass description
 		VkAttachmentReference color_grading_input_attachment_refs;
-		color_grading_input_attachment_refs.attachment = AttachmentType::BackupBufferEven; // from tone mapping pass
+		color_grading_input_attachment_refs.attachment = AttachmentType::BackupBuffer; // from tone mapping pass
 		color_grading_input_attachment_refs.layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
 		VkAttachmentReference color_grading_color_attachment_refs;
@@ -505,11 +553,11 @@ namespace peanut
 		subpass_dependencies[0] =
 		{
 			VK_SUBPASS_EXTERNAL,
-			SubpassType::DeferredLightingPass,
-			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+			SubpassType::BasePass,
 			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-			VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
 			VK_ACCESS_SHADER_READ_BIT,
+			VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
 			0
 		};
 
@@ -538,17 +586,6 @@ namespace peanut
 		subpass_dependencies[3] =
 		{
 			SubpassType::ForwardLightingPass,
-			SubpassType::ToneMappingPass,
-			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-			VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-			VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_READ_BIT,
-			VK_DEPENDENCY_BY_REGION_BIT
-		};
-
-		subpass_dependencies[4] =
-		{
-			SubpassType::ToneMappingPass,
 			SubpassType::ColorGradingPass,
 			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
 			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
@@ -556,6 +593,17 @@ namespace peanut
 			VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_READ_BIT,
 			VK_DEPENDENCY_BY_REGION_BIT
 		};
+
+		//subpass_dependencies[4] =
+		//{
+		//	SubpassType::ToneMappingPass,
+		//	SubpassType::ColorGradingPass,
+		//	VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+		//	VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+		//	VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+		//	VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_READ_BIT,
+		//	VK_DEPENDENCY_BY_REGION_BIT
+		//};
 
 		// create render pass
 		VkRenderPassCreateInfo render_pass_ci = {VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO};
@@ -587,10 +635,10 @@ namespace peanut
 		// gbuffer descriptor layout
 		std::vector<VkDescriptorSetLayoutBinding> gbuffer_descriptor_layout_binding =
 		{
-			{0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr},
-			{1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr},
-			{2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr},
-			{3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}
+			{0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}, // normal
+			{1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}, // metallic & roughness & occlusion
+			{2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}, // base color
+			{3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr} //  emissive
 		};
 
 		render_descriptors_[DescriptorLayoutType::MeshGbuffer].descriptor_set_layout_ = 
@@ -608,7 +656,7 @@ namespace peanut
 			{5, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}, // prefiltered
 			{6, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}, // brdf lut
 			{7, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}, // directonal light shadow
-			{8, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}, // point light shadow
+			// {8, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}, // point light shadow
 			{9, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}, // light uniform buffer
 		};
 
@@ -618,15 +666,15 @@ namespace peanut
 		// forward lighting layout used by transparency objects
 		std::vector<VkDescriptorSetLayoutBinding> forward_lighting_descriptor_layout_binding =
 		{
-			{0, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr},
-			{1, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr},
-			{2, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr},
-			{3, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}, // depth image
+			{0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}, // normal texture
+			{1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}, // metallic roughness occlusion texture
+			{2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}, // base color texture
+			{3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}, // emissive texture
 			{4, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}, // irradiance
 			{5, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}, // prefiltered
 			{6, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}, // brdf lut
 			{7, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}, // directonal light shadow
-			{8, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}, // point light shadow
+			// {8, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}, // point light shadow
 			{9, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}, // light uniform buffer
 		};
 
@@ -642,6 +690,15 @@ namespace peanut
 		render_descriptors_[DescriptorLayoutType::Skybox].descriptor_set_layout_ =
 			rhi->CreateDescriptorSetLayout(skybox_descriptor_layout_binding);
 
+		// color grading descriptor layout
+		std::vector<VkDescriptorSetLayoutBinding> color_grading_descriptor_layout_binding =
+		{
+			{0, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}, // backbuffer
+			{1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr} // color grading lut
+		};
+
+		render_descriptors_[DescriptorLayoutType::ColorGrading].descriptor_set_layout_ =
+			rhi->CreateDescriptorSetLayout(color_grading_descriptor_layout_binding);
 	}
 
 	void MainRenderPass::CreatePipelineLayouts()
@@ -692,6 +749,13 @@ namespace peanut
 		set_layouts.push_back(render_descriptors_[DescriptorLayoutType::Skybox].descriptor_set_layout_);
 		render_pipelines_[RenderPipelineType::Skybox].pipeline_layout_ =
 			rhi->CreatePipelineLayout(set_layouts, push_constant_range);
+
+		// color grading pipeline layout
+		set_layouts.clear();
+		set_layouts.push_back(render_descriptors_[DescriptorLayoutType::ColorGrading].descriptor_set_layout_);
+		render_pipelines_[RenderPipelineType::ColorGrading].pipeline_layout_ =
+			rhi->CreatePipelineLayout(set_layouts, push_constant_range);
+
 	}
 
 	void MainRenderPass::CreatePipelines()
@@ -803,6 +867,17 @@ namespace peanut
 		pipeline_create_info_.subpass = SubpassType::DeferredLightingPass;
 
 		render_pipelines_[RenderPipelineType::DeferredLighting].pipeline_ = rhi->CreateGraphicsPipeline(pipeline_cache_, 1, &pipeline_create_info_);
+
+		// color grading -- todo: remove to post process pass
+		shader_stage_cis =
+		{
+			ShaderManager::Get().GetShaderStageCreateInfo(rhi_, "screen.vert", VK_SHADER_STAGE_VERTEX_BIT),
+			ShaderManager::Get().GetShaderStageCreateInfo(rhi_, "color_grading.frag", VK_SHADER_STAGE_FRAGMENT_BIT)
+		};
+
+		pipeline_create_info_.layout = render_pipelines_[RenderPipelineType::ColorGrading].pipeline_layout_;
+		pipeline_create_info_.subpass = SubpassType::ColorGradingPass;
+		render_pipelines_[RenderPipelineType::ColorGrading].pipeline_ = rhi->CreateGraphicsPipeline(pipeline_cache_, 1, &pipeline_create_info_);
 	}
 
 	void MainRenderPass::CreateDescriptorSets()
@@ -810,6 +885,7 @@ namespace peanut
 		CreateDeferredLightDescriptor();
 		CreateForwardLightDescriptor();
 		CreateSkyboxDescriptor();
+		CreateColorGradingDescriptor();
 	}
 
 	VkDescriptorSet MainRenderPass::CreateGbufferDescriptor()
@@ -818,7 +894,9 @@ namespace peanut
 
 		assert(rhi.get() != nullptr);
 
-		return rhi->AllocateDescriptor(render_descriptors_[DescriptorLayoutType::MeshGbuffer].descriptor_set_layout_);
+		render_descriptors_[DescriptorLayoutType::MeshGbuffer].descritptor_set_ =
+			rhi->AllocateDescriptor(render_descriptors_[DescriptorLayoutType::MeshGbuffer].descriptor_set_layout_);
+		return render_descriptors_[DescriptorLayoutType::ForwardLighting].descritptor_set_;
 	}
 
 	void MainRenderPass::CreateDeferredLightDescriptor()
@@ -831,7 +909,7 @@ namespace peanut
 			rhi->AllocateDescriptor(render_descriptors_[DescriptorLayoutType::DeferredLighting].descriptor_set_layout_);
 	}
 
-	void MainRenderPass::CreateForwardLightDescriptor()
+	VkDescriptorSet MainRenderPass::CreateForwardLightDescriptor()
 	{
 		auto rhi = rhi_.lock();
 
@@ -839,6 +917,7 @@ namespace peanut
 
 		render_descriptors_[DescriptorLayoutType::ForwardLighting].descritptor_set_ =
 			rhi->AllocateDescriptor(render_descriptors_[DescriptorLayoutType::ForwardLighting].descriptor_set_layout_);
+		return render_descriptors_[DescriptorLayoutType::ForwardLighting].descritptor_set_;
 	}
 
 	void MainRenderPass::CreateSkyboxDescriptor()
@@ -849,6 +928,52 @@ namespace peanut
 
 		render_descriptors_[DescriptorLayoutType::Skybox].descritptor_set_ =
 			rhi->AllocateDescriptor(render_descriptors_[DescriptorLayoutType::Skybox].descriptor_set_layout_);
+	}
+
+	void MainRenderPass::CreateColorGradingDescriptor()
+	{
+		auto rhi = rhi_.lock();
+
+		assert(rhi.get() != nullptr);
+
+		render_descriptors_[DescriptorLayoutType::ColorGrading].descritptor_set_ =
+			rhi->AllocateDescriptor(render_descriptors_[DescriptorLayoutType::ColorGrading].descriptor_set_layout_);
+	}
+
+	void MainRenderPass::UpdateColorGradingDescriptor()
+	{
+		auto rhi = rhi_.lock();
+
+		assert(rhi.get() != nullptr);
+		VulkanRHI* vulkan_rhi = reinterpret_cast<VulkanRHI*>(rhi.get());
+
+		VkDescriptorImageInfo color_image_info = {};
+		color_image_info.sampler = vulkan_rhi->GetOrCreateSampler(VulkanRHI::Linear);
+		color_image_info.imageView = render_target_->attachments_[AttachmentType::BackupBuffer].image_view_;
+		color_image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+		VkDescriptorImageInfo lut_image_info = {};
+		lut_image_info.sampler = color_grading_render_data_->color_grading_lut_texture.image_sampler; // todo: get lut image sampler
+		lut_image_info.imageView = color_grading_render_data_->color_grading_lut_texture.image_view; // todo: add lut image view
+		lut_image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+
+		std::array<VkWriteDescriptorSet, 2> descriptor_writes = {};
+		descriptor_writes[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		descriptor_writes[0].descriptorCount = 1;
+		descriptor_writes[0].dstArrayElement = 0;
+		descriptor_writes[0].dstBinding = 0;
+		descriptor_writes[0].dstSet = render_descriptors_[DescriptorLayoutType::ColorGrading].descritptor_set_;
+		descriptor_writes[0].descriptorType = VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
+
+		descriptor_writes[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		descriptor_writes[1].descriptorCount = 1;
+		descriptor_writes[1].dstArrayElement = 0;
+		descriptor_writes[1].dstBinding = 1;
+		descriptor_writes[1].dstSet = render_descriptors_[DescriptorLayoutType::ColorGrading].descritptor_set_;
+		descriptor_writes[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+
+		vulkan_rhi->UpdateDescriptorSets(descriptor_writes.size(), descriptor_writes.data(), 0, nullptr);
 	}
 
 	void MainRenderPass::UpdateDeferredLightDescriptor()
@@ -880,39 +1005,43 @@ namespace peanut
 
 		// ibl irradiance texture
 		VkDescriptorImageInfo irradiance_texture_info = {};
-		irradiance_texture_info.sampler = vulkan_rhi->GetOrCreateSampler(VulkanRHI::Nearest);
-		irradiance_texture_info.imageView = VK_NULL_HANDLE; // todo: get irradiance texture image view
+		irradiance_texture_info.sampler = lighting_render_data_.ibl_light_texture.ibl_irradiance_texture.image_sampler;
+		irradiance_texture_info.imageView = lighting_render_data_.ibl_light_texture.ibl_irradiance_texture.image_view; // todo: get irradiance texture image view
 		irradiance_texture_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
 		// ibl prefiltered texture
 		VkDescriptorImageInfo prefiltered_texture_info = {};
-		prefiltered_texture_info.sampler = vulkan_rhi->GetOrCreateSampler(VulkanRHI::Nearest);
-		prefiltered_texture_info.imageView = VK_NULL_HANDLE; // todo: get prefiltered texture image view
+		prefiltered_texture_info.sampler = lighting_render_data_.ibl_light_texture.ibl_prefilter_texture.image_sampler;
+		prefiltered_texture_info.imageView = lighting_render_data_.ibl_light_texture.ibl_prefilter_texture.image_view; // todo: get prefiltered texture image view
 		prefiltered_texture_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
 		// ibl brdf lut
 		VkDescriptorImageInfo brdf_lut_info = {};
-		brdf_lut_info.sampler = vulkan_rhi->GetOrCreateSampler(VulkanRHI::Nearest);
-		brdf_lut_info.imageView = VK_NULL_HANDLE;
+		brdf_lut_info.sampler = lighting_render_data_.ibl_light_texture.brdf_lut_texture.image_sampler;
+		brdf_lut_info.imageView = lighting_render_data_.ibl_light_texture.brdf_lut_texture.image_view;
 		brdf_lut_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
 		// directional light shadow texture
 		VkDescriptorImageInfo directional_light_shadow_info = {};
-		directional_light_shadow_info.sampler = vulkan_rhi->GetOrCreateSampler(VulkanRHI::Nearest);
-		directional_light_shadow_info.imageView = VK_NULL_HANDLE;
+		directional_light_shadow_info.sampler = lighting_render_data_.directional_light_shadow_map.image_sampler;
+		directional_light_shadow_info.imageView = lighting_render_data_.directional_light_shadow_map.image_view;
 		directional_light_shadow_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
 		// point light shadow texture
-		VkDescriptorImageInfo point_light_shadow_info = {};
-		point_light_shadow_info.sampler = vulkan_rhi->GetOrCreateSampler(VulkanRHI::Nearest);
-		point_light_shadow_info.imageView = VK_NULL_HANDLE;
-		point_light_shadow_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		//VkDescriptorImageInfo point_light_shadow_info = {};
+		//point_light_shadow_info.sampler = vulkan_rhi->GetOrCreateSampler(VulkanRHI::Nearest);
+		//point_light_shadow_info.imageView = VK_NULL_HANDLE;
+		//point_light_shadow_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
 		// light uniform buffer
-		lighting_data_uniform_buffer_ = AllocateSubstorageFromUniformBuffer<LightingUBO>();
+		if (!lighting_data_uniform_buffer_.has_value())
+		{
+			lighting_data_uniform_buffer_ = AllocateSubstorageFromUniformBuffer<LightingUBO>();
+		}
+		
 		VkDescriptorBufferInfo& light_uniform_buffer_info = lighting_data_uniform_buffer_->descriptor_info;
 
-		std::array<VkWriteDescriptorSet, 10> descriptor_writes = {};
+		std::array<VkWriteDescriptorSet, 9> descriptor_writes = {};
 
 		descriptor_writes[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 		descriptor_writes[0].dstSet = render_descriptors_[DescriptorLayoutType::DeferredLighting].descritptor_set_;
@@ -964,24 +1093,134 @@ namespace peanut
 		descriptor_writes[7].dstBinding = 7;
 		descriptor_writes[7].pImageInfo = &directional_light_shadow_info;
 
-		descriptor_writes[8] = descriptor_writes[4];
-		descriptor_writes[8].dstBinding = 8;
-		descriptor_writes[8].pImageInfo = &point_light_shadow_info;
+		//descriptor_writes[8] = descriptor_writes[4];
+		//descriptor_writes[8].dstBinding = 8;
+		//descriptor_writes[8].pImageInfo = &point_light_shadow_info;
 
-		descriptor_writes[9].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		descriptor_writes[9].dstSet = render_descriptors_[DescriptorLayoutType::DeferredLighting].descritptor_set_;
-		descriptor_writes[9].dstBinding = 9;
-		descriptor_writes[9].dstArrayElement = 0;
-		descriptor_writes[9].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		descriptor_writes[9].descriptorCount = 1;
-		descriptor_writes[9].pBufferInfo = &light_uniform_buffer_info;
+		descriptor_writes[8].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		descriptor_writes[8].dstSet = render_descriptors_[DescriptorLayoutType::DeferredLighting].descritptor_set_;
+		descriptor_writes[8].dstBinding = 9;
+		descriptor_writes[8].dstArrayElement = 0;
+		descriptor_writes[8].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		descriptor_writes[8].descriptorCount = 1;
+		descriptor_writes[8].pBufferInfo = &light_uniform_buffer_info;
 
 		vulkan_rhi->UpdateDescriptorSets(descriptor_writes.size(), descriptor_writes.data(), 0, nullptr);
 	}
 
-	void MainRenderPass::UpdateForwardLightDescriptor()
+	void MainRenderPass::UpdateForwardLightDescriptor(VkCommandBuffer command_buffer, const PbrMaterial& material_data, VkDescriptorSet dst_descriptor_set)
 	{
 		// same as deffred lighting
+		auto rhi = rhi_.lock();
+		assert(rhi.get() != nullptr);
+
+		VulkanRHI* vulkan_rhi = reinterpret_cast<VulkanRHI*>(rhi.get());
+
+		VkDescriptorImageInfo normal_image_info = {};
+		normal_image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		normal_image_info.imageView = material_data.normal_texture->image_view;
+		normal_image_info.sampler = vulkan_rhi->GetMipmapSampler(material_data.normal_texture->width, material_data.normal_texture->height);
+
+		VkDescriptorImageInfo metallic_roughness_occlusion_image_info = {};
+		metallic_roughness_occlusion_image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		metallic_roughness_occlusion_image_info.imageView = material_data.metallic_roughness_occlusion_texture->image_view;
+		metallic_roughness_occlusion_image_info.sampler = vulkan_rhi->GetMipmapSampler(material_data.metallic_roughness_occlusion_texture->width,
+			material_data.metallic_roughness_occlusion_texture->height);
+
+		VkDescriptorImageInfo basecolor_image_info = {};
+		basecolor_image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		basecolor_image_info.imageView = material_data.base_color_texture->image_view;
+		basecolor_image_info.sampler = vulkan_rhi->GetMipmapSampler(material_data.base_color_texture->width,
+			material_data.base_color_texture->height);
+
+		VkDescriptorImageInfo emissive_image_info = {};
+		emissive_image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		emissive_image_info.imageView = material_data.emissive_texture->image_view;
+		emissive_image_info.sampler = vulkan_rhi->GetMipmapSampler(material_data.emissive_texture->width,
+			material_data.emissive_texture->height);
+
+		// ibl irradiance texture
+		VkDescriptorImageInfo irradiance_texture_info = {};
+		irradiance_texture_info.sampler = lighting_render_data_.ibl_light_texture.ibl_irradiance_texture.image_sampler;
+		irradiance_texture_info.imageView = lighting_render_data_.ibl_light_texture.ibl_irradiance_texture.image_view; // todo: get irradiance texture image view
+		irradiance_texture_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+		// ibl prefiltered texture
+		VkDescriptorImageInfo prefiltered_texture_info = {};
+		prefiltered_texture_info.sampler = lighting_render_data_.ibl_light_texture.ibl_prefilter_texture.image_sampler;
+		prefiltered_texture_info.imageView = lighting_render_data_.ibl_light_texture.ibl_prefilter_texture.image_view; // todo: get prefiltered texture image view
+		prefiltered_texture_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+		// ibl brdf lut
+		VkDescriptorImageInfo brdf_lut_info = {};
+		brdf_lut_info.sampler = lighting_render_data_.ibl_light_texture.brdf_lut_texture.image_sampler;
+		brdf_lut_info.imageView = lighting_render_data_.ibl_light_texture.brdf_lut_texture.image_view;
+		brdf_lut_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+		// directional light shadow texture
+		VkDescriptorImageInfo directional_light_shadow_info = {};
+		directional_light_shadow_info.sampler = lighting_render_data_.directional_light_shadow_map.image_sampler;
+		directional_light_shadow_info.imageView = lighting_render_data_.directional_light_shadow_map.image_view;
+		directional_light_shadow_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+		if (!lighting_data_uniform_buffer_.has_value())
+		{
+			lighting_data_uniform_buffer_ = AllocateSubstorageFromUniformBuffer<LightingUBO>();
+		}
+
+		VkDescriptorBufferInfo& light_uniform_buffer_info = lighting_data_uniform_buffer_->descriptor_info;
+
+		std::array<VkWriteDescriptorSet, 9> descriptor_writes = {};
+
+		descriptor_writes[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		descriptor_writes[0].dstSet = render_descriptors_[DescriptorLayoutType::ForwardLighting].descritptor_set_;
+		descriptor_writes[0].dstBinding = 0;
+		descriptor_writes[0].dstArrayElement = 0;
+		descriptor_writes[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		descriptor_writes[0].descriptorCount = 1;
+		descriptor_writes[0].pImageInfo = &normal_image_info;
+
+		descriptor_writes[1] = descriptor_writes[0];
+		descriptor_writes[1].dstBinding = 1;
+		descriptor_writes[1].pImageInfo = &metallic_roughness_occlusion_image_info;
+
+		descriptor_writes[2] = descriptor_writes[0];
+		descriptor_writes[2].dstBinding = 2;
+		descriptor_writes[2].pImageInfo = &basecolor_image_info;
+
+		descriptor_writes[3] = descriptor_writes[0];
+		descriptor_writes[3].dstBinding = 3;
+		descriptor_writes[3].pImageInfo = &emissive_image_info;
+
+		descriptor_writes[4] = descriptor_writes[0];
+		descriptor_writes[4].dstBinding = 4;
+		descriptor_writes[4].pImageInfo = &irradiance_texture_info;
+
+		descriptor_writes[5] = descriptor_writes[0];
+		descriptor_writes[5].dstBinding = 5;
+		descriptor_writes[5].pImageInfo = &prefiltered_texture_info;
+
+		descriptor_writes[6] = descriptor_writes[0];
+		descriptor_writes[6].dstBinding = 6;
+		descriptor_writes[6].pImageInfo = &brdf_lut_info;
+
+		descriptor_writes[7] = descriptor_writes[0];
+		descriptor_writes[7].dstBinding = 7;
+		descriptor_writes[7].pImageInfo = &directional_light_shadow_info;
+
+		//descriptor_writes[8] = descriptor_writes[4];
+		//descriptor_writes[8].dstBinding = 8;
+		//descriptor_writes[8].pImageInfo = &point_light_shadow_info;
+
+		descriptor_writes[8].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		descriptor_writes[8].dstSet = render_descriptors_[DescriptorLayoutType::ForwardLighting].descritptor_set_;
+		descriptor_writes[8].dstBinding = 9;
+		descriptor_writes[8].dstArrayElement = 0;
+		descriptor_writes[8].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		descriptor_writes[8].descriptorCount = 1;
+		descriptor_writes[8].pBufferInfo = &light_uniform_buffer_info;
+
+		vulkan_rhi->UpdateDescriptorSets(descriptor_writes.size(), descriptor_writes.data(), 0, nullptr);
 	}
 
 	void MainRenderPass::UpdateGbufferDescriptor(VkCommandBuffer command_buffer, const PbrMaterial& material_data, VkDescriptorSet dst_descriptor_set)
@@ -1043,9 +1282,8 @@ namespace peanut
 		std::shared_ptr<VulkanRHI> vulkan_rhi = std::static_pointer_cast<VulkanRHI>(rhi_.lock());
 		VkDescriptorImageInfo skybox_image_info = {};
         skybox_image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        skybox_image_info.imageView = skybox_render_data_->skybox_env_texture.view;
-        skybox_image_info.sampler = vulkan_rhi->GetMipmapSampler(skybox_render_data_->skybox_env_texture.width,
-																	skybox_render_data_->skybox_env_texture.height);
+        skybox_image_info.imageView = skybox_render_data_->skybox_env_texture.image_view;
+        skybox_image_info.sampler = skybox_render_data_->skybox_env_texture.image_sampler;
 
 		VkWriteDescriptorSet descriptor_writes[1] = {};
         descriptor_writes[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;

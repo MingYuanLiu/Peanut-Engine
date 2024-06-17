@@ -8,7 +8,13 @@ namespace peanut
 		rhi_ = init_info->rhi_;
 
 		CreateRenderTargets();
+		CreateRenderPass();
+		CreateFramebuffer();
 		CreateDescriptorSetLayouts();
+		CreateDescriptorSets();
+		CreatePipelineLayouts();
+		CreatePipelineCache();
+		CreatePipelines();
 	}
 
 	void IRenderPassBase::CreatePipelineCache()
@@ -100,7 +106,7 @@ namespace peanut
 		std::shared_ptr<VulkanRHI> vulkan_rhi = std::static_pointer_cast<VulkanRHI>(rhi_.lock());
 		if (!uniform_buffer_.has_value())
 		{
-			uniform_buffer_ = std::optional<UniformBuffer>();
+			uniform_buffer_ = UniformBuffer();
 		}
 
 		uniform_buffer_->buffer = vulkan_rhi->CreateBuffer(buffer_size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,

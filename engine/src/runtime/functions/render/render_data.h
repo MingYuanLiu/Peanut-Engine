@@ -26,29 +26,57 @@ namespace peanut
         uint32_t memory_type_index = 0;
     };
 
+
+    struct MeshBuffer
+    {
+        Resource<VkBuffer> vertex_buffer;
+        Resource<VkBuffer> index_buffer;
+        uint32_t num_elements;
+    };
+
+    struct TextureData
+    {
+        Resource<VkImage> image;
+        VkImageView image_view;
+        VkSampler image_sampler;
+
+        uint32_t width;
+        uint32_t height;
+        uint32_t channels;
+
+        uint32_t levels;
+        uint32_t layers;
+
+        void* pixels;
+    };
+
+    struct PbrMaterial
+    {
+        std::shared_ptr<TextureData> base_color_texture;
+        std::shared_ptr<TextureData> metallic_roughness_occlusion_texture;
+        std::shared_ptr<TextureData> normal_texture;
+        std::shared_ptr<TextureData> emissive_texture;
+    };
+
+    /**
+    * All render data used by render passes
+    */
     enum class RenderDataType
     {
         Base,
         StaticMesh,
         Light,
         SkeletalMesh,
-        Skybox
-    };
-
-    // VkImage + VkImageView + VkSampler
-    struct ImageViewSampler
-    {
-        Resource<VkImage> image;
-        VkImageView view;
-        VkSampler sampler;
-
-        uint32_t width;
-        uint32_t height;
+        Skybox,
+        ColorGrading
     };
 
     struct RenderData
     {
-        RenderDataType data_type_ = RenderDataType::Base;
+        RenderData(RenderDataType data_type = RenderDataType::Base)
+            : data_type(data_type) {}
+
+        RenderDataType data_type;
     };
 
     struct MeshRenderData : public RenderData
@@ -64,59 +92,56 @@ namespace peanut
 
     struct StaticMeshRenderData : public MeshRenderData
     {
-        StaticMeshRenderData() { data_type_ = RenderDataType::StaticMesh; }
+        StaticMeshRenderData() { RenderData(RenderDataType::StaticMesh); }
 
         std::vector<MaterialPCO> material_pcos;
         std::vector<PbrMaterial> pbr_materials;
     };
 
+    struct IblLightTexture
+    {
+        TextureData ibl_irradiance_texture;
+        TextureData ibl_prefilter_texture;
+        TextureData brdf_lut_texture;
+    };
+
     struct LightingRenderData : public RenderData
     {
-        LightingRenderData() { data_type_ = RenderDataType::Light; }
+        LightingRenderData() : RenderData(RenderDataType::Light)
+            { }
 
-        LightingUBO lighting_ubo_data;
+        std::vector<LightingUBO> lighting_ubo_data;
         Resource<VkBuffer> lighting_ub;
 
         // todo: ibl textures
-        
+        IblLightTexture ibl_light_texture;
+
+        TextureData directional_light_shadow_map;
+        std::vector<TextureData> point_light_shadow_map;
+        std::vector<TextureData> spot_light_shadow_map;
     };
 
     struct SkyboxRenderData : public RenderData
     {
-        SkyboxRenderData() { data_type_ = RenderDataType::Skybox; }
+        SkyboxRenderData() : RenderData(RenderDataType::Skybox),
+            vertex_buffer(Resource<VkBuffer>()), index_buffer(Resource<VkBuffer>()),
+            index_counts(0), transform_ubo_data(TransformUBO()), skybox_env_texture(TextureData())
+        { }
 
         Resource<VkBuffer> vertex_buffer;
         Resource<VkBuffer> index_buffer;
         uint32_t index_counts;
         TransformUBO transform_ubo_data;
-        ImageViewSampler skybox_env_texture;
+        TextureData skybox_env_texture;
     };
 
-    // ========================================================================
-    struct QueueFamilyIndices 
+    struct ColorGradingRenderData : public RenderData
     {
-        std::optional<uint32_t> graphics_family;
-        std::optional<uint32_t> present_family;
-        std::optional<uint32_t> compute_family;
+		ColorGradingRenderData() : RenderData(RenderDataType::ColorGrading),
+            color_grading_lut_texture(TextureData())
+		{ }
 
-        bool isComplete()
-        {
-            return graphics_family.has_value() && present_family.has_value() &&
-                    compute_family.has_value();
-        ;
-        }
-    };
-
-    struct VulkanPhysicalDevice 
-    {
-        VkPhysicalDevice physic_device_handle;
-        VkPhysicalDeviceProperties properties;
-        VkPhysicalDeviceMemoryProperties memory_properties;
-        VkPhysicalDeviceFeatures features;
-        VkSurfaceCapabilitiesKHR surface_capabilities;
-        std::vector<VkSurfaceFormatKHR> surface_formats;
-        std::vector<VkPresentModeKHR> present_modes;
-        QueueFamilyIndices queue_family_indices;
+        TextureData color_grading_lut_texture;
     };
 
     // wapper of decriptor set and layout
@@ -161,33 +186,6 @@ namespace peanut
 
         uint32_t width, height;
         uint32_t samples;
-    };
-
-    struct MeshBuffer 
-    {
-        Resource<VkBuffer> vertex_buffer;
-        Resource<VkBuffer> index_buffer;
-        uint32_t num_elements;
-    };
-
-    struct TextureData 
-    {
-        Resource<VkImage> image;
-        VkImageView image_view;
-        uint32_t width;
-        uint32_t height;
-        uint32_t channels;
-        uint32_t levels;
-        uint32_t layers;
-        void *pixels;
-    };
-
-    struct PbrMaterial 
-    {
-        std::shared_ptr<TextureData> base_color_texture;
-        std::shared_ptr<TextureData> metallic_roughness_occlusion_texture;
-        std::shared_ptr<TextureData> normal_texture;
-        std::shared_ptr<TextureData> emissive_texture;
     };
 
     struct TextureMemoryBarrier 
@@ -268,12 +266,14 @@ namespace peanut
         }
     };
 
-    struct SpecularFilterPushConstants {
+    struct SpecularFilterPushConstants
+    {
       uint32_t level;
       float roughness;
     };
 
-    struct TransformUniforms {
+    struct TransformUniforms 
+    {
       glm::mat4 viewProjectionMatrix;
       glm::mat4 skyProjectionMatrix;
       glm::mat4 sceneRotationMatrix;
@@ -286,7 +286,8 @@ namespace peanut
       float fov = 0.0f;
     };
 
-    struct SceneSettings {
+    struct SceneSettings
+    {
       float pitch = 0.0f;
       float yaw = 0.0f;
 
@@ -298,7 +299,8 @@ namespace peanut
       } lights[kNumLights];
     };
 
-    struct ShadingUniforms {
+    struct ShadingUniforms 
+    {
       struct {
         glm::vec4 direction;
         glm::vec4 radiance;

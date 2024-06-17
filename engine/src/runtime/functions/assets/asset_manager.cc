@@ -45,9 +45,7 @@ std::shared_ptr<TextureData> AssetsManager::LoadTextureData(const std::string& t
 
     auto texture_width = texture_data->width;
     auto texture_height = texture_data->height;
-    texture_data->levels =
-        levels > 0 ? levels
-                    : RenderUtils::NumMipmapLevels(texture_width, texture_height);
+    texture_data->levels = levels > 0 ? levels : RenderUtils::NumMipmapLevels(texture_width, texture_height);
     texture_data->layers = 1;
 
     VkImageUsageFlags usage =
@@ -56,9 +54,8 @@ std::shared_ptr<TextureData> AssetsManager::LoadTextureData(const std::string& t
         usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;  // for mipmap generation
 
     auto rhi = GlobalEngineContext::GetContext()->GetRenderSystem()->GetRHI();
-    texture_data->image =
-        rhi->CreateImage(texture_width, texture_height, texture_data->layers,
-                        texture_data->levels, 1, format, usage);
+    texture_data->image = rhi->CreateImage(texture_width, texture_height, texture_data->layers,
+                                            texture_data->levels, 1, format, usage);
 
     texture_data->image_view = rhi->CreateImageView(
         texture_data->image.resource, format, VK_IMAGE_ASPECT_COLOR_BIT, 0,
@@ -243,8 +240,8 @@ void AssetsManager::LoadRenderObjectFromDescriptionFile(const std::string& descr
             pbr_material_description["normal_texture"].string_value();
         std::string metallic_texture_file =
             pbr_material_description["metallic_texture"].string_value();
-        std::string roughness_texture_file =
-            pbr_material_description["roughness_texture"].string_value();
+        std::string emissive_texture_file =
+            pbr_material_description["emissive_texture"].string_value();
 
         std::shared_ptr<PbrMaterial> pbr_material = std::make_shared<PbrMaterial>();
 
@@ -254,13 +251,13 @@ void AssetsManager::LoadRenderObjectFromDescriptionFile(const std::string& descr
             LoadTextureData(normal_texture_file, VK_FORMAT_R8G8B8A8_UNORM);
         std::shared_ptr<TextureData> metallic_texture =
             LoadTextureData(metallic_texture_file, VK_FORMAT_R8_UNORM);
-        std::shared_ptr<TextureData> roughness_texture =
-            LoadTextureData(roughness_texture_file, VK_FORMAT_R8_UNORM);
+        std::shared_ptr<TextureData> emissive_texture =
+            LoadTextureData(emissive_texture_file, VK_FORMAT_R8_UNORM);
 
-        pbr_material->albedo_texture_ = albedo_texture;
-        pbr_material->normal_texture_ = normal_texture;
-        pbr_material->metallic_texture_ = metallic_texture;
-        pbr_material->roughness_texture_ = roughness_texture;
+        pbr_material->base_color_texture = albedo_texture;
+        pbr_material->normal_texture = normal_texture;
+        pbr_material->metallic_roughness_occlusion_texture = metallic_texture;
+        pbr_material->emissive_texture = emissive_texture;
 
         out_pbr_material_models.insert(std::make_pair(object_name, pbr_material));
 

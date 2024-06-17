@@ -16,6 +16,7 @@ namespace peanut
 		}
 
 		VkPipelineShaderStageCreateInfo GetShaderStageCreateInfo(std::weak_ptr<RHI> rhi, const std::string& shader_name, VkShaderStageFlagBits stage);
+		VkShaderModule GetShaderModule(std::weak_ptr<RHI> rhi, const std::string& shader_name);
 
 	private:
 		std::unordered_map<std::string, std::string> shader_files_name_to_path;

@@ -38,4 +38,26 @@ namespace peanut
 
 		return shader_stage_info;
 	}
+
+	VkShaderModule ShaderManager::GetShaderModule(std::weak_ptr<RHI> rhi, const std::string& shader_name)
+	{
+		VkShaderModule shader_module = VK_NULL_HANDLE;
+		if (loaded_shader_modules.find(shader_name) != loaded_shader_modules.end())
+		{
+			shader_module = loaded_shader_modules[shader_name];
+		}
+		else
+		{
+			shader_module = rhi.lock()->CreateShaderModule(shader_files_name_to_path[shader_name]);
+			if (shader_module == VK_NULL_HANDLE)
+			{
+				PEANUT_LOG_ERROR("Failed to create shader module: {0}", shader_name);
+				return {};
+			}
+
+			loaded_shader_modules[shader_name] = shader_module;
+		}
+
+		return shader_module;
+	}
 }

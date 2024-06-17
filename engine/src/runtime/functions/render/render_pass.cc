@@ -856,7 +856,8 @@ void MainRenderPass::SetupSkyboxPipeline()
   rhi_->DestroyShaderModule(skybox_vs);
   rhi_->DestroyShaderModule(skybox_fs);
 }
-void MainRenderPass::LoadAndProcessEnvironmentMap() {
+void MainRenderPass::LoadAndProcessEnvironmentMap()
+{
   std::shared_ptr<TextureData> env_texture_unfiltered = rhi_->CreateTexture(
       kEnvMapSize, kEnvMapSize, 6, 0, VK_FORMAT_R16G16B16A16_SFLOAT,
       VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT);

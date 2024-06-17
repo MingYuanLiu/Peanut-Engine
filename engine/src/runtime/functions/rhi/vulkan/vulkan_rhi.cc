@@ -262,76 +262,77 @@ void VulkanRHI::CmdCopyBufferToImage(VkCommandBuffer command_buffer,
                          layout, 1, &copy_region);
 }
 
-void VulkanRHI::ExecImmediateCommandBuffer(VkCommandBuffer command_buffer) {
-  if (VKFAILED(vkEndCommandBuffer(command_buffer))) {
-    PEANUT_LOG_FATAL("Failed to end immediate command buffer");
-  }
+void VulkanRHI::ExecImmediateCommandBuffer(VkCommandBuffer command_buffer) 
+{
+    if (VKFAILED(vkEndCommandBuffer(command_buffer)))
+    {
+        PEANUT_LOG_FATAL("Failed to end immediate command buffer");
+    }
 
-  VkSubmitInfo submit_info = {VK_STRUCTURE_TYPE_SUBMIT_INFO};
-  submit_info.commandBufferCount = 1;
-  submit_info.pCommandBuffers = &command_buffer;
-  vkQueueSubmit(compute_queue_, 1, &submit_info, VK_NULL_HANDLE);
-  vkQueueWaitIdle(compute_queue_);
+    VkSubmitInfo submit_info = {VK_STRUCTURE_TYPE_SUBMIT_INFO};
+    submit_info.commandBufferCount = 1;
+    submit_info.pCommandBuffers = &command_buffer;
+    vkQueueSubmit(compute_queue_, 1, &submit_info, VK_NULL_HANDLE);
+    vkQueueWaitIdle(compute_queue_);
 
-  if (VKFAILED(vkResetCommandBuffer(
-          command_buffer, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT))) {
-    PEANUT_LOG_FATAL("Failed to reset immediate command buffer");
-  }
+    if (VKFAILED(vkResetCommandBuffer(command_buffer, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT)))
+    {
+        PEANUT_LOG_FATAL("Failed to reset immediate command buffer");
+    }
 }
 
-void VulkanRHI::GenerateMipmaps(const TextureData& texture) {
-  assert(texture.levels > 1);
+void VulkanRHI::GenerateMipmaps(const TextureData& texture) 
+{
+    assert(texture.levels > 1);
 
-  auto command_buffer = BeginImmediateCommandBuffer();
+    auto command_buffer = BeginImmediateCommandBuffer();
 
-  // Iterate through mip chain and consecutively blit from previous level to
-  // next level with linear filtering.
-  for (uint32_t level = 1, prev_level_width = texture.width,
-                prev_level_height = texture.height;
-       level < texture.levels;
-       ++level, prev_level_width /= 2, prev_level_height /= 2) {
+    // Iterate through mip chain and consecutively blit from previous level to
+    // next level with linear filtering.
+    for (uint32_t level = 1, prev_level_width = texture.width, prev_level_height = texture.height;
+                level < texture.levels; ++level, prev_level_width /= 2, prev_level_height /= 2) {
     const auto& pre_blit_barrier =
         TextureMemoryBarrier(texture, 0, VK_ACCESS_TRANSFER_WRITE_BIT,
-                             VK_IMAGE_LAYOUT_UNDEFINED,
-                             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
+                                VK_IMAGE_LAYOUT_UNDEFINED,
+                                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
             .MipLevels(level, 1);
     CmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
-                       VK_PIPELINE_STAGE_TRANSFER_BIT, {pre_blit_barrier});
+                        VK_PIPELINE_STAGE_TRANSFER_BIT, {pre_blit_barrier});
 
     VkImageBlit region = {};
     region.srcSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, level - 1, 0,
-                             texture.layers};
+                                texture.layers};
     region.dstSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, level, 0,
-                             texture.layers};
+                                texture.layers};
     region.srcOffsets[1] = {(int32_t)prev_level_width,
                             (int32_t)prev_level_height, 1};
     region.dstOffsets[1] = {(int32_t)(prev_level_width / 2),
                             (int32_t)(prev_level_height / 2), 1};
     vkCmdBlitImage(command_buffer, texture.image.resource,
-                   VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, texture.image.resource,
-                   VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region,
-                   VK_FILTER_LINEAR);
+                    VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, texture.image.resource,
+                    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region,
+                    VK_FILTER_LINEAR);
 
     const auto& post_blit_barrier =
         TextureMemoryBarrier(texture, VK_ACCESS_TRANSFER_WRITE_BIT,
-                             VK_ACCESS_TRANSFER_READ_BIT,
-                             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                             VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL)
+                                VK_ACCESS_TRANSFER_READ_BIT,
+                                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                                VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL)
             .MipLevels(level, 1);
     CmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
-                       VK_PIPELINE_STAGE_TRANSFER_BIT, {post_blit_barrier});
-  }
-  // Transition whole mip chain to shader read only layout.
-  {
+                        VK_PIPELINE_STAGE_TRANSFER_BIT, {post_blit_barrier});
+    }
+    // Transition whole mip chain to shader read only layout.
+    {
     const auto barrier =
         TextureMemoryBarrier(texture, VK_ACCESS_TRANSFER_WRITE_BIT, 0,
-                             VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+                                VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
     CmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
-                       VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, {barrier});
-  }
+                        VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, {barrier});
+    }
 
-  ExecImmediateCommandBuffer(command_buffer);
+    ExecImmediateCommandBuffer(command_buffer);
 }
 
 void VulkanRHI::CreateSampler(VkSamplerCreateInfo* create_info,
@@ -345,11 +346,12 @@ void VulkanRHI::CreateSampler(VkSamplerCreateInfo* create_info,
 VulkanPhysicalDevice VulkanRHI::GetPhysicalDevice() { return physical_device_; }
 
 void VulkanRHI::CreateDescriptorPool(VkDescriptorPoolCreateInfo* create_info,
-                                     VkDescriptorPool* out_pool) {
-  if (VKFAILED(
-          vkCreateDescriptorPool(vk_device_, create_info, nullptr, out_pool))) {
-    PEANUT_LOG_FATAL("Failed to create descriptor pool");
-  }
+                                     VkDescriptorPool* out_pool) 
+{
+    if (VKFAILED(vkCreateDescriptorPool(vk_device_, create_info, nullptr, out_pool))) 
+    {
+        PEANUT_LOG_FATAL("Failed to create descriptor pool");
+    }
 }
 
 VkDevice VulkanRHI::GetDevice() { return vk_device_; }
@@ -651,29 +653,31 @@ std::shared_ptr<TextureData> VulkanRHI::CreateTexture(
   return texture;
 }
 
-VkPipeline VulkanRHI::CreateComputePipeline(
-    VkShaderModule cs_shader, VkPipelineLayout layout,
-    const VkSpecializationInfo* specialize_info) {
-  const VkPipelineShaderStageCreateInfo shader_stage = {
-      VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-      nullptr,
-      0,
-      VK_SHADER_STAGE_COMPUTE_BIT,
-      cs_shader,
-      "main",
-      specialize_info};
-  VkComputePipelineCreateInfo create_info = {
-      VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO};
-  create_info.stage = shader_stage;
-  create_info.layout = layout;
+VkPipeline VulkanRHI::CreateComputePipeline(VkShaderModule cs_shader, VkPipelineLayout layout, const VkSpecializationInfo* specialize_info) 
+{
+    const VkPipelineShaderStageCreateInfo shader_stage = 
+    {
+        VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+        nullptr,
+        0,
+        VK_SHADER_STAGE_COMPUTE_BIT,
+        cs_shader,
+        "main",
+        specialize_info
+    };
 
-  VkPipeline pipeline;
-  if (VKFAILED(vkCreateComputePipelines(vk_device_, VK_NULL_HANDLE, 1,
-                                        &create_info, nullptr, &pipeline))) {
-    PEANUT_LOG_FATAL("Failed to create compute pipeline");
-  }
+    VkComputePipelineCreateInfo create_info = { VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO };
+    create_info.stage = shader_stage;
+    create_info.layout = layout;
 
-  return pipeline;
+    VkPipeline pipeline;
+    if (VKFAILED(vkCreateComputePipelines(vk_device_, VK_NULL_HANDLE, 1,
+                                        &create_info, nullptr, &pipeline))) 
+    {
+        PEANUT_LOG_FATAL("Failed to create compute pipeline");
+    }
+
+    return pipeline;
 }
 
 static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(
@@ -814,7 +818,8 @@ void VulkanRHI::PresentFrame()
     }
 }
 
-void VulkanRHI::SetupPhysicalDevice() {
+void VulkanRHI::SetupPhysicalDevice() 
+{
   assert(vk_instance_ != VK_NULL_HANDLE);
 
   uint32_t physical_device_count;

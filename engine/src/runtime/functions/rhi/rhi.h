@@ -11,8 +11,11 @@
 #define VKFAILED(x) ((x) != VK_SUCCESS)
 #endif  // !VKFAILED
 
-namespace peanut {
-class RHI {
+namespace peanut 
+{
+struct VulkanPhysicalDevice;
+class RHI 
+{
 public:
     virtual ~RHI() {}
     virtual void Init(const std::shared_ptr<WindowSystem>& window_system) = 0;
