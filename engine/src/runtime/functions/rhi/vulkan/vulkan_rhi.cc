@@ -220,7 +220,7 @@ void VulkanRHI::CopyMemToDevice(VkDeviceMemory memory, const void* data,
   vkUnmapMemory(vk_device_, memory);
 }
 
-VkCommandBuffer VulkanRHI::BeginImmediateCommandBuffer() 
+VkCommandBuffer VulkanRHI::BeginImmediateComputePassCommandBuffer() 
 {
     VkCommandBufferBeginInfo begin_info = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
     begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
@@ -241,11 +241,12 @@ VkCommandBuffer VulkanRHI::GetCommandBuffer()
 void VulkanRHI::CmdPipelineBarrier(
     VkCommandBuffer command_buffer, VkPipelineStageFlags src_stage_mask,
     VkPipelineStageFlags dst_stage_mask,
-    const std::vector<TextureMemoryBarrier>& barriers) {
+    const std::vector<TextureMemoryBarrier>& barriers)
+{
   vkCmdPipelineBarrier(
-      command_buffer, src_stage_mask, dst_stage_mask, 0, 0, nullptr, 0, nullptr,
-      (uint32_t)barriers.size(),
-      reinterpret_cast<const VkImageMemoryBarrier*>(barriers.data()));
+      command_buffer, src_stage_mask, dst_stage_mask,
+      0, 0, nullptr, 0, nullptr,
+      (uint32_t)barriers.size(), reinterpret_cast<const VkImageMemoryBarrier*>(barriers.data()));
 }
 
 void VulkanRHI::CmdCopyBufferToImage(VkCommandBuffer command_buffer,
@@ -253,16 +254,16 @@ void VulkanRHI::CmdCopyBufferToImage(VkCommandBuffer command_buffer,
                                      Resource<VkImage> image,
                                      uint32_t image_width,
                                      uint32_t image_height,
-                                     VkImageLayout layout) {
-  VkBufferImageCopy copy_region = {};
-  copy_region.bufferOffset = 0;
-  copy_region.imageSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1};
-  copy_region.imageExtent = {image_width, image_height, 1};
-  vkCmdCopyBufferToImage(command_buffer, buffer.resource, image.resource,
-                         layout, 1, &copy_region);
+                                     VkImageLayout layout)
+{
+    VkBufferImageCopy copy_region = {};
+    copy_region.bufferOffset = 0;
+    copy_region.imageSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1};
+    copy_region.imageExtent = {image_width, image_height, 1};
+    vkCmdCopyBufferToImage(command_buffer, buffer.resource, image.resource, layout, 1, &copy_region);
 }
 
-void VulkanRHI::ExecImmediateCommandBuffer(VkCommandBuffer command_buffer) 
+void VulkanRHI::ExecImmediateComputePassCommandBuffer(VkCommandBuffer command_buffer) 
 {
     if (VKFAILED(vkEndCommandBuffer(command_buffer)))
     {
@@ -285,54 +286,53 @@ void VulkanRHI::GenerateMipmaps(const TextureData& texture)
 {
     assert(texture.levels > 1);
 
-    auto command_buffer = BeginImmediateCommandBuffer();
+    auto command_buffer = BeginImmediateComputePassCommandBuffer();
 
+    int32_t width = static_cast<int32_t>(texture.width);
+    int32_t height = static_cast<int32_t>(texture.height);
+    int32_t total_levels = static_cast<int32_t>(texture.levels);
     // Iterate through mip chain and consecutively blit from previous level to
     // next level with linear filtering.
-    for (uint32_t level = 1, prev_level_width = texture.width, prev_level_height = texture.height;
-                level < texture.levels; ++level, prev_level_width /= 2, prev_level_height /= 2) {
-    const auto& pre_blit_barrier =
-        TextureMemoryBarrier(texture, 0, VK_ACCESS_TRANSFER_WRITE_BIT,
-                                VK_IMAGE_LAYOUT_UNDEFINED,
-                                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
-            .MipLevels(level, 1);
-    CmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
-                        VK_PIPELINE_STAGE_TRANSFER_BIT, {pre_blit_barrier});
-
-    VkImageBlit region = {};
-    region.srcSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, level - 1, 0,
-                                texture.layers};
-    region.dstSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, level, 0,
-                                texture.layers};
-    region.srcOffsets[1] = {(int32_t)prev_level_width,
-                            (int32_t)prev_level_height, 1};
-    region.dstOffsets[1] = {(int32_t)(prev_level_width / 2),
-                            (int32_t)(prev_level_height / 2), 1};
-    vkCmdBlitImage(command_buffer, texture.image.resource,
-                    VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, texture.image.resource,
-                    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region,
-                    VK_FILTER_LINEAR);
-
-    const auto& post_blit_barrier =
-        TextureMemoryBarrier(texture, VK_ACCESS_TRANSFER_WRITE_BIT,
-                                VK_ACCESS_TRANSFER_READ_BIT,
-                                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                                VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL)
-            .MipLevels(level, 1);
-    CmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
-                        VK_PIPELINE_STAGE_TRANSFER_BIT, {post_blit_barrier});
-    }
-    // Transition whole mip chain to shader read only layout.
+    for (int32_t level = 1;level < total_levels; ++level)
     {
-    const auto barrier =
-        TextureMemoryBarrier(texture, VK_ACCESS_TRANSFER_WRITE_BIT, 0,
-                                VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+        // transfer image to destination layout
+        const auto& pre_blit_barrier = TextureMemoryBarrier(texture, 0,
+            VK_ACCESS_TRANSFER_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL).MipLevels(level, 1);
+
+        // transfer image to source layout
+        const auto& post_blit_barrier = TextureMemoryBarrier(texture, VK_ACCESS_TRANSFER_WRITE_BIT,
+            VK_ACCESS_TRANSFER_READ_BIT,VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL).MipLevels(level, 1);
+        
+        CmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
+            VK_PIPELINE_STAGE_TRANSFER_BIT, {pre_blit_barrier});
+
+        VkImageBlit region = {};
+        region.srcSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, static_cast<uint32_t>(level - 1), 0,
+                                    texture.layers};
+        region.dstSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, static_cast<uint32_t>(level), 0,
+                                    texture.layers};
+        region.srcOffsets[1] = {width >> (level - 1), height >> (level - 1), 1};
+        region.dstOffsets[1] = {width >> level, height >> level, 1};
+        
+        vkCmdBlitImage(command_buffer, texture.image.resource,
+                        VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, texture.image.resource,
+                        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region, VK_FILTER_LINEAR);
+        
+        CmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
+                            VK_PIPELINE_STAGE_TRANSFER_BIT, {post_blit_barrier});
+    }
+    
+    // Transition the image layout of the whole mip chains to shader read only layout
+    // because the mipmap texture will be readed by compute shader
+    const auto barrier = TextureMemoryBarrier(texture, VK_ACCESS_TRANSFER_WRITE_BIT, 0,
+                                VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    
     CmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
                         VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, {barrier});
-    }
 
-    ExecImmediateCommandBuffer(command_buffer);
+    ExecImmediateComputePassCommandBuffer(command_buffer);
 }
 
 void VulkanRHI::CreateSampler(VkSamplerCreateInfo* create_info,
@@ -625,32 +625,30 @@ void VulkanRHI::DestroyShaderModule(VkShaderModule shader_module) {
   vkDestroyShaderModule(vk_device_, shader_module, nullptr);
 }
 
-std::shared_ptr<TextureData> VulkanRHI::CreateTexture(
-    uint32_t width, uint32_t height, uint32_t layers, uint32_t levels,
-    VkFormat format, VkImageUsageFlags additional_usage) {
-  assert(width > 0 && height > 0);
-  assert(layers > 0);
+std::shared_ptr<TextureData> VulkanRHI::CreateTexture(uint32_t width, uint32_t height, uint32_t layers, uint32_t levels,
+    VkFormat format, VkImageUsageFlags additional_usage)
+{
+    assert(width > 0 && height > 0);
+    assert(layers > 0);
 
-  std::shared_ptr<TextureData> texture = std::make_shared<TextureData>();
-  texture->width = width;
-  texture->height = height;
-  texture->layers = layers;
-  texture->levels =
-      levels > 0 ? levels : RenderUtils::NumMipmapLevels(width, height);
+    std::shared_ptr<TextureData> texture = std::make_shared<TextureData>();
+    texture->width = width;
+    texture->height = height;
+    texture->layers = layers;
+    texture->levels = levels > 0 ? levels : RenderUtils::NumMipmapLevels(width, height);
 
-  VkImageUsageFlags usage = VK_IMAGE_USAGE_SAMPLED_BIT |
-                            VK_IMAGE_USAGE_TRANSFER_DST_BIT | additional_usage;
-  if (texture->levels > 1) {
-    usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;  // For mipmap generation
-  }
+    VkImageUsageFlags usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | additional_usage;
+    if (texture->levels > 1)
+    {
+        usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;  // For mipmap generation
+    }
 
-  texture->image =
-      CreateImage(width, height, layers, texture->levels, 1, format, usage);
-  texture->image_view = CreateImageView(texture->image.resource, format,
+    texture->image = CreateImage(width, height, layers, texture->levels, 1, format, usage);
+    texture->image_view = CreateImageView(texture->image.resource, format,
                                         VK_IMAGE_ASPECT_COLOR_BIT, 0,
                                         VK_REMAINING_MIP_LEVELS, layers);
 
-  return texture;
+    return texture;
 }
 
 VkPipeline VulkanRHI::CreateComputePipeline(VkShaderModule cs_shader, VkPipelineLayout layout, const VkSpecializationInfo* specialize_info) 
@@ -754,34 +752,32 @@ void VulkanRHI::SetupInstance()
     // create instance
     if (VKFAILED(vkCreateInstance(&instance_info, nullptr, &vk_instance_))) 
     {
-        PEANUT_LOG_FATAL("Failed to Create vulkan instance");
+        PEANUT_LOG_FATAL("Failed to Create vulkan instance")
     }
 
     // volkLoadInstance(vk_instance_);
 }
 
-VkImageView VulkanRHI::CreateTextureView(
-    const std::shared_ptr<TextureData>& texture, VkFormat format,
-    VkImageAspectFlags aspect_mask, uint32_t base_mip_level,
-    uint32_t num_mip_levels) {
-  VkImageViewCreateInfo create_info = {
-      VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO};
-  create_info.image = texture->image.resource;
-  create_info.viewType =
-      (texture->layers == 6) ? VK_IMAGE_VIEW_TYPE_CUBE : VK_IMAGE_VIEW_TYPE_2D;
-  create_info.format = format;
-  create_info.subresourceRange.aspectMask = aspect_mask;
-  create_info.subresourceRange.baseMipLevel = base_mip_level;
-  create_info.subresourceRange.levelCount = num_mip_levels;
-  create_info.subresourceRange.baseArrayLayer = 0;
-  create_info.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
+VkImageView VulkanRHI::CreateTextureView(const std::shared_ptr<TextureData>& texture, VkFormat format,
+    VkImageAspectFlags aspect_mask, uint32_t base_mip_level, uint32_t num_mip_levels)
+{
+    VkImageViewCreateInfo create_info = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
+    create_info.image = texture->image.resource;
+    create_info.viewType = (texture->layers == 6) ? VK_IMAGE_VIEW_TYPE_CUBE : VK_IMAGE_VIEW_TYPE_2D;
+    create_info.format = format;
+    create_info.subresourceRange.aspectMask = aspect_mask;
+    create_info.subresourceRange.baseMipLevel = base_mip_level;
+    create_info.subresourceRange.levelCount = num_mip_levels;
+    create_info.subresourceRange.baseArrayLayer = 0;
+    create_info.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
 
-  VkImageView view;
-  if (VKFAILED(vkCreateImageView(vk_device_, &create_info, nullptr, &view))) {
-    PEANUT_LOG_FATAL("Failed to create image view");
-  }
+    VkImageView view;
+    if (VKFAILED(vkCreateImageView(vk_device_, &create_info, nullptr, &view)))
+    {
+        PEANUT_LOG_FATAL("Failed to create image view")
+    }
 
-  return view;
+    return view;
 }
 
 void VulkanRHI::PresentFrame()

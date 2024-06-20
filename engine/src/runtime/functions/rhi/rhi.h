@@ -34,21 +34,28 @@ public:
 
     virtual Resource<VkBuffer> CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags memoryFlags) = 0;
 
-    virtual std::shared_ptr<TextureData> CreateTexture(
-        uint32_t width, uint32_t height, uint32_t layers, uint32_t levels,
+    /**
+     * Create an empty texture data according to the given width and height.
+     * @param width width of the created texture
+     * @param height height of the created texture
+     * @param layers array layers of the image, if it be set 6, we will create an cube image with flag VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT
+     * @param levels mip levels, default is 0, which means levels will be computed from width and height
+     * @param format image format, like VK_FORMAT_R8G8B8A8_UNORM
+     * @param additional_usage image usage layout, except VK_IMAGE_USAGE_SAMPLED_BIT and VK_IMAGE_USAGE_TRANSFER_DST_BIT
+     * @return 
+     */
+    virtual std::shared_ptr<TextureData> CreateTexture(uint32_t width, uint32_t height, uint32_t layers, uint32_t levels,
         VkFormat format, VkImageUsageFlags additional_usage) = 0;
 
-    virtual VkImageView CreateTextureView(
-        const std::shared_ptr<TextureData>& texture, VkFormat format,
-        VkImageAspectFlags aspect_mask, uint32_t base_mip_level,
-        uint32_t num_mip_levels) = 0;
+    virtual VkImageView CreateTextureView(const std::shared_ptr<TextureData>& texture, VkFormat format,
+        VkImageAspectFlags aspect_mask, uint32_t base_mip_level, uint32_t num_mip_levels) = 0;
 
     virtual void DestroyTexture(std::shared_ptr<TextureData>& texture) = 0;
 
     virtual void CopyMemToDevice(VkDeviceMemory memory, const void* data,
                                 size_t size) = 0;
 
-    virtual VkCommandBuffer BeginImmediateCommandBuffer() = 0;
+    virtual VkCommandBuffer BeginImmediateComputePassCommandBuffer() = 0;
 
     virtual void CmdPipelineBarrier(
         VkCommandBuffer commandBuffer, VkPipelineStageFlags srcStageMask,
@@ -61,7 +68,7 @@ public:
                                     uint32_t image_width, uint32_t image_height,
                                     VkImageLayout layout) = 0;
 
-    virtual void ExecImmediateCommandBuffer(VkCommandBuffer command_buffer) = 0;
+    virtual void ExecImmediateComputePassCommandBuffer(VkCommandBuffer command_buffer) = 0;
 
     virtual VkCommandBuffer GetCommandBuffer() = 0;
 

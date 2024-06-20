@@ -139,7 +139,7 @@ void MainRenderPass::RenderTick(const ViewSettings &view,
   }
 
   // Begin recording current frame command buffer.
-  VkCommandBuffer command_buffer = rhi_->BeginImmediateCommandBuffer();
+  VkCommandBuffer command_buffer = rhi_->BeginImmediateComputePassCommandBuffer();
   // vkResetCommandBuffer(command_buffer, 0);
   // begin render pass
   std::array<VkClearValue, 2> clear_value = {};
@@ -883,7 +883,7 @@ void MainRenderPass::LoadAndProcessEnvironmentMap()
   rhi_->UpdateImageDescriptorSet(compute_descriptor_set_, BindingsOutputTexture,
                                  VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
                                  {output_texture});
-  VkCommandBuffer command_buffer = rhi_->BeginImmediateCommandBuffer();
+  VkCommandBuffer command_buffer = rhi_->BeginImmediateComputePassCommandBuffer();
   {
     const auto prev_dispatch_barrier =
         TextureMemoryBarrier(*env_texture_unfiltered, 0,
@@ -908,7 +908,7 @@ void MainRenderPass::LoadAndProcessEnvironmentMap()
         command_buffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
         VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, {post_dispatch_barrier});
   }
-  rhi_->ExecImmediateCommandBuffer(command_buffer);
+  rhi_->ExecImmediateComputePassCommandBuffer(command_buffer);
   rhi_->DestroyPipeline(pipeline);
   rhi_->DestroyTexture(env_texture_equirect);
 
@@ -928,7 +928,7 @@ void MainRenderPass::LoadAndProcessEnvironmentMap()
         envmap_vs, g_pipeline_layouts_[DescriptorSetType::Compute],
         &specialization_info);
 
-    VkCommandBuffer command_buffer = rhi_->BeginImmediateCommandBuffer();
+    VkCommandBuffer command_buffer = rhi_->BeginImmediateComputePassCommandBuffer();
     std::vector<VkImageView> env_map_tail_views;
     std::vector<VkDescriptorImageInfo> env_map_tail_descriptor;
     {
@@ -1016,7 +1016,7 @@ void MainRenderPass::LoadAndProcessEnvironmentMap()
                                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
                                VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, {barrier});
     }
-    rhi_->ExecImmediateCommandBuffer(command_buffer);
+    rhi_->ExecImmediateComputePassCommandBuffer(command_buffer);
 
     for (VkImageView tail_view : env_map_tail_views) {
       rhi_->DestroyImageView(tail_view);
@@ -1045,7 +1045,7 @@ void MainRenderPass::ComputeDiffuseIrradianceMap() {
                                  VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
                                  {out_texture});
 
-  VkCommandBuffer command_buffer = rhi_->BeginImmediateCommandBuffer();
+  VkCommandBuffer command_buffer = rhi_->BeginImmediateComputePassCommandBuffer();
   const auto prev_pipeline_barrier =
       TextureMemoryBarrier(*irradiance_map_, 0, VK_ACCESS_SHADER_WRITE_BIT,
                            VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
@@ -1066,7 +1066,7 @@ void MainRenderPass::ComputeDiffuseIrradianceMap() {
   rhi_->CmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
                            VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
                            {post_pipeline_barrier});
-  rhi_->ExecImmediateCommandBuffer(command_buffer);
+  rhi_->ExecImmediateComputePassCommandBuffer(command_buffer);
   rhi_->DestroyPipeline(pipeline);
   rhi_->DestroyShaderModule(irradiance_map_shader);
 }
@@ -1081,7 +1081,7 @@ void MainRenderPass::ComputeCookTorranceLut() {
   rhi_->UpdateImageDescriptorSet(compute_descriptor_set_, BindingsOutputTexture,
                                  VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
                                  {out_texture});
-  VkCommandBuffer command_buffer = rhi_->BeginImmediateCommandBuffer();
+  VkCommandBuffer command_buffer = rhi_->BeginImmediateComputePassCommandBuffer();
   const auto lut_barrier =
       TextureMemoryBarrier(*brdf_lut_, 0, VK_ACCESS_SHADER_WRITE_BIT,
                            VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
@@ -1101,7 +1101,7 @@ void MainRenderPass::ComputeCookTorranceLut() {
                            VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
                            {post_lut_barrier});
 
-  rhi_->ExecImmediateCommandBuffer(command_buffer);
+  rhi_->ExecImmediateComputePassCommandBuffer(command_buffer);
   rhi_->DestroyPipeline(pipeline);
   rhi_->DestroyShaderModule(lut_cs);
 }

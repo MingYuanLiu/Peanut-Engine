@@ -41,6 +41,7 @@ std::shared_ptr<TextureData> AssetsManager::LoadTextureData(const std::string& t
     {
         PEANUT_LOG_FATAL("Failed to read texture file {0}",
                         texture_filepath.c_str());
+        return texture_data;
     }
 
     auto texture_width = texture_data->width;

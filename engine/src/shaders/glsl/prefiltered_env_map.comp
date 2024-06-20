@@ -1,0 +1,3 @@
+#version 450 core
+// Pre-filters environment cube map using GGX NDF importance sampling.
+// Part of specular IBL split-sum approximation.

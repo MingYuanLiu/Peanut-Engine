@@ -98,7 +98,7 @@ public:
 
     virtual void CopyMemToDevice(VkDeviceMemory memory, const void* data, size_t size) override;
 
-    virtual VkCommandBuffer BeginImmediateCommandBuffer() override;
+    virtual VkCommandBuffer BeginImmediateComputePassCommandBuffer() override;
 
     virtual VkCommandBuffer GetCommandBuffer() override;
 
@@ -111,7 +111,7 @@ public:
                                     uint32_t image_width, uint32_t image_height,
                                     VkImageLayout layout);
 
-    virtual void ExecImmediateCommandBuffer(VkCommandBuffer command_buffer) override;
+    virtual void ExecImmediateComputePassCommandBuffer(VkCommandBuffer command_buffer) override;
 
     virtual void GenerateMipmaps(const TextureData& texture) override;
 
