@@ -354,6 +354,11 @@ void VulkanRHI::CreateDescriptorPool(VkDescriptorPoolCreateInfo* create_info,
     }
 }
 
+void VulkanRHI::DestroyDescriptorPool(VkDescriptorPool* pool)
+{
+    vkDestroyDescriptorPool(vk_device_, *pool, nullptr);
+}
+
 VkDevice VulkanRHI::GetDevice() { return vk_device_; }
 
 VkDescriptorSet VulkanRHI::AllocateDescriptor(VkDescriptorPool pool,
@@ -387,6 +392,11 @@ VkDescriptorSetLayout VulkanRHI::CreateDescriptorSetLayout(const std::vector<VkD
     PEANUT_LOG_FATAL("Failed to create descriptorset layout");
     }
     return layout;
+}
+
+void VulkanRHI::DestroyDescriptorSetLayout(VkDescriptorSetLayout* descriptor_set_layout)
+{
+    vkDestroyDescriptorSetLayout(vk_device_, *descriptor_set_layout, nullptr);
 }
 
 VkPipelineLayout VulkanRHI::CreatePipelineLayout(const std::vector<VkDescriptorSetLayout>& set_layout,
@@ -469,9 +479,9 @@ void VulkanRHI::CreateFrameBuffer(VkFramebufferCreateInfo* create_info, VkFrameb
 
 bool VulkanRHI::MemoryTypeNeedsStaging(uint32_t memory_type_index)
 {
-  assert(memory_type_index < physical_device_.memory_properties.memoryTypeCount);
-  const VkMemoryPropertyFlags flags = physical_device_.memory_properties.memoryTypes[memory_type_index].propertyFlags;
-  return (flags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) == 0;
+    assert(memory_type_index < physical_device_.memory_properties.memoryTypeCount);
+    const VkMemoryPropertyFlags flags = physical_device_.memory_properties.memoryTypes[memory_type_index].propertyFlags;
+    return (flags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) == 0;
 }
 
 VkPipeline VulkanRHI::CreateGraphicsPipeline(VkRenderPass renderpass, uint32_t subpass, VkShaderModule vs_shader_module,

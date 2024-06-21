@@ -126,8 +126,9 @@ public:
     // fixme: do not copy whole structure
     virtual VulkanPhysicalDevice GetPhysicalDevice() override;
 
-    virtual void CreateDescriptorPool(VkDescriptorPoolCreateInfo* create_info,
-                                    VkDescriptorPool* out_pool);
+    virtual void CreateDescriptorPool(VkDescriptorPoolCreateInfo* create_info, VkDescriptorPool* out_pool) override;
+
+    virtual void DestroyDescriptorPool(VkDescriptorPool* pool) override;
 
     virtual VkDevice GetDevice();
 
@@ -135,11 +136,11 @@ public:
 
     virtual VkDescriptorSet AllocateDescriptor(VkDescriptorSetLayout layout) override;
 
-    virtual VkDescriptorSetLayout CreateDescriptorSetLayout(
-        const std::vector<VkDescriptorSetLayoutBinding>& bindings) override;
+    virtual VkDescriptorSetLayout CreateDescriptorSetLayout(const std::vector<VkDescriptorSetLayoutBinding>& bindings) override;
 
-    virtual VkPipelineLayout CreatePipelineLayout(
-        const std::vector<VkDescriptorSetLayout>& set_layout,
+    virtual void DestroyDescriptorSetLayout(VkDescriptorSetLayout* descriptor_set_layout) override;
+
+    virtual VkPipelineLayout CreatePipelineLayout(const std::vector<VkDescriptorSetLayout>& set_layout,
         const std::vector<VkPushConstantRange>& push_constants) override;
 
     virtual uint32_t GetNumberFrames() override

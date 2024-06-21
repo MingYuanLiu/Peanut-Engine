@@ -26,17 +26,49 @@ namespace peanut
 		EnvironmentMapComputePass() = default;
 		~EnvironmentMapComputePass() = default;
 
-		void Initialize(std::weak_ptr<RHI> rhi, const std::string&);
+		void Initialize(std::weak_ptr<RHI> rhi, const std::string& environment_map_url);
+
+		/**
+		 * load environment map and generate ibl textures
+		 */
 		void Dispatch();
-		void Destory();
 
-		std::shared_ptr<TextureData> GetEnvironmentMap();
-		std::shared_ptr<TextureData> GetIrradianceMap();
-		std::shared_ptr<TextureData> GetFilteredTexture();
-		std::shared_ptr<TextureData> GetBRDFLutTexture();
+		/**
+		 * destroy all resources
+		 */
+		void Destroy();
 
-		void FileSkyboxRenderData(SkyboxRenderData&);
-		void FileIblTextureResource(IblLightTexture&);
+		std::shared_ptr<TextureData> GetEnvironmentMap()
+		{
+			return environment_map_;
+		}
+		
+		std::shared_ptr<TextureData> GetIrradianceMap()
+		{
+			return env_irradiance_map_;
+		}
+		
+		std::shared_ptr<TextureData> GetFilteredTexture()
+		{
+			return prefiltered_texture_;
+		}
+		
+		std::shared_ptr<TextureData> GetBRDFLutTexture()
+		{
+			return brdf_lut_texture_;
+		}
+
+		void FillSkyboxRenderData(SkyboxRenderData& skybox_render_data)
+		{
+			skybox_render_data.skybox_env_texture = *environment_map_;
+		}
+		
+		void FillIblTextureResource(IblLightTexture& ibl_light_texture)
+		{
+			ibl_light_texture.ibl_prefilter_texture = *prefiltered_texture_;
+			ibl_light_texture.ibl_irradiance_texture = *env_irradiance_map_;
+			ibl_light_texture.brdf_lut_texture = *brdf_lut_texture_;
+		}
 
 		EnvironmentMapComputePass(const EnvironmentMapComputePass&) = delete;
 		EnvironmentMapComputePass(EnvironmentMapComputePass&&) = delete;
@@ -48,8 +80,6 @@ namespace peanut
 
 		void SetupDescriptorSetLayout();
 		void SetupComputePipelineLayout();
-		void CreateComputePipeline();
-		void CreateDescriptorSet();
 
 		// load environment map hdr image and generate mipmap images
 		void LoadEnvironmentMap();
@@ -58,8 +88,8 @@ namespace peanut
 		void CreateFilteredTexture();
 		void CreateBRDFLutTexture();
 
-		bool is_dispatched;
-		bool is_initialized;
+		bool is_dispatched = false;
+		bool is_initialized = false;
 
 		uint32_t environment_map_mip_levels_; // mipmap levels
 		std::string environment_map_url_;

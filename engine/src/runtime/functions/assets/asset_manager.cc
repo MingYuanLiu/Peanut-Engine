@@ -72,7 +72,7 @@ std::shared_ptr<TextureData> AssetsManager::LoadTextureData(const std::string& t
                         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
     rhi->CopyMemToDevice(staging_buffer.memory, texture_data->pixels,
                         texture_pixel_size);
-    VkCommandBuffer command_buffer = rhi->BeginImmediateCommandBuffer();
+    VkCommandBuffer command_buffer = rhi->BeginImmediateComputePassCommandBuffer();
 
     const auto begin_barrier =
         TextureMemoryBarrier(*texture_data, 0, VK_ACCESS_TRANSFER_WRITE_BIT,
@@ -98,7 +98,7 @@ std::shared_ptr<TextureData> AssetsManager::LoadTextureData(const std::string& t
     rhi->CmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
                             VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, {end_barrier});
 
-    rhi->ExecImmediateCommandBuffer(command_buffer);
+    rhi->ExecImmediateComputePassCommandBuffer(command_buffer);
     rhi->DestroyBuffer(staging_buffer);
     if (texture_data->levels > 1) 
     {
@@ -120,17 +120,18 @@ std::shared_ptr<MeshBuffer> AssetsManager::LoadMeshBuffer(const std::string& mes
     }
 
     std::shared_ptr<MeshBuffer> mesh_buffer = std::make_shared<MeshBuffer>();
-    mesh_buffer->num_elements = static_cast<uint32_t>(mesh->faces().size()) * 3;
+    mesh_buffer->num_elements = static_cast<uint32_t>(mesh->indexes().size()) * 3;
     const auto vertex_size = mesh->vertices().size() * sizeof(Mesh::Vertex);
-    const auto index_size = mesh->faces().size() * sizeof(Mesh::Face);
+    const auto index_size = mesh->indexes().size() * sizeof(Mesh::Index);
 
-    const auto& rhi =
-        GlobalEngineContext::GetContext()->GetRenderSystem()->GetRHI();
+    const auto& rhi = GlobalEngineContext::GetContext()->GetRenderSystem()->GetRHI();
 
+    // create mesh buffer
     mesh_buffer->vertex_buffer = rhi->CreateBuffer(
         vertex_size,
         VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    
     mesh_buffer->index_buffer = rhi->CreateBuffer(
         index_size,
         VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
@@ -139,39 +140,37 @@ std::shared_ptr<MeshBuffer> AssetsManager::LoadMeshBuffer(const std::string& mes
     bool using_staging_vertex_buffer = false;
     bool using_staging_index_buffer = false;
 
-    Resource<VkBuffer> staging_vertext_buffer = mesh_buffer->vertex_buffer;
-    if (rhi->MemoryTypeNeedsStaging(
-            mesh_buffer->vertex_buffer.memory_type_index))
+    Resource<VkBuffer> staging_vertex_buffer = mesh_buffer->vertex_buffer;
+    if (rhi->MemoryTypeNeedsStaging(mesh_buffer->vertex_buffer.memory_type_index))
     {
-        staging_vertext_buffer = rhi->CreateBuffer(
+        staging_vertex_buffer = rhi->CreateBuffer(
             mesh_buffer->vertex_buffer.allocation_size,
             VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+        
         using_staging_vertex_buffer = true;
     }
 
     Resource<VkBuffer> staging_index_buffer = mesh_buffer->index_buffer;
-    if (rhi->MemoryTypeNeedsStaging(
-            mesh_buffer->index_buffer.memory_type_index)) 
+    if (rhi->MemoryTypeNeedsStaging(mesh_buffer->index_buffer.memory_type_index)) 
     {
         staging_index_buffer = rhi->CreateBuffer(
             mesh_buffer->vertex_buffer.allocation_size,
             VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+        
         using_staging_index_buffer = true;
     }
 
-    rhi->CopyMemToDevice(staging_vertext_buffer.memory, mesh->vertices().data(),
-                        vertex_size);
-    rhi->CopyMemToDevice(staging_index_buffer.memory, mesh->faces().data(),
-                        index_size);
+    rhi->CopyMemToDevice(staging_vertex_buffer.memory, mesh->vertices().data(), vertex_size);
+    rhi->CopyMemToDevice(staging_index_buffer.memory, mesh->indexes().data(), index_size);
 
     // copy from staging buffer to mesh buffer
     if (using_staging_index_buffer || using_staging_vertex_buffer) 
     {
-        VkCommandBuffer command_buffer = rhi->BeginImmediateCommandBuffer();
+        VkCommandBuffer command_buffer = rhi->BeginImmediateComputePassCommandBuffer();
         if (using_staging_vertex_buffer) 
         {
             const VkBufferCopy region = {0, 0, vertex_size};
-            vkCmdCopyBuffer(command_buffer, staging_vertext_buffer.resource,
+            vkCmdCopyBuffer(command_buffer, staging_vertex_buffer.resource,
                             mesh_buffer->vertex_buffer.resource, 1, &region);
         }
 
@@ -182,7 +181,7 @@ std::shared_ptr<MeshBuffer> AssetsManager::LoadMeshBuffer(const std::string& mes
                             mesh_buffer->index_buffer.resource, 1,
                             &index_copy_region);
         }
-        rhi->ExecImmediateCommandBuffer(command_buffer);
+        rhi->ExecImmediateComputePassCommandBuffer(command_buffer);
     }
 
     if (using_staging_index_buffer) 
@@ -192,7 +191,7 @@ std::shared_ptr<MeshBuffer> AssetsManager::LoadMeshBuffer(const std::string& mes
 
     if (using_staging_vertex_buffer) 
     {
-        rhi->DestroyBuffer(staging_vertext_buffer);
+        rhi->DestroyBuffer(staging_vertex_buffer);
     }
 
     return mesh_buffer;

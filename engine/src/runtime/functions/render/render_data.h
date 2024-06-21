@@ -112,8 +112,7 @@ namespace peanut
 
         std::vector<LightingUBO> lighting_ubo_data;
         Resource<VkBuffer> lighting_ub;
-
-        // todo: ibl textures
+        
         IblLightTexture ibl_light_texture;
 
         TextureData directional_light_shadow_map;

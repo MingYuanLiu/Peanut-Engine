@@ -5,6 +5,8 @@
 #include <array>
 #include <map>
 
+#include "env_map_compute_pass.h"
+
 namespace peanut
 {
 	namespace RenderPipelineType
@@ -122,5 +124,8 @@ namespace peanut
 	private:
 		std::optional<SubstorageUniformBuffer> lighting_data_uniform_buffer_;
 		std::map<RenderPipelineType::Type, std::vector<VkPushConstantRange> > all_push_constant_range_;
+
+		// todo(temp): move compute pass to render system
+		std::shared_ptr<EnvironmentMapComputePass> environment_map_compute_pass_;
 	};
 }

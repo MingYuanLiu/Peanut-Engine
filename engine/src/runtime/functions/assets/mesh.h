@@ -22,7 +22,7 @@ namespace peanut
             glm::vec2 texcoord;
         };
         // index
-        struct Face 
+        struct Index 
         {
             uint32_t v1, v2, v3;
         };
@@ -38,11 +38,11 @@ namespace peanut
         static std::shared_ptr<Mesh> ReadFromString(const std::string& data);
 
         const std::vector<Vertex>& vertices() const { return vertices_; }
-        const std::vector<Face>& faces() const { return faces_; }
+        const std::vector<Index>& indexes() const { return indexes_; }
 
     private:
         std::vector<Vertex> vertices_;
-        std::vector<Face> faces_;
+        std::vector<Index> indexes_;
 
         static constexpr uint32_t kImportFlags =
             aiProcess_CalcTangentSpace | aiProcess_Triangulate |

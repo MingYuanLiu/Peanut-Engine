@@ -15,13 +15,23 @@ namespace peanut
 		UpdateSkyboxDescriptor();
 		UpdateColorGradingDescriptor();
 
-		// temp: load static mesh render data
+		/************************** use to debug ********************************/
+		/************************************************************************/
+		// todo(temp): load static mesh render data and skybox render data
+		std::shared_ptr<StaticMeshRenderData> mesh_render_data = std::make_shared<StaticMeshRenderData>();
+		
 
-		// temp: load ibl texture data
-
-		// temp: load skybox render data
-
-		// temp: load color grading render data
+		// todo(temp): load skybox render data
+		environment_map_compute_pass_ = std::make_shared<EnvironmentMapComputePass>();
+		environment_map_compute_pass_->Initialize(rhi_, "assets/textures/environment.hdr");
+		environment_map_compute_pass_->Dispatch();
+		environment_map_compute_pass_->FillIblTextureResource(lighting_render_data_.ibl_light_texture);
+		environment_map_compute_pass_->FillSkyboxRenderData(skybox_render_data_.value());
+		
+		// todo(temp): load color grading render data
+		
+		
+		/************************************************************************/
 	}
 
 	void MainRenderPass::Render()
@@ -159,7 +169,7 @@ namespace peanut
 		vkCmdBindVertexBuffers(command_buffer, 0, 1, vertex_buffer, vertex_buffer_offset);
 		vkCmdBindIndexBuffer(command_buffer, static_mesh_render_data->index_buffer.resource, 0, VK_INDEX_TYPE_UINT32);
 
-		uint32_t submesh_counts = static_mesh_render_data->index_counts.size();
+		uint32_t submesh_counts = static_cast<uint32_t>(static_mesh_render_data->index_counts.size());
 		for (uint32_t i = 0; i < submesh_counts; ++i)
 		{
 			if (!is_forward)

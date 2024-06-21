@@ -11,7 +11,7 @@
 #include "runtime/functions/render/render_utils.h"
 #include "runtime/functions/rhi/rhi.h"
 
-namespace peanut {
+namespace peanut_old {
     enum DescriptorSetType : uint32_t {
         Uniforms = 0,
         Pbr,

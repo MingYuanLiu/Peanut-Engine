@@ -4,6 +4,74 @@
 
 namespace peanut
 {
+	void EnvironmentMapComputePass::Initialize(std::weak_ptr<RHI> rhi, const std::string& environment_map_url)
+	{
+		if (is_initialized)
+		{
+			return;
+		}
+
+		SetupComputeDescriptorPool();
+		SetupComputeSampler();
+		SetupDescriptorSetLayout();
+		SetupComputePipelineLayout();
+		
+		is_initialized = true;
+	}
+
+	void EnvironmentMapComputePass::Dispatch()
+	{
+		if (is_dispatched)
+		{
+			return;
+		}
+
+		LoadEnvironmentMap();
+		CreateFilteredTexture();
+		CreateIrradianceMap();
+		CreateBRDFLutTexture();
+
+		is_dispatched = true;
+	}
+
+	void EnvironmentMapComputePass::Destroy()
+	{
+		std::shared_ptr<RHI> rhi = rhi_.lock();
+		assert(rhi.get() != nullptr);
+		
+		if (is_initialized)
+        {
+			// destroy common resource
+			rhi->DestroyPipelineLayout(compute_pipeline_layout_);
+			rhi->DestroySampler(&default_sampler_);
+			rhi->DestroyDescriptorPool(&compute_descriptor_pool_);
+			rhi->DestroyDescriptorSetLayout(&default_descriptor_layout_);
+
+			compute_pipeline_layout_ = VK_NULL_HANDLE;
+			default_sampler_ = VK_NULL_HANDLE;
+			compute_descriptor_pool_ = VK_NULL_HANDLE;
+			default_descriptor_layout_ = VK_NULL_HANDLE;
+
+			is_initialized = false;
+        }
+
+		if (is_dispatched)
+		{
+			// destroy textures
+			rhi->DestroyTexture(prefiltered_texture_);
+			rhi->DestroyTexture(environment_map_);
+			rhi->DestroyTexture(brdf_lut_texture_);
+			rhi->DestroyTexture(env_irradiance_map_);
+
+			prefiltered_texture_= nullptr;
+			environment_map_= nullptr;
+			brdf_lut_texture_= nullptr;
+			env_irradiance_map_= nullptr;
+
+			is_dispatched = false;
+		}
+	}
+	
 	void EnvironmentMapComputePass::SetupComputeDescriptorPool()
 	{
 		std::shared_ptr<RHI> rhi = rhi_.lock();
@@ -58,11 +126,6 @@ namespace peanut
 		const std::vector<VkPushConstantRange> pipeline_push_const = { {VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(SpecularFilterPushConstants)} };
 
 		compute_pipeline_layout_ = rhi->CreatePipelineLayout(pipeline_descriptor_layouts, pipeline_push_const);
-	}
-
-	void EnvironmentMapComputePass::CreateComputePipeline()
-	{
-
 	}
 
 	void EnvironmentMapComputePass::LoadEnvironmentMap()
@@ -182,6 +245,7 @@ namespace peanut
 
 		// release
 		rhi->DestroyPipeline(irradiance_pipeline);
+		
 	}
 	
 	void EnvironmentMapComputePass::CreateFilteredTexture()

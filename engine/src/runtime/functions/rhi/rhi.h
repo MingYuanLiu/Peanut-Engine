@@ -85,6 +85,8 @@ public:
 
     virtual void CreateDescriptorPool(VkDescriptorPoolCreateInfo* create_info, VkDescriptorPool* out_pool) = 0;
 
+    virtual void DestroyDescriptorPool(VkDescriptorPool* pool) = 0;
+
     virtual VkDevice GetDevice() = 0;
 
     virtual VkDescriptorSet AllocateDescriptor(VkDescriptorPool pool, VkDescriptorSetLayout layout) = 0;
@@ -103,6 +105,8 @@ public:
         const std::vector<VkDescriptorBufferInfo>& descriptors) = 0;
 
     virtual VkDescriptorSetLayout CreateDescriptorSetLayout(const std::vector<VkDescriptorSetLayoutBinding>& bindings) = 0;
+
+    virtual void DestroyDescriptorSetLayout(VkDescriptorSetLayout* descriptor_set_layout) = 0;
 
     virtual VkPipelineLayout CreatePipelineLayout(const std::vector<VkDescriptorSetLayout>& set_layout,
                                                   const std::vector<VkPushConstantRange>& push_constants) = 0;

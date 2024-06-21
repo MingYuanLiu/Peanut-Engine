@@ -1,6 +1,6 @@
 #pragma once
 
-namespace peanut {
+namespace peanut_old {
 class RenderPassBase
 {
 public:

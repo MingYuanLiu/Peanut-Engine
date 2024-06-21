@@ -3,7 +3,7 @@
 
 #include <array>
 
-namespace peanut {
+namespace peanut_old {
 
 void MainRenderPass::Initialize() {
   rhi_ = GlobalEngineContext::GetContext()->GetRenderSystem()->GetRHI();
@@ -231,7 +231,7 @@ void MainRenderPass::RenderTick(const ViewSettings &view,
 void MainRenderPass::preparePassData() 
 {
     // load pbr model's assets
-    auto &asset_manager = AssetsManager::GetInstance();
+    auto &asset_manager = peanut::AssetsManager::GetInstance();
 
     pbr_mesh_ = asset_manager.LoadMeshBuffer(kPBRModelFile);
     skybox_mesh_ = asset_manager.LoadMeshBuffer(kSkyBoxModelFile);
