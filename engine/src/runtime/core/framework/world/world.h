@@ -14,10 +14,10 @@ namespace peanut
 	public:
 
 		META_FUNCTION()
-		std::string GetWorldName() { return std::string(); }
+		std::string GetWorldName() { return world_name_; }
 
 		META_FUNCTION()
-		Level* GetCurrentLevel() { return nullptr; }
+		Level* GetCurrentLevel() { return current_level_; }
 
 	private:
 		META_PROPERTY()
@@ -25,5 +25,8 @@ namespace peanut
 
 		META_PROPERTY()
 		Level* current_level_;
+
+		META_PROPERTY()
+		std::vector<Level*> levels_;
 	};
 }

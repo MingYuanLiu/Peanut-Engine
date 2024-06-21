@@ -4,6 +4,7 @@
 #include <array>
 #include <map>
 #include <iostream>
+#include <math.h>
 #include <set>
 #include <glm/glm.hpp>
 
@@ -14,114 +15,124 @@
 #define PEANUT_STR(s) #s
 
 namespace peanut {
-void VulkanRHI::Init(const std::shared_ptr<WindowSystem>& window_system) {
-  native_window_ = (GLFWwindow*)window_system->GetNativeWindow();
-  if (!native_window_) {
-    PEANUT_LOG_ERROR("Glfw window must be created before init vulkan rhi");
-    return;
-  }
 
-  required_device_features_.shaderStorageImageExtendedFormats = VK_TRUE;
-  required_device_features_.samplerAnisotropy = VK_TRUE;
-  window_width_ = window_system->GetWidth();
-  window_height_ = window_system->GetHeight();
+void VulkanRHI::Init(const std::shared_ptr<WindowSystem>& window_system) 
+{
+    native_window_ = (GLFWwindow*)window_system->GetNativeWindow();
+    if (!native_window_) 
+    {
+        PEANUT_LOG_ERROR("Glfw window must be created before init vulkan rhi");
+        return;
+    }
 
-  SetupInstance();
+    required_device_features_.shaderStorageImageExtendedFormats = VK_TRUE;
+    required_device_features_.samplerAnisotropy = VK_TRUE;
+    window_width_ = window_system->GetWidth();
+    window_height_ = window_system->GetHeight();
 
-  CreateWindowSurface();
+    SetupInstance();
 
-  SetupPhysicalDevice();
+    CreateWindowSurface();
 
-  SetupLogicDevice();
+    SetupPhysicalDevice();
 
-  CreateSwapChain();
+    SetupLogicDevice();
 
-  CreateCommandPoolAndCommandBuffers();
+    CreateSwapChain();
 
-  CreateDescriptorPool();
+    CreateCommandPoolAndCommandBuffers();
 
-  CreateSyncPrimitives();
+    CreateDescriptorPool();
 
-  InitializeFrameIndex();
+    CreateSyncPrimitives();
 
-  totle_frame_count_ = 0;
-  // current_frame_index_ = 0;
+    InitializeFrameIndex();
 
-  PEANUT_LOG_INFO("Vulkan init finished [{0}]",
-                  physical_device_.properties.deviceName);
+    GetOrCreateSampler(Linear);
+    GetOrCreateSampler(Nearest);
+
+    tole_frame_count_ = 0;
+    // current_frame_index_ = 0;
+
+    PEANUT_LOG_INFO("Vulkan init finished [{0}]",
+                    physical_device_.properties.deviceName);
 }
 
-void VulkanRHI::Shutdown() {
-  PEANUT_LOG_INFO("Destroy all vulkan resource");
-  vkDeviceWaitIdle(vk_device_);
+void VulkanRHI::Shutdown()
+{
+    PEANUT_LOG_INFO("Destroy all vulkan resource");
+    vkDeviceWaitIdle(vk_device_);
 
-  vkDestroyDescriptorPool(vk_device_, descriptor_pool_, nullptr);
-  vkDestroyCommandPool(vk_device_, command_pool_, nullptr);
-  vkDestroySwapchainKHR(vk_device_, swapchain_, nullptr);
-  vkDestroySurfaceKHR(vk_instance_, window_surface_, nullptr);
+    vkDestroyDescriptorPool(vk_device_, descriptor_pool_, nullptr);
+    vkDestroyCommandPool(vk_device_, command_pool_, nullptr);
+    vkDestroySwapchainKHR(vk_device_, swapchain_, nullptr);
+    vkDestroySurfaceKHR(vk_instance_, window_surface_, nullptr);
 
-  vkDestroyFence(vk_device_, acquire_next_image_fence_, nullptr);
-  for (int i = 0; i < frame_in_flight_numbers_; ++i) {
+    vkDestroyFence(vk_device_, acquire_next_image_fence_, nullptr);
+    for (int i = 0; i < frame_in_flight_numbers_; ++i) {
     vkDestroyFence(vk_device_, frame_submit_fences_[i], nullptr);
     vkDestroyImageView(vk_device_, swapchain_image_views_[i], nullptr);
-  }
+    }
 
-  vkDestroyDevice(vk_device_, nullptr);
-  vkDestroyInstance(vk_instance_, nullptr);
+    vkDestroyDevice(vk_device_, nullptr);
+    vkDestroyInstance(vk_instance_, nullptr);
 }
 
 Resource<VkImage> VulkanRHI::CreateImage(uint32_t width, uint32_t height,
                                          uint32_t layers, uint32_t levels,
                                          uint32_t samples, VkFormat format,
-                                         VkImageUsageFlags usage) {
-  assert(width > 0 && height > 0);
-  assert(levels > 0);
-  assert(samples > 0 && samples < 64);
+                                         VkImageUsageFlags usage) 
+{
+    assert(width > 0 && height > 0);
+    assert(levels > 0);
+    assert(samples > 0 && samples < 64);
 
-  Resource<VkImage> vkImage;
+    Resource<VkImage> vkImage;
 
-  VkImageCreateInfo create_info = {VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};
-  create_info.flags = (layers == 6) ? VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : 0;
-  create_info.imageType = VK_IMAGE_TYPE_2D;
-  create_info.format = format;
-  create_info.extent = {width, height, 1};
-  create_info.mipLevels = levels;
-  create_info.arrayLayers = layers;
-  create_info.samples = static_cast<VkSampleCountFlagBits>(samples);
-  create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
-  create_info.usage = usage;
-  create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-  create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    VkImageCreateInfo create_info = {VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};
+    create_info.flags = (layers == 6) ? VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : 0;
+    create_info.imageType = VK_IMAGE_TYPE_2D;
+    create_info.format = format;
+    create_info.extent = {width, height, 1};
+    create_info.mipLevels = levels;
+    create_info.arrayLayers = layers;
+    create_info.samples = static_cast<VkSampleCountFlagBits>(samples);
+    create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
+    create_info.usage = usage;
+    create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
-  if (VKFAILED(vkCreateImage(vk_device_, &create_info, nullptr,
-                             &vkImage.resource))) {
-    PEANUT_LOG_ERROR("Failed to create vulkan image");
+    if (VKFAILED(vkCreateImage(vk_device_, &create_info, nullptr,
+                                &vkImage.resource))) 
+    {
+        PEANUT_LOG_ERROR("Failed to create vulkan image");
+        return vkImage;
+    }
+
+    VkMemoryRequirements requirements;
+    vkGetImageMemoryRequirements(vk_device_, vkImage.resource, &requirements);
+
+    VkMemoryAllocateInfo mem_alloc_info = { VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
+    mem_alloc_info.allocationSize = requirements.size;
+    mem_alloc_info.memoryTypeIndex =
+        FindMemoryType(requirements, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    if (VKFAILED(vkAllocateMemory(vk_device_, &mem_alloc_info, nullptr,
+                                &vkImage.memory))) 
+    {
+        vkDestroyImage(vk_device_, vkImage.resource, nullptr);
+        PEANUT_LOG_FATAL("Failed to allocate memory to image");
+    }
+    if (VKFAILED(vkBindImageMemory(vk_device_, vkImage.resource, vkImage.memory, 0))) 
+    {
+        vkDestroyImage(vk_device_, vkImage.resource, nullptr);
+        vkFreeMemory(vk_device_, vkImage.memory, nullptr);
+        PEANUT_LOG_FATAL("Failed to bind memory to vulkan image");
+    }
+
+    vkImage.allocation_size = mem_alloc_info.allocationSize;
+    vkImage.memory_type_index = mem_alloc_info.memoryTypeIndex;
+
     return vkImage;
-  }
-
-  VkMemoryRequirements requirements;
-  vkGetImageMemoryRequirements(vk_device_, vkImage.resource, &requirements);
-
-  VkMemoryAllocateInfo mem_alloc_info = {
-      VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO};
-  mem_alloc_info.allocationSize = requirements.size;
-  mem_alloc_info.memoryTypeIndex =
-      FindMemoryType(requirements, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-  if (VKFAILED(vkAllocateMemory(vk_device_, &mem_alloc_info, nullptr,
-                                &vkImage.memory))) {
-    vkDestroyImage(vk_device_, vkImage.resource, nullptr);
-    PEANUT_LOG_FATAL("Failed to allocate memory to image");
-  }
-  if (VKFAILED(
-          vkBindImageMemory(vk_device_, vkImage.resource, vkImage.memory, 0))) {
-    vkDestroyImage(vk_device_, vkImage.resource, nullptr);
-    vkFreeMemory(vk_device_, vkImage.memory, nullptr);
-    PEANUT_LOG_FATAL("Failed to bind memory to vulkan image");
-  }
-  vkImage.allocation_size = mem_alloc_info.allocationSize;
-  vkImage.memory_type_index = mem_alloc_info.memoryTypeIndex;
-
-  return vkImage;
 }
 
 VkImageView VulkanRHI::CreateImageView(VkImage image, VkFormat format,
@@ -150,38 +161,38 @@ VkImageView VulkanRHI::CreateImageView(VkImage image, VkFormat format,
 
 Resource<VkBuffer> VulkanRHI::CreateBuffer(VkDeviceSize size,
                                            VkBufferUsageFlags usage,
-                                           VkMemoryPropertyFlags memoryFlags) {
-  Resource<VkBuffer> buffer;
+                                           VkMemoryPropertyFlags memoryFlags) 
+{
+    Resource<VkBuffer> buffer;
 
-  VkBufferCreateInfo create_info = {VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
-  create_info.size = size;
-  create_info.usage = usage;
-  create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-  if (VKFAILED(vkCreateBuffer(vk_device_, &create_info, nullptr,
-                              &buffer.resource))) {
-    PEANUT_LOG_FATAL("Failed to create buffer");
-  }
+    VkBufferCreateInfo create_info = {VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
+    create_info.size = size;
+    create_info.usage = usage;
+    create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    if (VKFAILED(vkCreateBuffer(vk_device_, &create_info, nullptr, &buffer.resource))) 
+    {
+        PEANUT_LOG_FATAL("Failed to create buffer");
+    }
 
-  VkMemoryRequirements memory_requirements;
-  vkGetBufferMemoryRequirements(vk_device_, buffer.resource,
-                                &memory_requirements);
+    VkMemoryRequirements memory_requirements;
+    vkGetBufferMemoryRequirements(vk_device_, buffer.resource, &memory_requirements);
 
-  VkMemoryAllocateInfo allocate_info = {VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO};
-  allocate_info.allocationSize = memory_requirements.size;
-  allocate_info.memoryTypeIndex =
-      FindMemoryType(memory_requirements, memoryFlags);
-  if (VKFAILED(vkAllocateMemory(vk_device_, &allocate_info, nullptr,
-                                &buffer.memory))) {
-    PEANUT_LOG_FATAL("Failed to allocate device memory for buffer");
-  }
-  if (VKFAILED(
-          vkBindBufferMemory(vk_device_, buffer.resource, buffer.memory, 0))) {
-    PEANUT_LOG_FATAL("Failed to bind device memory to buffer");
-  }
+    VkMemoryAllocateInfo allocate_info = {VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO};
+    allocate_info.allocationSize = memory_requirements.size;
+    allocate_info.memoryTypeIndex = FindMemoryType(memory_requirements, memoryFlags);
 
-  buffer.allocation_size = allocate_info.allocationSize;
-  buffer.memory_type_index = allocate_info.memoryTypeIndex;
-  return buffer;
+    if (VKFAILED(vkAllocateMemory(vk_device_, &allocate_info, nullptr, &buffer.memory))) 
+    {
+        PEANUT_LOG_FATAL("Failed to allocate device memory for buffer");
+    }
+    if (VKFAILED(vkBindBufferMemory(vk_device_, buffer.resource, buffer.memory, 0))) 
+    {
+        PEANUT_LOG_FATAL("Failed to bind device memory to buffer");
+    }
+
+    buffer.allocation_size = allocate_info.allocationSize;
+    buffer.memory_type_index = allocate_info.memoryTypeIndex;
+    return buffer;
 }
 
 void VulkanRHI::DestroyBuffer(Resource<VkBuffer> buffer) {
@@ -209,26 +220,33 @@ void VulkanRHI::CopyMemToDevice(VkDeviceMemory memory, const void* data,
   vkUnmapMemory(vk_device_, memory);
 }
 
-VkCommandBuffer VulkanRHI::BeginImmediateCommandBuffer() {
-  VkCommandBufferBeginInfo begin_info = {
-      VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
-  begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-  if (VKFAILED(vkBeginCommandBuffer(command_buffers_[current_frame_index_],
-                                    &begin_info))) {
-    PEANUT_LOG_FATAL(
-        "Failed to begin immediate command buffer (still in recording state?)");
-  }
-  return command_buffers_[current_frame_index_];
+VkCommandBuffer VulkanRHI::BeginImmediateComputePassCommandBuffer() 
+{
+    VkCommandBufferBeginInfo begin_info = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
+    begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+    if (VKFAILED(vkBeginCommandBuffer(command_buffers_[current_frame_index_], &begin_info))) 
+    {
+        PEANUT_LOG_FATAL("Failed to begin immediate command buffer (still in recording state?)");
+    }
+
+    return command_buffers_[current_frame_index_];
+}
+
+VkCommandBuffer VulkanRHI::GetCommandBuffer()
+{
+    return command_buffers_[current_frame_index_];
 }
 
 void VulkanRHI::CmdPipelineBarrier(
     VkCommandBuffer command_buffer, VkPipelineStageFlags src_stage_mask,
     VkPipelineStageFlags dst_stage_mask,
-    const std::vector<TextureMemoryBarrier>& barriers) {
+    const std::vector<TextureMemoryBarrier>& barriers)
+{
   vkCmdPipelineBarrier(
-      command_buffer, src_stage_mask, dst_stage_mask, 0, 0, nullptr, 0, nullptr,
-      (uint32_t)barriers.size(),
-      reinterpret_cast<const VkImageMemoryBarrier*>(barriers.data()));
+      command_buffer, src_stage_mask, dst_stage_mask,
+      0, 0, nullptr, 0, nullptr,
+      (uint32_t)barriers.size(), reinterpret_cast<const VkImageMemoryBarrier*>(barriers.data()));
 }
 
 void VulkanRHI::CmdCopyBufferToImage(VkCommandBuffer command_buffer,
@@ -236,85 +254,85 @@ void VulkanRHI::CmdCopyBufferToImage(VkCommandBuffer command_buffer,
                                      Resource<VkImage> image,
                                      uint32_t image_width,
                                      uint32_t image_height,
-                                     VkImageLayout layout) {
-  VkBufferImageCopy copy_region = {};
-  copy_region.bufferOffset = 0;
-  copy_region.imageSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1};
-  copy_region.imageExtent = {image_width, image_height, 1};
-  vkCmdCopyBufferToImage(command_buffer, buffer.resource, image.resource,
-                         layout, 1, &copy_region);
+                                     VkImageLayout layout)
+{
+    VkBufferImageCopy copy_region = {};
+    copy_region.bufferOffset = 0;
+    copy_region.imageSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1};
+    copy_region.imageExtent = {image_width, image_height, 1};
+    vkCmdCopyBufferToImage(command_buffer, buffer.resource, image.resource, layout, 1, &copy_region);
 }
 
-void VulkanRHI::ExecImmediateCommandBuffer(VkCommandBuffer command_buffer) {
-  if (VKFAILED(vkEndCommandBuffer(command_buffer))) {
-    PEANUT_LOG_FATAL("Failed to end immediate command buffer");
-  }
+void VulkanRHI::ExecImmediateComputePassCommandBuffer(VkCommandBuffer command_buffer) 
+{
+    if (VKFAILED(vkEndCommandBuffer(command_buffer)))
+    {
+        PEANUT_LOG_FATAL("Failed to end immediate command buffer");
+    }
 
-  VkSubmitInfo submit_info = {VK_STRUCTURE_TYPE_SUBMIT_INFO};
-  submit_info.commandBufferCount = 1;
-  submit_info.pCommandBuffers = &command_buffer;
-  vkQueueSubmit(compute_queue_, 1, &submit_info, VK_NULL_HANDLE);
-  vkQueueWaitIdle(compute_queue_);
+    VkSubmitInfo submit_info = {VK_STRUCTURE_TYPE_SUBMIT_INFO};
+    submit_info.commandBufferCount = 1;
+    submit_info.pCommandBuffers = &command_buffer;
+    vkQueueSubmit(compute_queue_, 1, &submit_info, VK_NULL_HANDLE);
+    vkQueueWaitIdle(compute_queue_);
 
-  if (VKFAILED(vkResetCommandBuffer(
-          command_buffer, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT))) {
-    PEANUT_LOG_FATAL("Failed to reset immediate command buffer");
-  }
+    if (VKFAILED(vkResetCommandBuffer(command_buffer, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT)))
+    {
+        PEANUT_LOG_FATAL("Failed to reset immediate command buffer");
+    }
 }
 
-void VulkanRHI::GenerateMipmaps(const TextureData& texture) {
-  assert(texture.levels > 1);
+void VulkanRHI::GenerateMipmaps(const TextureData& texture) 
+{
+    assert(texture.levels > 1);
 
-  auto command_buffer = BeginImmediateCommandBuffer();
+    auto command_buffer = BeginImmediateComputePassCommandBuffer();
 
-  // Iterate through mip chain and consecutively blit from previous level to
-  // next level with linear filtering.
-  for (uint32_t level = 1, prev_level_width = texture.width,
-                prev_level_height = texture.height;
-       level < texture.levels;
-       ++level, prev_level_width /= 2, prev_level_height /= 2) {
-    const auto& pre_blit_barrier =
-        TextureMemoryBarrier(texture, 0, VK_ACCESS_TRANSFER_WRITE_BIT,
-                             VK_IMAGE_LAYOUT_UNDEFINED,
-                             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
-            .MipLevels(level, 1);
+    int32_t width = static_cast<int32_t>(texture.width);
+    int32_t height = static_cast<int32_t>(texture.height);
+    int32_t total_levels = static_cast<int32_t>(texture.levels);
+    // Iterate through mip chain and consecutively blit from previous level to
+    // next level with linear filtering.
+    for (int32_t level = 1;level < total_levels; ++level)
+    {
+        // transfer image to destination layout
+        const auto& pre_blit_barrier = TextureMemoryBarrier(texture, 0,
+            VK_ACCESS_TRANSFER_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL).MipLevels(level, 1);
+
+        // transfer image to source layout
+        const auto& post_blit_barrier = TextureMemoryBarrier(texture, VK_ACCESS_TRANSFER_WRITE_BIT,
+            VK_ACCESS_TRANSFER_READ_BIT,VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL).MipLevels(level, 1);
+        
+        CmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
+            VK_PIPELINE_STAGE_TRANSFER_BIT, {pre_blit_barrier});
+
+        VkImageBlit region = {};
+        region.srcSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, static_cast<uint32_t>(level - 1), 0,
+                                    texture.layers};
+        region.dstSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, static_cast<uint32_t>(level), 0,
+                                    texture.layers};
+        region.srcOffsets[1] = {width >> (level - 1), height >> (level - 1), 1};
+        region.dstOffsets[1] = {width >> level, height >> level, 1};
+        
+        vkCmdBlitImage(command_buffer, texture.image.resource,
+                        VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, texture.image.resource,
+                        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region, VK_FILTER_LINEAR);
+        
+        CmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
+                            VK_PIPELINE_STAGE_TRANSFER_BIT, {post_blit_barrier});
+    }
+    
+    // Transition the image layout of the whole mip chains to shader read only layout
+    // because the mipmap texture will be readed by compute shader
+    const auto barrier = TextureMemoryBarrier(texture, VK_ACCESS_TRANSFER_WRITE_BIT, 0,
+                                VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    
     CmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
-                       VK_PIPELINE_STAGE_TRANSFER_BIT, {pre_blit_barrier});
+                        VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, {barrier});
 
-    VkImageBlit region = {};
-    region.srcSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, level - 1, 0,
-                             texture.layers};
-    region.dstSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, level, 0,
-                             texture.layers};
-    region.srcOffsets[1] = {(int32_t)prev_level_width,
-                            (int32_t)prev_level_height, 1};
-    region.dstOffsets[1] = {(int32_t)(prev_level_width / 2),
-                            (int32_t)(prev_level_height / 2), 1};
-    vkCmdBlitImage(command_buffer, texture.image.resource,
-                   VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, texture.image.resource,
-                   VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region,
-                   VK_FILTER_LINEAR);
-
-    const auto& post_blit_barrier =
-        TextureMemoryBarrier(texture, VK_ACCESS_TRANSFER_WRITE_BIT,
-                             VK_ACCESS_TRANSFER_READ_BIT,
-                             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                             VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL)
-            .MipLevels(level, 1);
-    CmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
-                       VK_PIPELINE_STAGE_TRANSFER_BIT, {post_blit_barrier});
-  }
-  // Transition whole mip chain to shader read only layout.
-  {
-    const auto barrier =
-        TextureMemoryBarrier(texture, VK_ACCESS_TRANSFER_WRITE_BIT, 0,
-                             VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-    CmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
-                       VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, {barrier});
-  }
-
-  ExecImmediateCommandBuffer(command_buffer);
+    ExecImmediateComputePassCommandBuffer(command_buffer);
 }
 
 void VulkanRHI::CreateSampler(VkSamplerCreateInfo* create_info,
@@ -328,166 +346,165 @@ void VulkanRHI::CreateSampler(VkSamplerCreateInfo* create_info,
 VulkanPhysicalDevice VulkanRHI::GetPhysicalDevice() { return physical_device_; }
 
 void VulkanRHI::CreateDescriptorPool(VkDescriptorPoolCreateInfo* create_info,
-                                     VkDescriptorPool* out_pool) {
-  if (VKFAILED(
-          vkCreateDescriptorPool(vk_device_, create_info, nullptr, out_pool))) {
-    PEANUT_LOG_FATAL("Failed to create descriptor pool");
-  }
+                                     VkDescriptorPool* out_pool) 
+{
+    if (VKFAILED(vkCreateDescriptorPool(vk_device_, create_info, nullptr, out_pool))) 
+    {
+        PEANUT_LOG_FATAL("Failed to create descriptor pool");
+    }
 }
 
 VkDevice VulkanRHI::GetDevice() { return vk_device_; }
 
 VkDescriptorSet VulkanRHI::AllocateDescriptor(VkDescriptorPool pool,
-                                              VkDescriptorSetLayout layout) {
-  VkDescriptorSet descriptorset;
-  VkDescriptorSetAllocateInfo allocate_info = {
-      VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO};
-  allocate_info.descriptorPool = pool;
-  allocate_info.descriptorSetCount = 1;
-  allocate_info.pSetLayouts = &layout;
-  if (VKFAILED(vkAllocateDescriptorSets(vk_device_, &allocate_info,
-                                        &descriptorset))) {
-    PEANUT_LOG_FATAL("Failed to allocate descriptor sets");
-  }
-  return descriptorset;
+                                              VkDescriptorSetLayout layout)
+{
+    VkDescriptorSet descriptorset;
+    VkDescriptorSetAllocateInfo allocate_info = {VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO};
+    allocate_info.descriptorPool = pool;
+    allocate_info.descriptorSetCount = 1;
+    allocate_info.pSetLayouts = &layout;
+    if (VKFAILED(vkAllocateDescriptorSets(vk_device_, &allocate_info, &descriptorset))) 
+    {
+        PEANUT_LOG_FATAL("Failed to allocate descriptor sets");
+    }
+    return descriptorset;
 }
 
-VkDescriptorSet VulkanRHI::AllocateDescriptor(VkDescriptorSetLayout layout) {
-  return AllocateDescriptor(descriptor_pool_, layout);
+VkDescriptorSet VulkanRHI::AllocateDescriptor(VkDescriptorSetLayout layout) 
+{
+    return AllocateDescriptor(descriptor_pool_, layout);
 }
 
-VkDescriptorSetLayout VulkanRHI::CreateDescriptorSetLayout(
-    const std::vector<VkDescriptorSetLayoutBinding>& bindings) {
-  VkDescriptorSetLayout layout;
-  VkDescriptorSetLayoutCreateInfo create_info = {
-      VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO};
-  create_info.bindingCount = bindings.size();
-  create_info.pBindings = bindings.data();
-  if (VKFAILED(vkCreateDescriptorSetLayout(vk_device_, &create_info, nullptr,
-                                           &layout))) {
+VkDescriptorSetLayout VulkanRHI::CreateDescriptorSetLayout(const std::vector<VkDescriptorSetLayoutBinding>& bindings) 
+{
+    VkDescriptorSetLayout layout;
+    VkDescriptorSetLayoutCreateInfo create_info = {VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO};
+    create_info.bindingCount = bindings.size();
+    create_info.pBindings = bindings.data();
+    if (VKFAILED(vkCreateDescriptorSetLayout(vk_device_, &create_info, nullptr,
+                                            &layout))) {
     PEANUT_LOG_FATAL("Failed to create descriptorset layout");
-  }
-  return layout;
+    }
+    return layout;
 }
 
-VkPipelineLayout VulkanRHI::CreatePipelineLayout(
-    const std::vector<VkDescriptorSetLayout>& set_layout,
-    const std::vector<VkPushConstantRange>& push_constants) {
-  VkPipelineLayout layout;
-  VkPipelineLayoutCreateInfo create_info = {
-      VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO};
-  create_info.setLayoutCount = set_layout.size();
-  create_info.pSetLayouts = set_layout.data();
-  if (push_constants.size() > 0) {
-    create_info.pushConstantRangeCount = push_constants.size();
-    create_info.pPushConstantRanges = push_constants.data();
-  }
+VkPipelineLayout VulkanRHI::CreatePipelineLayout(const std::vector<VkDescriptorSetLayout>& set_layout,
+                                                 const std::vector<VkPushConstantRange>& push_constants)
+{
+    VkPipelineLayout layout;
+    VkPipelineLayoutCreateInfo create_info = {VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO};
+    create_info.setLayoutCount = set_layout.size();
+    create_info.pSetLayouts = set_layout.data();
+    if (push_constants.size() > 0)
+    {
+        create_info.pushConstantRangeCount = push_constants.size();
+        create_info.pPushConstantRanges = push_constants.data();
+    }
 
-  if (VKFAILED(
-          vkCreatePipelineLayout(vk_device_, &create_info, nullptr, &layout))) {
-    PEANUT_LOG_FATAL("Failed to create pipeline layout");
-  }
+    if (VKFAILED(vkCreatePipelineLayout(vk_device_, &create_info, nullptr, &layout))) 
+    {
+        PEANUT_LOG_FATAL("Failed to create pipeline layout");
+    }
 
-  return layout;
+    return layout;
 }
 
-void VulkanRHI::UpdateImageDescriptorSet(
-    VkDescriptorSet descriptor_set, uint32_t dst_binding,
-    VkDescriptorType descriptor_type,
-    const std::vector<VkDescriptorImageInfo>& descriptors) {
-  VkWriteDescriptorSet write_descriptor_set = {
-      VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
-  write_descriptor_set.dstSet = descriptor_set;
-  write_descriptor_set.dstBinding = dst_binding;
-  write_descriptor_set.descriptorType = descriptor_type;
-  write_descriptor_set.descriptorCount =
-      static_cast<uint32_t>(descriptors.size());
-  write_descriptor_set.pImageInfo = descriptors.data();
-  vkUpdateDescriptorSets(vk_device_, 1, &write_descriptor_set, 0, nullptr);
+void VulkanRHI::UpdateDescriptorSets(uint32_t descriptor_write_count, const VkWriteDescriptorSet* write_descriptor_sets,
+        uint32_t copy_descriptor_count, const VkCopyDescriptorSet* copy_descriptor_sets)
+{
+    vkUpdateDescriptorSets(vk_device_,  descriptor_write_count, write_descriptor_sets, copy_descriptor_count, copy_descriptor_sets);
 }
 
-void VulkanRHI::UpdateBufferDescriptorSet(
-    VkDescriptorSet descriptor_set, uint32_t dst_binding,
-    VkDescriptorType descriptor_type,
-    const std::vector<VkDescriptorBufferInfo>& descriptors) {
-  VkWriteDescriptorSet write_descriptor_set = {
-      VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
-  write_descriptor_set.dstSet = descriptor_set;
-  write_descriptor_set.dstBinding = dst_binding;
-  write_descriptor_set.descriptorType = descriptor_type;
-  write_descriptor_set.descriptorCount =
-      static_cast<uint32_t>(descriptors.size());
-  write_descriptor_set.pBufferInfo = descriptors.data();
-  vkUpdateDescriptorSets(vk_device_, 1, &write_descriptor_set, 0, nullptr);
+void VulkanRHI::UpdateImageDescriptorSet(VkDescriptorSet descriptor_set, uint32_t dst_binding, 
+                                         VkDescriptorType descriptor_type,const std::vector<VkDescriptorImageInfo>& descriptors) 
+{
+    VkWriteDescriptorSet write_descriptor_set = {VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
+    write_descriptor_set.dstSet = descriptor_set;
+    write_descriptor_set.dstBinding = dst_binding;
+    write_descriptor_set.descriptorType = descriptor_type;
+    write_descriptor_set.descriptorCount = static_cast<uint32_t>(descriptors.size());
+    write_descriptor_set.pImageInfo = descriptors.data();
+    vkUpdateDescriptorSets(vk_device_, 1, &write_descriptor_set, 0, nullptr);
+}
+
+void VulkanRHI::UpdateBufferDescriptorSet(VkDescriptorSet descriptor_set, uint32_t dst_binding, 
+                                          VkDescriptorType descriptor_type, const std::vector<VkDescriptorBufferInfo>& descriptors) 
+{
+    VkWriteDescriptorSet write_descriptor_set = {VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
+    write_descriptor_set.dstSet = descriptor_set;
+    write_descriptor_set.dstBinding = dst_binding;
+    write_descriptor_set.descriptorType = descriptor_type;
+    write_descriptor_set.descriptorCount = static_cast<uint32_t>(descriptors.size());
+    write_descriptor_set.pBufferInfo = descriptors.data();
+    vkUpdateDescriptorSets(vk_device_, 1, &write_descriptor_set, 0, nullptr);
 }
 
 void VulkanRHI::CreateRenderPass(VkRenderPassCreateInfo* create_info,
-                                 VkRenderPass* out_renderpass) {
-  if (VKFAILED(vkCreateRenderPass(vk_device_, create_info, nullptr,
-                                  out_renderpass))) {
-    PEANUT_LOG_FATAL("Failed to create render pass");
-  }
+                                 VkRenderPass* out_renderpass)
+{
+    if (VKFAILED(vkCreateRenderPass(vk_device_, create_info, nullptr, out_renderpass)))
+    {
+        PEANUT_LOG_FATAL("Failed to create render pass");
+    }
 }
 
-void VulkanRHI::GetPhysicalDeviceImageFormatProperties(
-    VkFormat format, VkImageType type, VkImageTiling tiling,
-    VkImageUsageFlags usage, VkImageCreateFlags flags,
-    VkImageFormatProperties* out_properties) {
-  if (VKFAILED(vkGetPhysicalDeviceImageFormatProperties(
-          physical_device_.physic_device_handle, format, type, tiling, usage,
-          flags, out_properties))) {
-    PEANUT_LOG_FATAL("Failed to Get physical device image format properties");
-  }
+void VulkanRHI::GetPhysicalDeviceImageFormatProperties(VkFormat format, VkImageType type, VkImageTiling tiling,
+                                                        VkImageUsageFlags usage, VkImageCreateFlags flags, VkImageFormatProperties* out_properties) 
+{
+    if (VKFAILED(vkGetPhysicalDeviceImageFormatProperties(physical_device_.physic_device_handle, format, type, 
+                                                          tiling, usage, flags, out_properties)))
+    {
+        PEANUT_LOG_FATAL("Failed to Get physical device image format properties");
+    }
 }
 
-void VulkanRHI::CreateFrameBuffer(VkFramebufferCreateInfo* create_info,
-                                  VkFramebuffer* out_framebuffer) {
-  if (VKFAILED(vkCreateFramebuffer(vk_device_, create_info, nullptr,
-                                   out_framebuffer))) {
-    PEANUT_LOG_FATAL("Failed to create frame buffer");
-  }
+void VulkanRHI::CreateFrameBuffer(VkFramebufferCreateInfo* create_info, VkFramebuffer* out_framebuffer)
+{
+    if (VKFAILED(vkCreateFramebuffer(vk_device_, create_info, nullptr, out_framebuffer)))
+    {
+        PEANUT_LOG_FATAL("Failed to create frame buffer");
+    }
 }
 
-bool VulkanRHI::MemoryTypeNeedsStaging(uint32_t memory_type_index) {
-  assert(memory_type_index <
-         physical_device_.memory_properties.memoryTypeCount);
-  const VkMemoryPropertyFlags flags =
-      physical_device_.memory_properties.memoryTypes[memory_type_index]
-          .propertyFlags;
+bool VulkanRHI::MemoryTypeNeedsStaging(uint32_t memory_type_index)
+{
+  assert(memory_type_index < physical_device_.memory_properties.memoryTypeCount);
+  const VkMemoryPropertyFlags flags = physical_device_.memory_properties.memoryTypes[memory_type_index].propertyFlags;
   return (flags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) == 0;
 }
 
-VkPipeline VulkanRHI::CreateGraphicsPipeline(
-    VkRenderPass renderpass, uint32_t subpass, VkShaderModule vs_shader_module,
-    VkShaderModule fs_shader_module, VkPipelineLayout pipeline_layout,
-    const std::vector<VkVertexInputBindingDescription>* vertex_input_bindings,
-    const std::vector<VkVertexInputAttributeDescription>* vertex_attributes,
-    const VkPipelineMultisampleStateCreateInfo* multisample_state,
-    const VkPipelineDepthStencilStateCreateInfo* depth_stencil_stat) {
-  const VkViewport default_viewport = {
-      0.0f, 0.0f, (float)window_width_, (float)window_height_, 0.0f, 1.0f};
-  const VkRect2D default_scissor = {0, 0, window_width_, window_height_};
-  const VkPipelineMultisampleStateCreateInfo default_multisample_state = {
-      VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
-      nullptr,
-      0,
-      VK_SAMPLE_COUNT_1_BIT,
-  };
+VkPipeline VulkanRHI::CreateGraphicsPipeline(VkRenderPass renderpass, uint32_t subpass, VkShaderModule vs_shader_module,
+                                            VkShaderModule fs_shader_module, VkPipelineLayout pipeline_layout,
+                                            const std::vector<VkVertexInputBindingDescription>* vertex_input_bindings,
+                                            const std::vector<VkVertexInputAttributeDescription>* vertex_attributes,
+                                            const VkPipelineMultisampleStateCreateInfo* multisample_state,
+                                            const VkPipelineDepthStencilStateCreateInfo* depth_stencil_stat) 
+{
+    const VkViewport default_viewport = {0.0f, 0.0f, (float)window_width_, (float)window_height_, 0.0f, 1.0f};
+    const VkRect2D default_scissor = {0, 0, window_width_, window_height_};
+    const VkPipelineMultisampleStateCreateInfo default_multisample_state = 
+    {
+        VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
+        nullptr,
+        0,
+        VK_SAMPLE_COUNT_1_BIT,
+    };
 
-  VkPipelineColorBlendAttachmentState default_color_blend_attachment_state = {};
-  default_color_blend_attachment_state.blendEnable = VK_FALSE;
-  default_color_blend_attachment_state.colorWriteMask =
-      VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
-      VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+    VkPipelineColorBlendAttachmentState default_color_blend_attachment_state = {};
+    default_color_blend_attachment_state.blendEnable = VK_FALSE;
+    default_color_blend_attachment_state.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
+                                                          VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
 
-  const VkPipelineShaderStageCreateInfo shader_stage_create_info[] = {
-      {VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0,
-       VK_SHADER_STAGE_VERTEX_BIT, vs_shader_module, "main", nullptr},
-      {VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0,
-       VK_SHADER_STAGE_FRAGMENT_BIT, fs_shader_module, "main", nullptr}};
+    const VkPipelineShaderStageCreateInfo shader_stage_create_info[] = 
+    {
+        {VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0,
+        VK_SHADER_STAGE_VERTEX_BIT, vs_shader_module, "main", nullptr},
+        {VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0,
+        VK_SHADER_STAGE_FRAGMENT_BIT, fs_shader_module, "main", nullptr}
+    };
 
-  VkPipelineVertexInputStateCreateInfo vertex_input_state_create_info = {
-      VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO};
+  VkPipelineVertexInputStateCreateInfo vertex_input_state_create_info = { VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
   if (vertex_input_bindings) {
     vertex_input_state_create_info.vertexBindingDescriptionCount =
         static_cast<uint32_t>(vertex_input_bindings->size());
@@ -558,86 +575,107 @@ VkPipeline VulkanRHI::CreateGraphicsPipeline(
   }
 
   return pipeline;
+
 }
 
-VkShaderModule VulkanRHI::CreateShaderModule(
-    const std::string& shader_file_path) {
-  std::vector<char> shader_code;
-  if (!RenderUtils::ReadBinaryFile(shader_file_path, shader_code)) {
-    PEANUT_LOG_FATAL("Failed to read shader file {0}",
-                     shader_file_path.c_str());
-  }
+VkPipeline VulkanRHI::CreateGraphicsPipeline(VkPipelineCache pipeline_cache, uint32_t createinfo_counts, VkGraphicsPipelineCreateInfo* pcreate_infos)
+{
+    VkPipeline pipeline = VK_NULL_HANDLE;
+    if (VKFAILED(vkCreateGraphicsPipelines(vk_device_, pipeline_cache, createinfo_counts, pcreate_infos, nullptr, &pipeline)))
+    {
+        PEANUT_LOG_ERROR("Failed to create graphics render pipeline by pipeline create info");
 
-  VkShaderModuleCreateInfo create_info = {
-      VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO};
-  create_info.codeSize = shader_code.size();
-  create_info.pCode = reinterpret_cast<uint32_t*>(&shader_code[0]);
+    }
+    return pipeline;
+}
 
-  VkShaderModule shader_module = VK_NULL_HANDLE;
-  if (VKFAILED(vkCreateShaderModule(vk_device_, &create_info, nullptr,
-                                    &shader_module))) {
-    PEANUT_LOG_FATAL("Failed to create shader module with file {0}",
-                     shader_file_path);
-  }
+VkPipelineCache VulkanRHI::CreatePipelineCache(VkPipelineCacheCreateInfo* pcreate_info)
+{
+    VkPipelineCache pipeline_cache = VK_NULL_HANDLE;
+    if (VKFAILED(vkCreatePipelineCache(vk_device_, pcreate_info, nullptr, &pipeline_cache)))
+    {
+        PEANUT_LOG_ERROR("Failed to create pipeline cache");
+    }
 
-  return shader_module;
+    return pipeline_cache;
+}
+
+VkShaderModule VulkanRHI::CreateShaderModule(const std::string& shader_file_path) 
+{
+    std::vector<char> shader_code;
+    if (!RenderUtils::ReadBinaryFile(shader_file_path, shader_code)) 
+    {
+        PEANUT_LOG_FATAL("Failed to read shader file {0}", shader_file_path.c_str());
+    }
+
+    VkShaderModuleCreateInfo create_info = { VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO };
+    create_info.codeSize = shader_code.size();
+    create_info.pCode = reinterpret_cast<uint32_t*>(&shader_code[0]);
+
+    VkShaderModule shader_module = VK_NULL_HANDLE;
+    if (VKFAILED(vkCreateShaderModule(vk_device_, &create_info, nullptr, &shader_module)))
+    {
+        PEANUT_LOG_FATAL("Failed to create shader module with file {0}", shader_file_path);
+    }
+
+    return shader_module;
 }
 
 void VulkanRHI::DestroyShaderModule(VkShaderModule shader_module) {
   vkDestroyShaderModule(vk_device_, shader_module, nullptr);
 }
 
-std::shared_ptr<TextureData> VulkanRHI::CreateTexture(
-    uint32_t width, uint32_t height, uint32_t layers, uint32_t levels,
-    VkFormat format, VkImageUsageFlags additional_usage) {
-  assert(width > 0 && height > 0);
-  assert(layers > 0);
+std::shared_ptr<TextureData> VulkanRHI::CreateTexture(uint32_t width, uint32_t height, uint32_t layers, uint32_t levels,
+    VkFormat format, VkImageUsageFlags additional_usage)
+{
+    assert(width > 0 && height > 0);
+    assert(layers > 0);
 
-  std::shared_ptr<TextureData> texture = std::make_shared<TextureData>();
-  texture->width = width;
-  texture->height = height;
-  texture->layers = layers;
-  texture->levels =
-      levels > 0 ? levels : RenderUtils::NumMipmapLevels(width, height);
+    std::shared_ptr<TextureData> texture = std::make_shared<TextureData>();
+    texture->width = width;
+    texture->height = height;
+    texture->layers = layers;
+    texture->levels = levels > 0 ? levels : RenderUtils::NumMipmapLevels(width, height);
 
-  VkImageUsageFlags usage = VK_IMAGE_USAGE_SAMPLED_BIT |
-                            VK_IMAGE_USAGE_TRANSFER_DST_BIT | additional_usage;
-  if (texture->levels > 1) {
-    usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;  // For mipmap generation
-  }
+    VkImageUsageFlags usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | additional_usage;
+    if (texture->levels > 1)
+    {
+        usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;  // For mipmap generation
+    }
 
-  texture->image =
-      CreateImage(width, height, layers, texture->levels, 1, format, usage);
-  texture->image_view = CreateImageView(texture->image.resource, format,
+    texture->image = CreateImage(width, height, layers, texture->levels, 1, format, usage);
+    texture->image_view = CreateImageView(texture->image.resource, format,
                                         VK_IMAGE_ASPECT_COLOR_BIT, 0,
                                         VK_REMAINING_MIP_LEVELS, layers);
 
-  return texture;
+    return texture;
 }
 
-VkPipeline VulkanRHI::CreateComputePipeline(
-    VkShaderModule cs_shader, VkPipelineLayout layout,
-    const VkSpecializationInfo* specialize_info) {
-  const VkPipelineShaderStageCreateInfo shader_stage = {
-      VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-      nullptr,
-      0,
-      VK_SHADER_STAGE_COMPUTE_BIT,
-      cs_shader,
-      "main",
-      specialize_info};
-  VkComputePipelineCreateInfo create_info = {
-      VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO};
-  create_info.stage = shader_stage;
-  create_info.layout = layout;
+VkPipeline VulkanRHI::CreateComputePipeline(VkShaderModule cs_shader, VkPipelineLayout layout, const VkSpecializationInfo* specialize_info) 
+{
+    const VkPipelineShaderStageCreateInfo shader_stage = 
+    {
+        VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+        nullptr,
+        0,
+        VK_SHADER_STAGE_COMPUTE_BIT,
+        cs_shader,
+        "main",
+        specialize_info
+    };
 
-  VkPipeline pipeline;
-  if (VKFAILED(vkCreateComputePipelines(vk_device_, VK_NULL_HANDLE, 1,
-                                        &create_info, nullptr, &pipeline))) {
-    PEANUT_LOG_FATAL("Failed to create compute pipeline");
-  }
+    VkComputePipelineCreateInfo create_info = { VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO };
+    create_info.stage = shader_stage;
+    create_info.layout = layout;
 
-  return pipeline;
+    VkPipeline pipeline;
+    if (VKFAILED(vkCreateComputePipelines(vk_device_, VK_NULL_HANDLE, 1,
+                                        &create_info, nullptr, &pipeline))) 
+    {
+        PEANUT_LOG_FATAL("Failed to create compute pipeline");
+    }
+
+    return pipeline;
 }
 
 static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(
@@ -658,122 +696,126 @@ void VulkanRHI::PopulateDebugMessengerCreateInfo(
   createInfo.pfnUserCallback = DebugCallback;
 }
 
-void VulkanRHI::SetupInstance() {
-  // app information
-  VkApplicationInfo app_info{};
-  app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-  app_info.pApplicationName = "Peanut_Render";
-  app_info.applicationVersion = VK_MAKE_VERSION(0, 0, 1);
-  app_info.pEngineName = "Peanut_Engine";
-  app_info.engineVersion = VK_MAKE_VERSION(0, 0, 1);
-  app_info.apiVersion = VK_API_VERSION_1_0;
-  app_info.pNext = nullptr;
+void VulkanRHI::SetupInstance() 
+{
+    // app information
+    VkApplicationInfo app_info{};
+    app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+    app_info.pApplicationName = "Peanut_Render";
+    app_info.applicationVersion = VK_MAKE_VERSION(0, 0, 1);
+    app_info.pEngineName = "Peanut_Engine";
+    app_info.engineVersion = VK_MAKE_VERSION(0, 0, 1);
+    app_info.apiVersion = VK_API_VERSION_1_0;
+    app_info.pNext = nullptr;
 
-  std::vector<const char*> instance_layers;
-  std::vector<const char*> instance_extensions;
+    std::vector<const char*> instance_layers;
+    std::vector<const char*> instance_extensions;
 
-  uint32_t glfw_required_extensions_num;
-  const char** required_extensions =
-      glfwGetRequiredInstanceExtensions(&glfw_required_extensions_num);
-  if (glfw_required_extensions_num > 0) {
-    instance_extensions = std::vector<const char*>{
-        required_extensions,
-        required_extensions + glfw_required_extensions_num};
-  }
+    uint32_t glfw_required_extensions_num;
+    const char** required_extensions =
+        glfwGetRequiredInstanceExtensions(&glfw_required_extensions_num);
+
+    if (glfw_required_extensions_num > 0) 
+    {
+        instance_extensions = std::vector<const char*>{
+            required_extensions,
+            required_extensions + glfw_required_extensions_num};
+    }
 
 #if _DEBUG
-  instance_layers.push_back("VK_LAYER_KHRONOS_validation");
-  instance_extensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
+    instance_layers.push_back("VK_LAYER_KHRONOS_validation");
+    instance_extensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
 #endif
 
-  // create info
-  VkInstanceCreateInfo instance_info{};
-  instance_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-  instance_info.pApplicationInfo = &app_info;
+    // create info
+    VkInstanceCreateInfo instance_info{};
+    instance_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+    instance_info.pApplicationInfo = &app_info;
 
-  if (!instance_layers.empty()) {
+    if (!instance_layers.empty()) {
     instance_info.enabledLayerCount =
         static_cast<uint32_t>(instance_layers.size());
     instance_info.ppEnabledLayerNames = &instance_layers[0];
-  }
-  if (!instance_extensions.empty()) {
+    }
+    if (!instance_extensions.empty()) {
     instance_info.enabledExtensionCount =
         static_cast<uint32_t>(instance_extensions.size());
     instance_info.ppEnabledExtensionNames = &instance_extensions[0];
-  }
+    }
 
 #ifdef _DEBUG
-  VkDebugUtilsMessengerCreateInfoEXT debug_create_info{};
-  PopulateDebugMessengerCreateInfo(debug_create_info);
-  instance_info.pNext = (VkDebugUtilsMessengerCreateInfoEXT*)&debug_create_info;
+    VkDebugUtilsMessengerCreateInfoEXT debug_create_info{};
+    PopulateDebugMessengerCreateInfo(debug_create_info);
+    instance_info.pNext = (VkDebugUtilsMessengerCreateInfoEXT*)&debug_create_info;
 #endif
 
-  // create instance
-  if (VKFAILED(vkCreateInstance(&instance_info, nullptr, &vk_instance_))) {
-    PEANUT_LOG_FATAL("Failed to Create vulkan instance");
-  }
+    // create instance
+    if (VKFAILED(vkCreateInstance(&instance_info, nullptr, &vk_instance_))) 
+    {
+        PEANUT_LOG_FATAL("Failed to Create vulkan instance")
+    }
 
-  // volkLoadInstance(vk_instance_);
+    // volkLoadInstance(vk_instance_);
 }
 
-VkImageView VulkanRHI::CreateTextureView(
-    const std::shared_ptr<TextureData>& texture, VkFormat format,
-    VkImageAspectFlags aspect_mask, uint32_t base_mip_level,
-    uint32_t num_mip_levels) {
-  VkImageViewCreateInfo create_info = {
-      VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO};
-  create_info.image = texture->image.resource;
-  create_info.viewType =
-      (texture->layers == 6) ? VK_IMAGE_VIEW_TYPE_CUBE : VK_IMAGE_VIEW_TYPE_2D;
-  create_info.format = format;
-  create_info.subresourceRange.aspectMask = aspect_mask;
-  create_info.subresourceRange.baseMipLevel = base_mip_level;
-  create_info.subresourceRange.levelCount = num_mip_levels;
-  create_info.subresourceRange.baseArrayLayer = 0;
-  create_info.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
+VkImageView VulkanRHI::CreateTextureView(const std::shared_ptr<TextureData>& texture, VkFormat format,
+    VkImageAspectFlags aspect_mask, uint32_t base_mip_level, uint32_t num_mip_levels)
+{
+    VkImageViewCreateInfo create_info = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
+    create_info.image = texture->image.resource;
+    create_info.viewType = (texture->layers == 6) ? VK_IMAGE_VIEW_TYPE_CUBE : VK_IMAGE_VIEW_TYPE_2D;
+    create_info.format = format;
+    create_info.subresourceRange.aspectMask = aspect_mask;
+    create_info.subresourceRange.baseMipLevel = base_mip_level;
+    create_info.subresourceRange.levelCount = num_mip_levels;
+    create_info.subresourceRange.baseArrayLayer = 0;
+    create_info.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
 
-  VkImageView view;
-  if (VKFAILED(vkCreateImageView(vk_device_, &create_info, nullptr, &view))) {
-    PEANUT_LOG_FATAL("Failed to create image view");
-  }
+    VkImageView view;
+    if (VKFAILED(vkCreateImageView(vk_device_, &create_info, nullptr, &view)))
+    {
+        PEANUT_LOG_FATAL("Failed to create image view")
+    }
 
-  return view;
+    return view;
 }
 
-void VulkanRHI::PresentFrame() {
-  VkResult result;
+void VulkanRHI::PresentFrame()
+{
+    VkResult result;
 
-  VkPresentInfoKHR present_info = {VK_STRUCTURE_TYPE_PRESENT_INFO_KHR};
-  present_info.swapchainCount = 1;
-  present_info.pSwapchains = &swapchain_;
-  present_info.pImageIndices = &current_frame_index_;
-  present_info.pResults = &result;
-  if (VKFAILED(vkQueuePresentKHR(present_queue_, &present_info)) ||
-      VKFAILED(result)) {
-    PEANUT_LOG_FATAL("Failed to queue swapchain image presentation");
-    return;
-  }
+    VkPresentInfoKHR present_info = {VK_STRUCTURE_TYPE_PRESENT_INFO_KHR};
+    present_info.swapchainCount = 1;
+    present_info.pSwapchains = &swapchain_;
+    present_info.pImageIndices = &current_frame_index_;
+    present_info.pResults = &result;
+    if (VKFAILED(vkQueuePresentKHR(present_queue_, &present_info)) || VKFAILED(result))
+    {
+        PEANUT_LOG_FATAL("Failed to queue swapchain image presentation");
+        return;
+    }
 
-  if (VKFAILED(vkAcquireNextImageKHR(vk_device_, swapchain_, UINT64_MAX,
+    if (VKFAILED(vkAcquireNextImageKHR(vk_device_, swapchain_, UINT64_MAX,
                                      VK_NULL_HANDLE, acquire_next_image_fence_,
-                                     &current_frame_index_))) {
-    PEANUT_LOG_FATAL("Failed to acquire next swapchain image");
-    return;
-  }
+                                     &current_frame_index_)))
+    {
+        PEANUT_LOG_FATAL("Failed to acquire next swapchain image");
+        return;
+    }
 
-  const VkFence fences[] = {acquire_next_image_fence_,
-                            frame_submit_fences_[current_frame_index_]};
-  const uint32_t fence_num_wait =
-      (totle_frame_count_ < current_frame_index_) ? 1 : 2;
-  vkWaitForFences(vk_device_, fence_num_wait, fences, VK_TRUE, UINT64_MAX);
-  vkResetFences(vk_device_, fence_num_wait, fences);
+    const VkFence fences[] = {acquire_next_image_fence_, frame_submit_fences_[current_frame_index_]};
+    const uint32_t fence_num_wait = (tole_frame_count_ < current_frame_index_) ? 1 : 2;
+    vkWaitForFences(vk_device_, fence_num_wait, fences, VK_TRUE, UINT64_MAX);
+    vkResetFences(vk_device_, fence_num_wait, fences);
 
-  if (totle_frame_count_ <= UINT16_MAX) {
-    ++totle_frame_count_;
-  }
+    if (tole_frame_count_ <= UINT16_MAX)
+    {
+        ++tole_frame_count_;
+    }
 }
 
-void VulkanRHI::SetupPhysicalDevice() {
+void VulkanRHI::SetupPhysicalDevice() 
+{
   assert(vk_instance_ != VK_NULL_HANDLE);
 
   uint32_t physical_device_count;
@@ -986,50 +1028,71 @@ void VulkanRHI::FindPhysicalDeviceQueueFamily(VkPhysicalDevice handle,
   }
 }
 
-void VulkanRHI::QuerySurfaceCapabilities(
-    VulkanPhysicalDevice& in_physical_device, VkSurfaceKHR surface) {
-  if (VKFAILED(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
-          in_physical_device.physic_device_handle, surface,
-          &in_physical_device.surface_capabilities))) {
-    PEANUT_LOG_FATAL("Get surface capability failed");
-    return;
-  }
-
-  bool has_surface_format = false;
-  uint32_t surface_format_numbers = 0;
-  if (VKSUCCESS(vkGetPhysicalDeviceSurfaceFormatsKHR(
-          in_physical_device.physic_device_handle, surface,
-          &surface_format_numbers, nullptr)) &&
-      surface_format_numbers > 0) {
-    in_physical_device.surface_formats.resize(surface_format_numbers);
-    if (VKSUCCESS(vkGetPhysicalDeviceSurfaceFormatsKHR(
-            in_physical_device.physic_device_handle, surface,
-            &surface_format_numbers, &in_physical_device.surface_formats[0]))) {
-      has_surface_format = true;
+void VulkanRHI::QuerySurfaceCapabilities(VulkanPhysicalDevice& in_physical_device, VkSurfaceKHR surface)
+{
+    if (VKFAILED(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(in_physical_device.physic_device_handle, surface, &in_physical_device.surface_capabilities)))
+    {
+        PEANUT_LOG_FATAL("Get surface capability failed");
+        return;
     }
-  }
 
-  if (!has_surface_format) {
-    PEANUT_LOG_FATAL("Failed to get surface formats");
-  }
-
-  bool has_present_modes = false;
-  uint32_t present_mode_numbers = 0;
-  if (VKSUCCESS(vkGetPhysicalDeviceSurfacePresentModesKHR(
-          in_physical_device.physic_device_handle, surface,
-          &present_mode_numbers, nullptr)) &&
-      present_mode_numbers > 0) {
-    in_physical_device.present_modes.resize(present_mode_numbers);
-    if (VKSUCCESS(vkGetPhysicalDeviceSurfacePresentModesKHR(
-            in_physical_device.physic_device_handle, surface,
-            &present_mode_numbers, &in_physical_device.present_modes[0]))) {
-      has_present_modes = true;
+    bool has_surface_format = false;
+    uint32_t surface_format_numbers = 0;
+    if (VKSUCCESS(vkGetPhysicalDeviceSurfaceFormatsKHR(in_physical_device.physic_device_handle, surface, &surface_format_numbers, nullptr)) 
+                && surface_format_numbers > 0)
+    {
+        in_physical_device.surface_formats.resize(surface_format_numbers);
+        if (VKSUCCESS(vkGetPhysicalDeviceSurfaceFormatsKHR(
+                in_physical_device.physic_device_handle, surface,
+                &surface_format_numbers, &in_physical_device.surface_formats[0])))
+        {
+            has_surface_format = true;
+        }
     }
-  }
 
-  if (!has_present_modes) {
-    PEANUT_LOG_FATAL("Failed to retrieve physical device support present mod");
-  }
+    if (!has_surface_format)
+    {
+        PEANUT_LOG_FATAL("Failed to get surface formats");
+    }
+
+    bool has_present_modes = false;
+    uint32_t present_mode_numbers = 0;
+    if (VKSUCCESS(vkGetPhysicalDeviceSurfacePresentModesKHR(in_physical_device.physic_device_handle, surface, &present_mode_numbers, nullptr)) 
+                && present_mode_numbers > 0)
+    {
+        in_physical_device.present_modes.resize(present_mode_numbers);
+        if (VKSUCCESS(vkGetPhysicalDeviceSurfacePresentModesKHR(in_physical_device.physic_device_handle, surface,
+                &present_mode_numbers, &in_physical_device.present_modes[0])))
+        {
+            has_present_modes = true;
+        }
+    }
+
+    if (!has_present_modes) 
+    {
+        PEANUT_LOG_FATAL("Failed to retrieve physical device support present mod");
+    }
+}
+
+VkFormat VulkanRHI::FindSuitableDepthFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags feature_flag)
+{
+    for (auto format : candidates)
+    {
+		VkFormatProperties props;
+		vkGetPhysicalDeviceFormatProperties(physical_device_.physic_device_handle, format, &props);
+
+        if ((tiling == VK_IMAGE_TILING_OPTIMAL && (props.optimalTilingFeatures & feature_flag) == feature_flag) ||
+            (tiling == VK_IMAGE_TILING_LINEAR && (props.linearTilingFeatures & feature_flag) == feature_flag))
+        {
+			return format;
+		}
+	    
+        
+        
+    }
+
+    PEANUT_LOG_ERROR("Failed to find suitable depth image");
+    return VK_FORMAT_UNDEFINED;
 }
 
 void VulkanRHI::CreateWindowSurface() {
@@ -1088,85 +1151,95 @@ void VulkanRHI::SetupLogicDevice() {
                    0, &present_queue_);
 }
 
-void VulkanRHI::CreateSwapChain() {
-  VkPresentModeKHR present_mode = VkPresentModeKHR::VK_PRESENT_MODE_FIFO_KHR;
-  // not find in physical device present mode
-  if (std::find(physical_device_.present_modes.begin(),
+void VulkanRHI::CreateSwapChain()
+{
+    VkPresentModeKHR present_mode = VkPresentModeKHR::VK_PRESENT_MODE_FIFO_KHR;
+    // not find in physical device present mode
+    if (std::find(physical_device_.present_modes.begin(),
                 physical_device_.present_modes.end(),
-                present_mode) == physical_device_.present_modes.end()) {
-    present_mode = physical_device_.present_modes[0];
-  }
-
-  // get image counts
-  uint32_t image_counts =
-      physical_device_.surface_capabilities.minImageCount + 1;
-
-  if (physical_device_.surface_capabilities.maxImageCount > 0 &&
-      image_counts > physical_device_.surface_capabilities.maxImageCount)
-    image_counts = physical_device_.surface_capabilities.maxImageCount;
-
-  VkSwapchainCreateInfoKHR swapchain_create_info = {
-      VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR};
-  swapchain_create_info.surface = window_surface_;
-  swapchain_create_info.minImageCount = image_counts;
-  swapchain_create_info.imageFormat = VK_FORMAT_B8G8R8A8_UNORM;
-  swapchain_create_info.imageColorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
-  swapchain_create_info.imageExtent =
-      physical_device_.surface_capabilities.currentExtent;
-  swapchain_create_info.imageArrayLayers = 1;
-  swapchain_create_info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-  swapchain_create_info.preTransform =
-      physical_device_.surface_capabilities.currentTransform;
-
-  if (physical_device_.queue_family_indices.graphics_family !=
-      physical_device_.queue_family_indices.present_family) {
-    swapchain_create_info.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
-    swapchain_create_info.queueFamilyIndexCount = 2;
-
-    uint32_t queue_family_indices[] = {
-        physical_device_.queue_family_indices.graphics_family.value(),
-        physical_device_.queue_family_indices.present_family.value()};
-    swapchain_create_info.pQueueFamilyIndices = queue_family_indices;
-  } else {
-    swapchain_create_info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
-  }
-
-  swapchain_create_info.presentMode = present_mode;
-  swapchain_create_info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-  swapchain_create_info.clipped = VK_TRUE;
-  swapchain_create_info.oldSwapchain = VK_NULL_HANDLE;
-  if (VKFAILED(vkCreateSwapchainKHR(vk_device_, &swapchain_create_info, nullptr,
-                                    &swapchain_))) {
-    PEANUT_LOG_FATAL("Failed to create swapchain");
-  }
-
-  if (VKSUCCESS(vkGetSwapchainImagesKHR(vk_device_, swapchain_,
-                                        &frame_in_flight_numbers_, nullptr)) &&
-      frame_in_flight_numbers_ > 0) {
-    swapchain_images_.resize(frame_in_flight_numbers_);
-    if (VKFAILED(vkGetSwapchainImagesKHR(vk_device_, swapchain_,
-                                         &frame_in_flight_numbers_,
-                                         &swapchain_images_[0]))) {
-      PEANUT_LOG_FATAL("Failed to retrieve swapchain image handles");
+                present_mode) == physical_device_.present_modes.end()) 
+    {
+        present_mode = physical_device_.present_modes[0];
     }
-  }
 
-  swapchain_image_views_.resize(frame_in_flight_numbers_);
-  for (int i = 0; i < frame_in_flight_numbers_; ++i) {
-    VkImageViewCreateInfo view_create_info = {
-        VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO};
-    view_create_info.image = swapchain_images_[i];
-    view_create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
-    view_create_info.format = VK_FORMAT_B8G8R8A8_UNORM;
-    view_create_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    view_create_info.subresourceRange.levelCount = 1;
-    view_create_info.subresourceRange.layerCount = 1;
+    // get image counts
+    uint32_t image_counts = physical_device_.surface_capabilities.minImageCount + 1;
 
-    if (VKFAILED(vkCreateImageView(vk_device_, &view_create_info, nullptr,
-                                   &swapchain_image_views_[i]))) {
-      PEANUT_LOG_FATAL("Failed to create image view with index {0}", i);
+    if (physical_device_.surface_capabilities.maxImageCount > 0 &&
+        image_counts > physical_device_.surface_capabilities.maxImageCount)
+    {
+       image_counts = physical_device_.surface_capabilities.maxImageCount;
     }
-  }
+   
+    swapchain_image_format_ = VK_FORMAT_B8G8R8A8_UNORM;
+
+    VkSwapchainCreateInfoKHR swapchain_create_info = {VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR};
+    swapchain_create_info.surface = window_surface_;
+    swapchain_create_info.minImageCount = image_counts;
+    swapchain_create_info.imageFormat = swapchain_image_format_;
+    swapchain_create_info.imageColorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
+    swapchain_create_info.imageExtent =
+        physical_device_.surface_capabilities.currentExtent;
+    swapchain_create_info.imageArrayLayers = 1;
+    swapchain_create_info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+    swapchain_create_info.preTransform =
+        physical_device_.surface_capabilities.currentTransform;
+
+    if (physical_device_.queue_family_indices.graphics_family !=
+        physical_device_.queue_family_indices.present_family)
+    {
+        swapchain_create_info.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
+        swapchain_create_info.queueFamilyIndexCount = 2;
+
+        uint32_t queue_family_indices[] = {
+            physical_device_.queue_family_indices.graphics_family.value(),
+            physical_device_.queue_family_indices.present_family.value()};
+        swapchain_create_info.pQueueFamilyIndices = queue_family_indices;
+        } else {
+        swapchain_create_info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    }
+
+    swapchain_create_info.presentMode = present_mode;
+    swapchain_create_info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+    swapchain_create_info.clipped = VK_TRUE;
+    swapchain_create_info.oldSwapchain = VK_NULL_HANDLE;
+    if (VKFAILED(vkCreateSwapchainKHR(vk_device_, &swapchain_create_info, nullptr,
+                                    &swapchain_))) 
+    {
+        PEANUT_LOG_FATAL("Failed to create swapchain");
+    }
+
+    if (VKSUCCESS(vkGetSwapchainImagesKHR(vk_device_, swapchain_, &frame_in_flight_numbers_, nullptr))
+                    && frame_in_flight_numbers_ > 0) 
+    {
+        swapchain_images_.resize(frame_in_flight_numbers_);
+        if (VKFAILED(vkGetSwapchainImagesKHR(vk_device_, swapchain_,
+                                                &frame_in_flight_numbers_,
+                                                &swapchain_images_[0])))
+        {
+            PEANUT_LOG_FATAL("Failed to retrieve swapchain image handles");
+        }
+    }
+
+    swapchain_image_views_.resize(frame_in_flight_numbers_);
+    for (int i = 0; i < frame_in_flight_numbers_; ++i) 
+    {
+        VkImageViewCreateInfo view_create_info = {VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO};
+        view_create_info.image = swapchain_images_[i];
+        view_create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        view_create_info.format = swapchain_image_format_;
+        view_create_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        view_create_info.subresourceRange.levelCount = 1;
+        view_create_info.subresourceRange.layerCount = 1;
+
+        if (VKFAILED(vkCreateImageView(vk_device_, &view_create_info, nullptr,
+                                        &swapchain_image_views_[i]))) {
+            PEANUT_LOG_FATAL("Failed to create image view with index {0}", i);
+        }
+    }
+
+    std::vector<VkFormat> depth_format_candidates = { VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT };
+    depth_image_format_ = FindSuitableDepthFormat(depth_format_candidates, VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
 }
 
 void VulkanRHI::CreateCommandPoolAndCommandBuffers() {
@@ -1231,17 +1304,20 @@ void VulkanRHI::DestroyResource(Resource<VkImage>& image) {
   }
 }
 
-void VulkanRHI::DestroyRenderTarget(RenderTarget& render_target) {
-  DestroyResource(render_target.color_image);
-  DestroyResource(render_target.depth_image);
+void VulkanRHI::DestroyRenderTarget(RenderTarget& render_target)
+{
+    DestroyResource(render_target.color_image);
+    DestroyResource(render_target.depth_image);
 
-  if (render_target.color_view != VK_NULL_HANDLE) {
-    vkDestroyImageView(vk_device_, render_target.color_view, nullptr);
-  }
+    if (render_target.color_view != VK_NULL_HANDLE)
+    {
+        vkDestroyImageView(vk_device_, render_target.color_view, nullptr);
+    }
 
-  if (render_target.depth_view != VK_NULL_HANDLE) {
-    vkDestroyImageView(vk_device_, render_target.depth_view, nullptr);
-  }
+    if (render_target.depth_view != VK_NULL_HANDLE) 
+    {
+        vkDestroyImageView(vk_device_, render_target.depth_view, nullptr);
+    }
 }
 
 void VulkanRHI::CreateSyncPrimitives() {
@@ -1299,6 +1375,111 @@ uint32_t VulkanRHI::FindMemoryType(
   }
 
   return -1;
+}
+
+VkSampler VulkanRHI::GetOrCreateSampler(ImageSamplerType sampler_type)
+{
+    switch (sampler_type)
+    {
+    default:
+    case Linear:
+    {
+        if (!linear_sampler_)
+        {
+            VkSamplerCreateInfo sampler_ci{ VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
+            sampler_ci.magFilter = VK_FILTER_LINEAR;
+            sampler_ci.minFilter = VK_FILTER_LINEAR;
+            sampler_ci.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+            sampler_ci.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+            sampler_ci.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+            sampler_ci.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+            sampler_ci.mipLodBias = 0.0f;
+            sampler_ci.anisotropyEnable = VK_FALSE;
+            sampler_ci.maxAnisotropy = physical_device_.properties.limits.maxSamplerAnisotropy;
+            sampler_ci.compareEnable = VK_FALSE;
+            sampler_ci.compareOp = VK_COMPARE_OP_ALWAYS;
+            sampler_ci.minLod = 0.0f;
+            sampler_ci.maxLod = 8.0f;
+            sampler_ci.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+            sampler_ci.unnormalizedCoordinates = VK_FALSE;
+
+            if (VKFAILED(vkCreateSampler(vk_device_, &sampler_ci, nullptr, &linear_sampler_)))
+            {
+                PEANUT_LOG_ERROR("Create linear sampler failed");
+                return nullptr;
+            }
+        }
+
+        return linear_sampler_;
+    }
+    case Nearest:
+    {
+        if (!nearest_sampler_)
+        {
+            VkSamplerCreateInfo sampler_ci{ VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
+            sampler_ci.magFilter = VK_FILTER_NEAREST;
+            sampler_ci.minFilter = VK_FILTER_NEAREST;
+            sampler_ci.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+            sampler_ci.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+            sampler_ci.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+            sampler_ci.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+            sampler_ci.mipLodBias = 0.0f;
+            sampler_ci.anisotropyEnable = VK_FALSE;
+            sampler_ci.maxAnisotropy = physical_device_.properties.limits.maxSamplerAnisotropy;
+            sampler_ci.compareEnable = VK_FALSE;
+            sampler_ci.compareOp = VK_COMPARE_OP_ALWAYS;
+            sampler_ci.minLod = 0.0f;
+            sampler_ci.maxLod = 8.0f;
+            sampler_ci.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+            sampler_ci.unnormalizedCoordinates = VK_FALSE;
+
+            if (VKFAILED(vkCreateSampler(vk_device_, &sampler_ci, nullptr, &nearest_sampler_)))
+            {
+                PEANUT_LOG_ERROR("Create linear sampler failed");
+                return nullptr;
+            }
+        }
+
+        return nearest_sampler_;
+    }
+    }
+}
+
+VkSampler VulkanRHI::GetMipmapSampler(uint32_t width, uint32_t height)
+{
+    assert(width > 0 && height > 0);
+
+    uint32_t max_border = static_cast<uint32_t>(std::floor(std::log2(std::max(width, height))));
+    uint32_t mip_levels = max_border + 1;
+    auto find_iter = mipmap_samplers_.find(mip_levels);
+    if (find_iter != mipmap_samplers_.end())
+    {
+        return find_iter->second;
+    }
+
+    VkSampler result = VK_NULL_HANDLE;
+    VkSamplerCreateInfo sampler_ci{ VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
+    sampler_ci.magFilter = VK_FILTER_LINEAR;
+    sampler_ci.minFilter = VK_FILTER_LINEAR;
+    sampler_ci.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    sampler_ci.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    sampler_ci.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    sampler_ci.anisotropyEnable = VK_FALSE;
+    sampler_ci.maxAnisotropy = physical_device_.properties.limits.maxSamplerAnisotropy;
+    sampler_ci.compareEnable = VK_FALSE;
+    sampler_ci.compareOp = VK_COMPARE_OP_ALWAYS;
+    sampler_ci.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+    sampler_ci.unnormalizedCoordinates = VK_FALSE;
+    sampler_ci.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+    sampler_ci.maxLod = static_cast<float>(mip_levels - 1);
+    if (VKFAILED(vkCreateSampler(vk_device_, &sampler_ci, nullptr, &result)))
+    {
+        PEANUT_LOG_ERROR("Create mipmap sampler failed");
+        return VK_NULL_HANDLE;
+    }
+
+    mipmap_samplers_[mip_levels] = result;
+    return result;
 }
 
 }  // namespace peanut

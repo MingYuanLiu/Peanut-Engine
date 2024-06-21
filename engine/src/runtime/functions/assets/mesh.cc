@@ -38,8 +38,6 @@ Mesh::Mesh(const aiMesh* mesh) {
     if (mesh->HasTangentsAndBitangents()) {
       vertex.tangent = {mesh->mTangents[i].x, mesh->mTangents[i].y,
                         mesh->mTangents[i].z};
-      vertex.bitangent = {mesh->mBitangents[i].x, mesh->mBitangents[i].y,
-                          mesh->mBitangents[i].z};
     }
     if (mesh->HasTextureCoords(0)) {
       vertex.texcoord = {mesh->mTextureCoords[0][i].x,
@@ -56,21 +54,24 @@ Mesh::Mesh(const aiMesh* mesh) {
   }
 }
 
-std::shared_ptr<Mesh> Mesh::ReadFromFile(const std::string& filename) {
-  LogStream::initialize();
+std::shared_ptr<Mesh> Mesh::ReadFromFile(const std::string& filename) 
+{
+    LogStream::initialize();
 
-  PEANUT_LOG_INFO("Loading mesh from file: {0}", filename.c_str());
+    PEANUT_LOG_INFO("Loading mesh from file: {0}", filename.c_str());
 
-  std::shared_ptr<Mesh> mesh;
-  Assimp::Importer importer;
-  const aiScene* scene = importer.ReadFile(filename.c_str(), kImportFlags);
-  if (scene && scene->HasMeshes()) {
-    mesh = std::make_shared<Mesh>(scene->mMeshes[0]);
-  } else {
-    PEANUT_LOG_ERROR("File {0} not include mesh", filename.c_str());
-  }
+    std::shared_ptr<Mesh> mesh;
+    Assimp::Importer importer;
+    const aiScene* scene = importer.ReadFile(filename.c_str(), kImportFlags);
+    if (scene && scene->HasMeshes()) 
+    {
+        mesh = std::make_shared<Mesh>(scene->mMeshes[0]);
+    } else 
+    {
+        PEANUT_LOG_ERROR("File {0} not include mesh", filename.c_str());
+    }
 
-  return mesh;
+    return mesh;
 }
 
 std::shared_ptr<Mesh> Mesh::ReadFromString(const std::string& data) {

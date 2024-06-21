@@ -40,20 +40,22 @@ class RenderUtils {
     return std::abs(value - 0.0f) <= std::numeric_limits<float>::epsilon();
   }
 
-  static bool ReadBinaryFile(const std::string& path,
-                             std::vector<char>& output) {
-    std::ifstream file{path, std::ios::binary | std::ios::ate};
-    if (!file.is_open()) {
-      return false;
+    static bool ReadBinaryFile(const std::string& path,
+                                std::vector<char>& output) 
+    {
+        std::ifstream file{path, std::ios::binary | std::ios::ate};
+        if (!file.is_open())
+        {
+            return false;
+        }
+
+        std::streamsize size = file.tellg();
+        file.seekg(0, std::ios::beg);
+
+        std::vector<char> buffer(size);
+        output.resize(size);
+        file.read(output.data(), size);
+        return true;
     }
-
-    std::streamsize size = file.tellg();
-    file.seekg(0, std::ios::beg);
-
-    std::vector<char> buffer(size);
-    output.resize(size);
-    file.read(output.data(), size);
-    return true;
-  }
 };
 }  // namespace peanut

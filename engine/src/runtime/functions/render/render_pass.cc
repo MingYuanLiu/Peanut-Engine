@@ -45,44 +45,46 @@ void MainRenderPass::Initialize() {
   ComputeCookTorranceLut();
 }
 
-void MainRenderPass::DeInitialize() {
-  PEANUT_LOG_INFO("DeInitialize main render pass");
+void MainRenderPass::DeInitialize() 
+{
+    PEANUT_LOG_INFO("DeInitialize main render pass");
 
-  rhi_->DestroyTexture(environment_map_);
-  rhi_->DestroyTexture(irradiance_map_);
-  rhi_->DestroyTexture(brdf_lut_);
-  rhi_->DestroyTexture(albedo_texture_);
-  rhi_->DestroyTexture(normal_texture_);
-  rhi_->DestroyTexture(metalness_texture_);
-  rhi_->DestroyTexture(roughness_texture_);
+    rhi_->DestroyTexture(environment_map_);
+    rhi_->DestroyTexture(irradiance_map_);
+    rhi_->DestroyTexture(brdf_lut_);
+    rhi_->DestroyTexture(albedo_texture_);
+    rhi_->DestroyTexture(normal_texture_);
+    rhi_->DestroyTexture(metalness_texture_);
+    rhi_->DestroyTexture(roughness_texture_);
 
-  AssetsManager::GetInstance().DestroyMeshBuffer(*pbr_mesh_);
-  AssetsManager::GetInstance().DestroyMeshBuffer(*skybox_mesh_);
+    AssetsManager::GetInstance().DestroyMeshBuffer(*pbr_mesh_);
+    AssetsManager::GetInstance().DestroyMeshBuffer(*skybox_mesh_);
 
-  DestroyUniformBuffer(uniform_buffer_);
+    DestroyUniformBuffer(uniform_buffer_);
 
-  // destroy sampler
-  rhi_->DestroySampler(&default_sampler_);
-  rhi_->DestroySampler(&brdf_sampler_);
+    // destroy sampler
+    rhi_->DestroySampler(&default_sampler_);
+    rhi_->DestroySampler(&brdf_sampler_);
 
-  rhi_->DestroyPipelineLayout(g_pipeline_layouts_[Pbr]);
-  rhi_->DestroyPipeline(pbr_pipeline_);
+    rhi_->DestroyPipelineLayout(g_pipeline_layouts_[Pbr]);
+    rhi_->DestroyPipeline(pbr_pipeline_);
 
-  rhi_->DestroyPipelineLayout(g_pipeline_layouts_[Skybox]);
-  rhi_->DestroyPipeline(skybox_pipeline_);
+    rhi_->DestroyPipelineLayout(g_pipeline_layouts_[Skybox]);
+    rhi_->DestroyPipeline(skybox_pipeline_);
 
-  rhi_->DestroyPipelineLayout(g_pipeline_layouts_[ToneMap]);
-  rhi_->DestroyPipeline(tonemap_pipeline_);
+    rhi_->DestroyPipelineLayout(g_pipeline_layouts_[ToneMap]);
+    rhi_->DestroyPipeline(tonemap_pipeline_);
 
-  rhi_->DestroyRenderPass(g_render_pass_);
+    rhi_->DestroyRenderPass(g_render_pass_);
 
-  // destroy render target
-  int32_t num_frames = rhi_->GetNumberFrames();
-  for (int32_t i = 0; i < num_frames; ++i) {
-    DestroyRenderTarget(g_render_targets_[i]);
+    // destroy render target
+    int32_t num_frames = rhi_->GetNumberFrames();
+    for (int32_t i = 0; i < num_frames; ++i) 
+    {
+        DestroyRenderTarget(g_render_targets_[i]);
 
-    rhi_->DestroyFrameBuffer(g_frame_buffers_[i]);
-  }
+        rhi_->DestroyFrameBuffer(g_frame_buffers_[i]);
+    }
 }
 
 void MainRenderPass::RenderTick(const ViewSettings &view,
@@ -137,7 +139,7 @@ void MainRenderPass::RenderTick(const ViewSettings &view,
   }
 
   // Begin recording current frame command buffer.
-  VkCommandBuffer command_buffer = rhi_->BeginImmediateCommandBuffer();
+  VkCommandBuffer command_buffer = rhi_->BeginImmediateComputePassCommandBuffer();
   // vkResetCommandBuffer(command_buffer, 0);
   // begin render pass
   std::array<VkClearValue, 2> clear_value = {};
@@ -226,51 +228,55 @@ void MainRenderPass::RenderTick(const ViewSettings &view,
   rhi_->PresentFrame();
 }
 
-void MainRenderPass::preparePassData() {
-  // load pbr model's assets
-  auto &asset_manager = AssetsManager::GetInstance();
+void MainRenderPass::preparePassData() 
+{
+    // load pbr model's assets
+    auto &asset_manager = AssetsManager::GetInstance();
 
-  pbr_mesh_ = asset_manager.LoadMeshBuffer(kPBRModelFile);
-  skybox_mesh_ = asset_manager.LoadMeshBuffer(kSkyBoxModelFile);
+    pbr_mesh_ = asset_manager.LoadMeshBuffer(kPBRModelFile);
+    skybox_mesh_ = asset_manager.LoadMeshBuffer(kSkyBoxModelFile);
 
-  albedo_texture_ = asset_manager.LoadTextureData(kPbrAlbedoTextureFile,
-                                                  VK_FORMAT_R8G8B8A8_SRGB);
-  normal_texture_ = asset_manager.LoadTextureData(kPbrNormalTextureFile,
-                                                  VK_FORMAT_R8G8B8A8_UNORM);
-  metalness_texture_ = asset_manager.LoadTextureData(kMetalnessTextureFile,
-                                                     VK_FORMAT_R8_UNORM, 1);
-  roughness_texture_ = asset_manager.LoadTextureData(kRoughnessTextureFile,
-                                                     VK_FORMAT_R8_UNORM, 1);
+    albedo_texture_ = asset_manager.LoadTextureData(kPbrAlbedoTextureFile,
+                                                    VK_FORMAT_R8G8B8A8_SRGB);
+    normal_texture_ = asset_manager.LoadTextureData(kPbrNormalTextureFile,
+                                                    VK_FORMAT_R8G8B8A8_UNORM);
+    metalness_texture_ = asset_manager.LoadTextureData(kMetalnessTextureFile,
+                                                        VK_FORMAT_R8_UNORM, 1);
+    roughness_texture_ = asset_manager.LoadTextureData(kRoughnessTextureFile,
+                                                        VK_FORMAT_R8_UNORM, 1);
 
-  environment_map_ = rhi_->CreateTexture(kEnvMapSize, kEnvMapSize, 6, 0,
-                                         VK_FORMAT_R16G16B16A16_SFLOAT,
-                                         VK_IMAGE_USAGE_STORAGE_BIT);
-  irradiance_map_ = rhi_->CreateTexture(kIrradianceMapSize, kIrradianceMapSize,
+    environment_map_ = rhi_->CreateTexture(kEnvMapSize, kEnvMapSize, 6, 0,
+                                            VK_FORMAT_R16G16B16A16_SFLOAT,
+                                            VK_IMAGE_USAGE_STORAGE_BIT);
+    irradiance_map_ = rhi_->CreateTexture(kIrradianceMapSize, kIrradianceMapSize,
                                         6, 1, VK_FORMAT_R16G16B16A16_SFLOAT,
                                         VK_IMAGE_USAGE_STORAGE_BIT);
-  brdf_lut_ =
-      rhi_->CreateTexture(kBrdfLutSize, kBrdfLutSize, 1, 1,
-                          VK_FORMAT_R16G16_SFLOAT, VK_IMAGE_USAGE_STORAGE_BIT);
+    brdf_lut_ =
+        rhi_->CreateTexture(kBrdfLutSize, kBrdfLutSize, 1, 1,
+                            VK_FORMAT_R16G16_SFLOAT, VK_IMAGE_USAGE_STORAGE_BIT);
 }
 
-void MainRenderPass::CreateUniformBuffer() {
-  uniform_buffer_.buffer =
-      rhi_->CreateBuffer(kUniformBufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                             VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-  uniform_buffer_.capacity = kUniformBufferSize;
-  uniform_buffer_.cursor = 0;
-  rhi_->MapMemory(uniform_buffer_.buffer.memory, 0, VK_WHOLE_SIZE, 0,
-                  &uniform_buffer_.host_mem_ptr);
+void MainRenderPass::CreateUniformBuffer() 
+{
+    uniform_buffer_.buffer =
+        rhi_->CreateBuffer(kUniformBufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                                VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+    uniform_buffer_.capacity = kUniformBufferSize;
+    uniform_buffer_.cursor = 0;
+    rhi_->MapMemory(uniform_buffer_.buffer.memory, 0, VK_WHOLE_SIZE, 0,
+                    &uniform_buffer_.host_mem_ptr);
 }
 
-void MainRenderPass::DestroyUniformBuffer(UniformBuffer uniform_buffer) {
-  if (uniform_buffer.host_mem_ptr != nullptr &&
-      uniform_buffer.buffer.memory != VK_NULL_HANDLE) {
-    rhi_->UnMapMemory(uniform_buffer.buffer.memory);
-  }
+void MainRenderPass::DestroyUniformBuffer(UniformBuffer uniform_buffer) 
+{
+    if (uniform_buffer.host_mem_ptr != nullptr &&
+        uniform_buffer.buffer.memory != VK_NULL_HANDLE) 
+    {
+        rhi_->UnMapMemory(uniform_buffer.buffer.memory);
+    }
 
-  rhi_->DestroyBuffer(uniform_buffer.buffer);
+    rhi_->DestroyBuffer(uniform_buffer.buffer);
 }
 
 void MainRenderPass::SetupSamplers() {
@@ -335,7 +341,8 @@ void MainRenderPass::SetupComputeDescriptorSets() {
 }
 
 // uniform buffer for rendering viewport and light input
-void MainRenderPass::SetupUniformDescriptorSets() {
+void MainRenderPass::SetupUniformDescriptorSets()
+{
   const std::vector<VkDescriptorSetLayoutBinding>
       descriptorset_layout_bindings = {
           {BindingsTransformUniforms, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1,
@@ -372,32 +379,34 @@ void MainRenderPass::SetupUniformDescriptorSets() {
 }
 
 UniformBufferAllocation MainRenderPass::AllocateSubStorageFromUniformBuffer(
-    UniformBuffer &buffer, VkDeviceSize size) {
-  const auto &properties = rhi_->GetPhysicalDevice().properties;
-  const VkDeviceSize min_alignment =
-      properties.limits.minUniformBufferOffsetAlignment;
-  const VkDeviceSize align_size =
-      RenderUtils::RoundToPowerOfTwo(size, min_alignment);
-  if (align_size > properties.limits.maxUniformBufferRange) {
-    PEANUT_LOG_FATAL(
-        "Request uniform buffer sub-allocation size exceeds "
-        "maxUniformBufferRange of current physical device");
-  }
+    UniformBuffer &buffer, VkDeviceSize size)
+{
+    const auto &properties = rhi_->GetPhysicalDevice().properties;
+    const VkDeviceSize min_alignment =
+        properties.limits.minUniformBufferOffsetAlignment;
+    const VkDeviceSize align_size =
+        RenderUtils::RoundToPowerOfTwo(size, min_alignment);
+    if (align_size > properties.limits.maxUniformBufferRange) 
+    {
+        PEANUT_LOG_FATAL(
+            "Request uniform buffer sub-allocation size exceeds "
+            "maxUniformBufferRange of current physical device");
+    }
 
-  if (buffer.cursor + align_size > buffer.capacity) {
-    PEANUT_LOG_FATAL("Failed to allocate with out-of-capacity unifor buffer");
-  }
+    if (buffer.cursor + align_size > buffer.capacity) 
+    {
+        PEANUT_LOG_FATAL("Failed to allocate with out-of-capacity unifor buffer");
+    }
 
-  UniformBufferAllocation allocation;
-  allocation.descriptor_info.buffer = buffer.buffer.resource;
-  allocation.descriptor_info.offset = buffer.cursor;
-  allocation.descriptor_info.range = align_size;
-  allocation.host_mem_ptr =
-      reinterpret_cast<uint8_t *>(buffer.host_mem_ptr) + buffer.cursor;
+    UniformBufferAllocation allocation;
+    allocation.descriptor_info.buffer = buffer.buffer.resource;
+    allocation.descriptor_info.offset = buffer.cursor;
+    allocation.descriptor_info.range = align_size;
+    allocation.host_mem_ptr = reinterpret_cast<uint8_t *>(buffer.host_mem_ptr) + buffer.cursor;
 
-  buffer.cursor += align_size;
+    buffer.cursor += align_size;
 
-  return allocation;
+    return allocation;
 }
 
 void MainRenderPass::SetupRenderpass() {
@@ -523,7 +532,8 @@ void MainRenderPass::CreateRenderTarget() {
                                                  0, &properties);
 
     for (VkSampleCountFlags max_sample_count = VK_SAMPLE_COUNT_64_BIT;
-         max_sample_count > VK_SAMPLE_COUNT_1_BIT; max_sample_count >>= 1) {
+         max_sample_count > VK_SAMPLE_COUNT_1_BIT; max_sample_count >>= 1)
+    {
       if (properties.sampleCounts & max_sample_count) {
         return static_cast<uint32_t>(max_sample_count);
       }
@@ -566,7 +576,8 @@ void MainRenderPass::CreateRenderTargetInternal(RenderTarget &target,
                                                 uint32_t width, uint32_t height,
                                                 uint32_t samples,
                                                 VkFormat color_format,
-                                                VkFormat depth_format) {
+                                                VkFormat depth_format)
+{
   RenderTarget render_target = {};
   render_target.width = width;
   render_target.height = height;
@@ -631,8 +642,7 @@ void MainRenderPass::CreateFrameBuffer() {
       attachments.push_back(g_resolve_render_targets_[i].color_view);
     }
 
-    VkFramebufferCreateInfo framebuffer_create_info = {
-        VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO};
+    VkFramebufferCreateInfo framebuffer_create_info = {VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO};
     framebuffer_create_info.renderPass = g_render_pass_;
     framebuffer_create_info.attachmentCount =
         static_cast<uint32_t>(attachments.size());
@@ -644,7 +654,8 @@ void MainRenderPass::CreateFrameBuffer() {
   }
 }
 
-void MainRenderPass::SetupPBRPipeline() {
+void MainRenderPass::SetupPBRPipeline()
+{
   const std::vector<VkVertexInputBindingDescription> vertex_input_bindings = {
       {0, sizeof(Mesh::Vertex), VK_VERTEX_INPUT_RATE_VERTEX},
   };
@@ -747,7 +758,8 @@ void MainRenderPass::SetupPBRPipeline() {
   rhi_->DestroyShaderModule(pbr_fs);
 }
 
-void MainRenderPass::SetupToneMapPipeline() {
+void MainRenderPass::SetupToneMapPipeline()
+{
   const std::vector<VkDescriptorSetLayoutBinding>
       descriptorset_layout_bindings = {{0, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT,
                                         1, VK_SHADER_STAGE_FRAGMENT_BIT,
@@ -788,7 +800,8 @@ void MainRenderPass::SetupToneMapPipeline() {
   rhi_->DestroyShaderModule(tonemap_vs);
   rhi_->DestroyShaderModule(tonemap_fs);
 }
-void MainRenderPass::SetupSkyboxPipeline() {
+void MainRenderPass::SetupSkyboxPipeline()
+{
   const std::vector<VkVertexInputBindingDescription> vertex_input_bindings = {
       {0, sizeof(Mesh::Vertex), VK_VERTEX_INPUT_RATE_VERTEX},
   };
@@ -843,7 +856,8 @@ void MainRenderPass::SetupSkyboxPipeline() {
   rhi_->DestroyShaderModule(skybox_vs);
   rhi_->DestroyShaderModule(skybox_fs);
 }
-void MainRenderPass::LoadAndProcessEnvironmentMap() {
+void MainRenderPass::LoadAndProcessEnvironmentMap()
+{
   std::shared_ptr<TextureData> env_texture_unfiltered = rhi_->CreateTexture(
       kEnvMapSize, kEnvMapSize, 6, 0, VK_FORMAT_R16G16B16A16_SFLOAT,
       VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT);
@@ -869,7 +883,7 @@ void MainRenderPass::LoadAndProcessEnvironmentMap() {
   rhi_->UpdateImageDescriptorSet(compute_descriptor_set_, BindingsOutputTexture,
                                  VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
                                  {output_texture});
-  VkCommandBuffer command_buffer = rhi_->BeginImmediateCommandBuffer();
+  VkCommandBuffer command_buffer = rhi_->BeginImmediateComputePassCommandBuffer();
   {
     const auto prev_dispatch_barrier =
         TextureMemoryBarrier(*env_texture_unfiltered, 0,
@@ -894,7 +908,7 @@ void MainRenderPass::LoadAndProcessEnvironmentMap() {
         command_buffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
         VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, {post_dispatch_barrier});
   }
-  rhi_->ExecImmediateCommandBuffer(command_buffer);
+  rhi_->ExecImmediateComputePassCommandBuffer(command_buffer);
   rhi_->DestroyPipeline(pipeline);
   rhi_->DestroyTexture(env_texture_equirect);
 
@@ -914,7 +928,7 @@ void MainRenderPass::LoadAndProcessEnvironmentMap() {
         envmap_vs, g_pipeline_layouts_[DescriptorSetType::Compute],
         &specialization_info);
 
-    VkCommandBuffer command_buffer = rhi_->BeginImmediateCommandBuffer();
+    VkCommandBuffer command_buffer = rhi_->BeginImmediateComputePassCommandBuffer();
     std::vector<VkImageView> env_map_tail_views;
     std::vector<VkDescriptorImageInfo> env_map_tail_descriptor;
     {
@@ -1002,7 +1016,7 @@ void MainRenderPass::LoadAndProcessEnvironmentMap() {
                                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
                                VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, {barrier});
     }
-    rhi_->ExecImmediateCommandBuffer(command_buffer);
+    rhi_->ExecImmediateComputePassCommandBuffer(command_buffer);
 
     for (VkImageView tail_view : env_map_tail_views) {
       rhi_->DestroyImageView(tail_view);
@@ -1031,7 +1045,7 @@ void MainRenderPass::ComputeDiffuseIrradianceMap() {
                                  VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
                                  {out_texture});
 
-  VkCommandBuffer command_buffer = rhi_->BeginImmediateCommandBuffer();
+  VkCommandBuffer command_buffer = rhi_->BeginImmediateComputePassCommandBuffer();
   const auto prev_pipeline_barrier =
       TextureMemoryBarrier(*irradiance_map_, 0, VK_ACCESS_SHADER_WRITE_BIT,
                            VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
@@ -1052,7 +1066,7 @@ void MainRenderPass::ComputeDiffuseIrradianceMap() {
   rhi_->CmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
                            VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
                            {post_pipeline_barrier});
-  rhi_->ExecImmediateCommandBuffer(command_buffer);
+  rhi_->ExecImmediateComputePassCommandBuffer(command_buffer);
   rhi_->DestroyPipeline(pipeline);
   rhi_->DestroyShaderModule(irradiance_map_shader);
 }
@@ -1067,7 +1081,7 @@ void MainRenderPass::ComputeCookTorranceLut() {
   rhi_->UpdateImageDescriptorSet(compute_descriptor_set_, BindingsOutputTexture,
                                  VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
                                  {out_texture});
-  VkCommandBuffer command_buffer = rhi_->BeginImmediateCommandBuffer();
+  VkCommandBuffer command_buffer = rhi_->BeginImmediateComputePassCommandBuffer();
   const auto lut_barrier =
       TextureMemoryBarrier(*brdf_lut_, 0, VK_ACCESS_SHADER_WRITE_BIT,
                            VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
@@ -1087,7 +1101,7 @@ void MainRenderPass::ComputeCookTorranceLut() {
                            VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
                            {post_lut_barrier});
 
-  rhi_->ExecImmediateCommandBuffer(command_buffer);
+  rhi_->ExecImmediateComputePassCommandBuffer(command_buffer);
   rhi_->DestroyPipeline(pipeline);
   rhi_->DestroyShaderModule(lut_cs);
 }
