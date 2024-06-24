@@ -7,8 +7,8 @@
 #include "runtime/core/event/mouse_event.h"
 #include "runtime/core/event/key_event.h"
 
-#include "runtime/functions/render/render_pass_base.h"
-#include "runtime/functions/render/render_pass.h"
+#include "runtime/functions/render/render_pass/render_pass_base.h"
+#include "runtime/functions/render/render_pass/main_render_pass.h"
 
 namespace peanut {
 class RenderSystem {
@@ -38,7 +38,7 @@ class RenderSystem {
 
  private:
   std::shared_ptr<RHI> rhi_;
-  std::unique_ptr<RenderPassBase> main_render_pass_;
+  std::unique_ptr<IRenderPassBase> main_render_pass_;
   std::weak_ptr<WindowSystem> window_system_;
 
   // todo: register window event

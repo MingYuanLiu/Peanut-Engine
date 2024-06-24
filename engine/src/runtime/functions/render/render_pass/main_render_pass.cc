@@ -48,7 +48,12 @@ namespace peanut
 		material_pco.has_normal_texture = true;
 
 		mesh_render_data->material_pcos.push_back(material_pco);
-
+		TransformUBO mesh_transform_ubo;
+		// get transform matrix from location, rotation, scale
+		mesh_transform_ubo.model = glm::mat4(1.0f);
+		mesh_transform_ubo.model_view_projection = glm::mat4(1.0f);
+		mesh_transform_ubo.normal_model = glm::mat4(1.0f);
+		mesh_render_data->transform_ubo_data = mesh_transform_ubo;
 
 		// todo(temp): load skybox render data
 		environment_map_compute_pass_ = std::make_shared<EnvironmentMapComputePass>();
@@ -56,6 +61,16 @@ namespace peanut
 		environment_map_compute_pass_->Dispatch();
 		environment_map_compute_pass_->FillIblTextureResource(lighting_render_data_.ibl_light_texture);
 		environment_map_compute_pass_->FillSkyboxRenderData(skybox_render_data_.value());
+		// todo(temp): load skybox mesh data
+		auto native_skybox_mesh_data = AssetsManager::GetInstance().LoadMeshBuffer("assets/mesh/skybox.obj");
+		skybox_render_data_->index_buffer = native_skybox_mesh_data->index_buffer;
+		skybox_render_data_->index_counts = native_skybox_mesh_data->num_elements;
+		skybox_render_data_->vertex_buffer = native_skybox_mesh_data->vertex_buffer;
+		TransformUBO transform_ubo;
+		transform_ubo.model = glm::mat4(1.0f);
+		transform_ubo.model_view_projection = glm::mat4(1.0f);
+		transform_ubo.normal_model = glm::mat4(1.0f);
+		skybox_render_data_->transform_ubo_data = transform_ubo;
 		
 		// todo(temp): load color grading render data
 		color_grading_render_data_ = std::make_optional<ColorGradingRenderData>();
@@ -84,7 +99,6 @@ namespace peanut
 		{
 			lighting_render_data_.lighting_ubo_data[i] = light_ubo;
 		}
-		
 		
 		/************************************************************************/
 	}
