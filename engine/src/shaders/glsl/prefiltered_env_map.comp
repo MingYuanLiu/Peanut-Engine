@@ -1,3 +1,22 @@
 #version 450 core
 // Pre-filters environment cube map using GGX NDF importance sampling.
 // Part of specular IBL split-sum approximation.
+#extension GL_GOOGLE_include_directive : enable
+
+#include "constants.h"
+
+layout(constant_id=0) const int NumMipLevels = 1;
+layout(set=0, binding=0) uniform samplerCube inputTexture;
+layout(set=0, binding=2, rgba16f) restrict writeonly uniform imageCube outputTexture[NumMipLevels];
+
+layout(push_constant) uniform PushConstants
+{
+	// Output texture mip level (without base mip level).
+	int level;
+	// Roughness value to pre-filter for.
+	float roughness;
+} pushConstants;
+
+#define PARAM_LEVEL     pushConstants.level
+#define PARAM_ROUGHNESS pushConstants.roughness
+

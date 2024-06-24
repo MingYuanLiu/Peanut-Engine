@@ -12,7 +12,114 @@
 #include <json11.hpp>
 #include <fstream>
 
-namespace peanut {
+namespace peanut 
+{
+std::shared_ptr<TextureData> AssetsManager::LoadTextureArrayData(const std::vector<std::string>& texture_files, VkFormat format)
+{
+    std::shared_ptr<TextureData> texture_data = std::make_shared<TextureData>();
+    
+    assert(texture_files.size() < 4);
+
+    std::vector<std::pair<int, int> > texture_width_height;
+    std::vector<void*> texture_pixels;
+
+    auto exit_free = [&texture_pixels]() {
+        for (void* loaded_pixel : texture_pixels)
+        {
+            stbi_image_free(loaded_pixel);
+        }
+    };
+
+    for (const auto& texture_file : texture_files)
+    {
+        int width = 0, height = 0, channel = 0;
+        auto pixels = stbi_load(texture_file.c_str(), &width, &height, &channel, STBI_rgb_alpha);
+        if (!pixels)
+        {
+            PEANUT_LOG_ERROR("Failed to load texture file {0}", texture_file);
+            exit_free();
+
+            return nullptr;
+        }
+
+        texture_width_height.emplace_back(width, height);
+        texture_pixels.push_back(pixels);
+    }
+
+    bool all_width_height_equal = true;
+    int last_width = -1, last_height = -1;
+    for (const auto& p : texture_width_height)
+    {
+        if (last_width == -1 && last_height == -1)
+        {
+            last_width = p.first;
+            last_height = p.second;
+        }
+        else if (p.first != last_width || p.second != last_height)
+        {
+            all_width_height_equal = false;
+        }
+    }
+
+    if (!all_width_height_equal)
+    {
+        PEANUT_LOG_ERROR("all array data size must be equal");
+        exit_free();
+        return nullptr;
+    }
+
+    texture_data->width = last_width;
+    texture_data->height = last_height;
+    texture_data->channels = 4;
+    texture_data->levels = 1;
+    texture_data->layers = 1;
+
+    VkImageUsageFlags usage =
+        VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+
+    // create image
+    auto rhi = GlobalEngineContext::GetContext()->GetRenderSystem()->GetRHI();
+    texture_data->image = rhi->CreateImage(texture_data->width, texture_data->height, 1, 1, 1, format, usage);
+    texture_data->image_view = rhi->CreateImageView(texture_data->image.resource, format, VK_IMAGE_ASPECT_COLOR_BIT, 0,
+                                                    VK_REMAINING_MIP_LEVELS, VK_REMAINING_ARRAY_LAYERS);
+
+    // copy data to image
+    size_t texture_pixel_size = texture_data->width * texture_data->height * texture_pixels.size();
+
+    void* all_data_pixel_ptr = malloc(texture_pixel_size);
+    size_t offset = texture_data->width * texture_data->height;
+    for (size_t i = 0; i < texture_pixels.size(); ++i)
+    {
+        uint8_t* data_ptr = reinterpret_cast<uint8_t*>(all_data_pixel_ptr);
+        memcpy(data_ptr + (i * offset), texture_pixels[i], offset);
+    }
+
+    Resource<VkBuffer> staging_buffer = rhi->CreateBuffer(texture_pixel_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+    rhi->CopyMemToDevice(staging_buffer.memory, all_data_pixel_ptr, texture_pixel_size);
+
+    VkCommandBuffer command_buffer = rhi->BeginImmediateComputePassCommandBuffer();
+
+    const auto begin_barrier =
+        TextureMemoryBarrier(*texture_data, 0, VK_ACCESS_TRANSFER_WRITE_BIT,
+            VK_IMAGE_LAYOUT_UNDEFINED,
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL).MipLevels(0, 1);
+
+    rhi->CmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+        VK_PIPELINE_STAGE_TRANSFER_BIT, { begin_barrier });
+
+    rhi->CmdCopyBufferToImage(command_buffer, staging_buffer, texture_data->image, texture_data->width, texture_data->height,
+        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+
+    rhi->ExecImmediateComputePassCommandBuffer(command_buffer);
+
+    texture_data->pixels = all_data_pixel_ptr;
+
+    // release staging buffer
+    rhi->DestroyBuffer(staging_buffer);
+
+    return texture_data;
+}
+
 std::shared_ptr<TextureData> AssetsManager::LoadTextureData(const std::string& texture_filepath, 
                                                             VkFormat format /*TODO: set a wapper format*/, int channels,
                                                             uint32_t levels) 
@@ -26,7 +133,7 @@ std::shared_ptr<TextureData> AssetsManager::LoadTextureData(const std::string& t
     {
         texture_data->pixels = stbi_loadf(texture_filepath.c_str(), &width, &height,
                                         &texture_channels, channels);
-    is_hdr = true;
+        is_hdr = true;
     } else 
     {
         texture_data->pixels = stbi_load(texture_filepath.c_str(), &width, &height,

@@ -9,4 +9,9 @@
 #define STD_GAMMA 2.2
 #define TONEMAP_EXPOSURE 4.5
 
+#define TWO_PI 2 * PI;
+#define EPSILON 0.00001;
+#define NUM_SAMPLES 1024;
+#define INV_NUM_SAMPLES (1.0 / float(NUM_SAMPLES));
+
 #endif

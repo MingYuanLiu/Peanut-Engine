@@ -38,11 +38,11 @@ namespace peanut
         static std::shared_ptr<Mesh> ReadFromString(const std::string& data);
 
         const std::vector<Vertex>& vertices() const { return vertices_; }
-        const std::vector<Index>& indexes() const { return indexes_; }
+        const std::vector<Index>& indexes() const { return indices_; }
 
     private:
         std::vector<Vertex> vertices_;
-        std::vector<Index> indexes_;
+        std::vector<Index> indices_;
 
         static constexpr uint32_t kImportFlags =
             aiProcess_CalcTangentSpace | aiProcess_Triangulate |

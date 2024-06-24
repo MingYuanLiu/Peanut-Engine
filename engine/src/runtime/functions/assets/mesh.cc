@@ -53,10 +53,10 @@ Mesh::Mesh(const aiMesh* mesh)
       vertices_.push_back(vertex);
     }
 
-    indexes_.reserve(mesh->mNumFaces);
-    for (size_t i = 0; i < indexes_.capacity(); ++i) {
+    indices_.reserve(mesh->mNumFaces);
+    for (size_t i = 0; i < indices_.capacity(); ++i) {
       assert(mesh->mFaces[i].mNumIndices == 3);
-      indexes_.push_back({mesh->mFaces[i].mIndices[0], mesh->mFaces[i].mIndices[1],
+      indices_.push_back({mesh->mFaces[i].mIndices[0], mesh->mFaces[i].mIndices[1],
                         mesh->mFaces[i].mIndices[2]});
     }
 }

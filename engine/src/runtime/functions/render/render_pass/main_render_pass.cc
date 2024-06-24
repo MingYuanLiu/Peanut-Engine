@@ -2,6 +2,7 @@
 
 #include "functions/assets/mesh.h"
 #include "functions/render/shader_manager.h"
+#include "functions/assets/asset_manager.h"
 
 namespace peanut
 {
@@ -19,7 +20,35 @@ namespace peanut
 		/************************************************************************/
 		// todo(temp): load static mesh render data and skybox render data
 		std::shared_ptr<StaticMeshRenderData> mesh_render_data = std::make_shared<StaticMeshRenderData>();
+		auto native_mesh_data = AssetsManager::GetInstance().LoadMeshBuffer("assets/mesh/cerberus.fbx");
+		mesh_render_data->vertex_buffer = native_mesh_data->vertex_buffer;
+		mesh_render_data->index_buffer = native_mesh_data->index_buffer;
+		mesh_render_data->index_counts = std::vector<uint32_t>{ native_mesh_data->num_elements };
+		mesh_render_data->index_offsets = std::vector<uint32_t>{ 0 };
+		// load pbr texture
+		auto pbr_albedo_texture = AssetsManager::GetInstance().LoadTextureData("assets/textures/cerberus_A.png", VK_FORMAT_R8G8B8A8_SRGB);
+		auto pbr_normal_texture = AssetsManager::GetInstance().LoadTextureData("assets/textures/cerberus_N.png", VK_FORMAT_R8G8B8A8_UNORM);
+		auto pbr_metallic_roughness_texture = AssetsManager::GetInstance().LoadTextureArrayData({ "assets/textures/cerberus_M.png", "assets/textures/cerberus_R.png" }, VK_FORMAT_R8G8B8A8_UNORM);
 		
+		PbrMaterial pbr_material;
+		pbr_material.base_color_texture = pbr_albedo_texture;
+		pbr_material.normal_texture = pbr_normal_texture;
+		pbr_material.metallic_roughness_occlusion_texture = pbr_metallic_roughness_texture;
+		pbr_material.emissive_texture = rhi_.lock()->CreateTexture(pbr_albedo_texture->width, pbr_albedo_texture->height,
+			1, 1, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT);
+
+		mesh_render_data->pbr_materials.push_back(pbr_material);
+		// init pbr_material data
+		MaterialPCO material_pco;
+		material_pco.base_color_factor = glm::vec4{1.0f, 1.0f, 1.f, 1.f};
+		material_pco.metallic_factor = 1.0;
+		material_pco.roughness_factor = 1.0;
+		material_pco.has_metallic_roughness_occlusion_texture = true;
+		material_pco.has_emissive_texture = false;
+		material_pco.has_normal_texture = true;
+
+		mesh_render_data->material_pcos.push_back(material_pco);
+
 
 		// todo(temp): load skybox render data
 		environment_map_compute_pass_ = std::make_shared<EnvironmentMapComputePass>();
@@ -29,6 +58,32 @@ namespace peanut
 		environment_map_compute_pass_->FillSkyboxRenderData(skybox_render_data_.value());
 		
 		// todo(temp): load color grading render data
+		color_grading_render_data_ = std::make_optional<ColorGradingRenderData>();
+		color_grading_render_data_->color_grading_lut_texture = *AssetsManager::GetInstance().LoadTextureData("", VK_FORMAT_R8G8B8A8_SRGB);
+		
+		// todo(temp): create empty shadow map texture with size 1024, which should be calculate by shadow pass
+		std::shared_ptr<VulkanRHI> vulkan_rhi = std::static_pointer_cast<VulkanRHI>(rhi_.lock());
+		lighting_render_data_.directional_light_shadow_map = *vulkan_rhi->CreateTexture(1024, 1024, 1, 1, vulkan_rhi->GetDepthImageFormat(), 0);
+
+		LightingUBO light_ubo;
+		light_ubo.sky_light.color = glm::vec3(1.0f, 1.0f, 1.0f);
+		light_ubo.has_directional_light = true;
+		light_ubo.has_sky_light = true;
+		light_ubo.point_light_num = 0;
+		light_ubo.spot_light_num = 0;
+		light_ubo.camera_dir = glm::vec3();
+		light_ubo.camera_pos = glm::vec3();
+		light_ubo.camera_view = glm::mat4();
+		light_ubo.directional_light.color = glm::vec3(1.0f, 1.0f, 1.0f);
+		light_ubo.directional_light.direction = glm::vec3();
+		light_ubo.inv_camera_view_proj = glm::mat4();
+
+		auto num_frames = vulkan_rhi->GetNumberFrames();
+		lighting_render_data_.lighting_ubo_data.resize(num_frames);
+		for (uint32_t i = 0; i < num_frames; ++i)
+		{
+			lighting_render_data_.lighting_ubo_data[i] = light_ubo;
+		}
 		
 		
 		/************************************************************************/

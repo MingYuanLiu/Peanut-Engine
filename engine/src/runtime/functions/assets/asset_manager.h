@@ -18,6 +18,9 @@ public:
 		return AssetManager;
 	}
 
+	// load at most four single-channel pictures 
+	std::shared_ptr<TextureData> LoadTextureArrayData(const std::vector<std::string>& texture_files, VkFormat format = VK_FORMAT_R8G8B8A8_UNORM);
+
 	/**
 	* @brief Load pbr material texture data from local file
 	*

@@ -210,8 +210,8 @@ void VulkanRHI::CopyMemToDevice(VkDeviceMemory memory, const void* data,
       VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE, nullptr, memory, 0, VK_WHOLE_SIZE};
 
   void* mapped_device_memory;
-  if (VKFAILED(vkMapMemory(vk_device_, memory, 0, VK_WHOLE_SIZE, 0,
-                           &mapped_device_memory))) {
+  if (VKFAILED(vkMapMemory(vk_device_, memory, 0, VK_WHOLE_SIZE, 0, &mapped_device_memory))) 
+  {
     PEANUT_LOG_FATAL("Failed to map device memory to host address space");
   }
 

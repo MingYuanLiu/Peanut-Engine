@@ -15,6 +15,9 @@ namespace peanut
 		SetupComputeSampler();
 		SetupDescriptorSetLayout();
 		SetupComputePipelineLayout();
+
+		rhi_ = rhi;
+		environment_map_url_ = environment_map_url;
 		
 		is_initialized = true;
 	}
