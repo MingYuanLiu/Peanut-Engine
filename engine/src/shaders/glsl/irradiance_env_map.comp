@@ -1,0 +1,45 @@
+#version 450 core
+#extension GL_GOOGLE_include_directive : enable
+
+#include "constants.h"
+
+layout(set = 0, binding = 0) uniform samplerCube inputTexture
+layout(set = 0, binding = 1, rgba16f) restrict writeonly uniform imageCube outputTexture;
+
+layout(push_constant) uniform PushConstants
+{
+	// Output texture mip level (without base mip level).
+	int level;
+	// Roughness value to pre-filter for.
+	float roughness;
+} pushConstants;
+
+#define PARAM_LEVEL     pushConstants.level
+#define PARAM_ROUGHNESS pushConstants.roughness
+
+#include "utils.inl"
+
+layout(local_size_x=32, local_size_y=32, local_size_z=1) in;
+void main(void)
+{
+	vec3 N = getSamplingVector();
+	
+	vec3 S, T;
+	computeBasisVectors(N, S, T);
+
+	// Monte Carlo integration of hemispherical irradiance.
+	// As a small optimization this also includes Lambertian BRDF assuming perfectly white surface (albedo of 1.0)
+	// so we don't need to normalize in PBR fragment shader (so technically it encodes exitant radiance rather than irradiance).
+	vec3 irradiance = vec3(0);
+	for(uint i = 0; i < NUM_SAMPLES_MonteCarlo; ++i) {
+		vec2 u  = sampleHammersley(i);
+		vec3 Li = tangentToWorld(sampleHemisphere(u.x, u.y), N, S, T);
+		float cosTheta = max(0.0, dot(Li, N));
+
+		// PIs here cancel out because of division by pdf.
+		irradiance += 2.0 * textureLod(inputTexture, Li, 0).rgb * cosTheta;
+	}
+	irradiance /= vec3(NUM_SAMPLES_MonteCarlo);
+
+	imageStore(outputTexture, ivec3(gl_GlobalInvocationID), vec4(irradiance, 1.0));
+}
