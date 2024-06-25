@@ -46,6 +46,7 @@ namespace peanut
 		material_pco.has_metallic_roughness_occlusion_texture = true;
 		material_pco.has_emissive_texture = false;
 		material_pco.has_normal_texture = true;
+		material_pco.has_base_color_texture = true;
 
 		mesh_render_data->material_pcos.push_back(material_pco);
 		TransformUBO mesh_transform_ubo;
@@ -74,7 +75,7 @@ namespace peanut
 		
 		// todo(temp): load color grading render data
 		color_grading_render_data_ = std::make_optional<ColorGradingRenderData>();
-		color_grading_render_data_->color_grading_lut_texture = *AssetsManager::GetInstance().LoadTextureData("", VK_FORMAT_R8G8B8A8_SRGB);
+		color_grading_render_data_->color_grading_lut_texture = *AssetsManager::GetInstance().LoadTextureData("assets/textures/color_grading_lut.png", VK_FORMAT_R8G8B8A8_SRGB);
 		
 		// todo(temp): create empty shadow map texture with size 1024, which should be calculate by shadow pass
 		std::shared_ptr<VulkanRHI> vulkan_rhi = std::static_pointer_cast<VulkanRHI>(rhi_.lock());
@@ -86,8 +87,8 @@ namespace peanut
 		light_ubo.has_sky_light = true;
 		light_ubo.point_light_num = 0;
 		light_ubo.spot_light_num = 0;
-		light_ubo.camera_dir = glm::vec3();
-		light_ubo.camera_pos = glm::vec3();
+		light_ubo.camera_dir = glm::vec3(0, 0, 1);
+		light_ubo.camera_pos = glm::vec3(0, 0, 0);
 		light_ubo.camera_view = glm::mat4();
 		light_ubo.directional_light.color = glm::vec3(1.0f, 1.0f, 1.0f);
 		light_ubo.directional_light.direction = glm::vec3();
