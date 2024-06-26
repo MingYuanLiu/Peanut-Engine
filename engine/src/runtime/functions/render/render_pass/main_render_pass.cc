@@ -10,12 +10,6 @@ namespace peanut
 	{
 		IRenderPassBase::Initialize(init_info);
 
-		CreateUniformBuffer(sizeof(LightingUBO) + 128);
-
-		UpdateDeferredLightDescriptor();
-		UpdateSkyboxDescriptor();
-		UpdateColorGradingDescriptor();
-
 		/************************** use to debug ********************************/
 		/************************************************************************/
 		// todo(temp): load static mesh render data and skybox render data
@@ -102,6 +96,12 @@ namespace peanut
 		}
 		
 		/************************************************************************/
+
+		CreateUniformBuffer(sizeof(LightingUBO) + 128);
+
+		UpdateDeferredLightDescriptor();
+		UpdateSkyboxDescriptor();
+		UpdateColorGradingDescriptor();
 	}
 
 	void MainRenderPass::Render()

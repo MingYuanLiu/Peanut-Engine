@@ -194,7 +194,7 @@ vec4 CalPbrLightColor(PbrMaterialInfo material_info)
     vec3 specular_color = mix(F0, material_info.base_color.rgb, material_info.metallic);
 
     float reflection = max(max(specular_color.r, specular_color.g), specular_color.b);
-    float reflection_90 = clamp(reflection * 25.0, 0, 1.0);
+    float reflectance_90 = clamp(reflection * 25.0, 0, 1.0);
     vec3 specular_color_reflection_90 = reflectance_90 * vec3(1.0);
 
     // surface, camera, and light directions

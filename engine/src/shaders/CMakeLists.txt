@@ -7,7 +7,7 @@ message(STATUS "Shader target: ${SHADER_TARGET_DIR}")
 
 macro(compile_shader shader_name stage)
     set(SPV_FILE "${SHADER_TARGET_DIR}/${shader_name}.spv")
-    set(SHADER_SRC_FILE "${SHADER_ROOT_DIR}/glsl/${shader_name}.glsl")
+    set(SHADER_SRC_FILE "${SHADER_ROOT_DIR}/glsl/${shader_name}.${tag}")
     add_custom_command(
         OUTPUT ${SPV_FILE}
         COMMAND ${GLSLANGVALIDATOR_EXECUTABLE} -V -S ${stage} -o ${SPV_FILE} ${SHADER_SRC_FILE}
@@ -18,8 +18,8 @@ endmacro()
 
 file(MAKE_DIRECTORY ${SHADER_TARGET_DIR})
 message(STATUS "Compile shaders start ")
-compile_shader(equirect2cube_cs comp)
-compile_shader(irmap_cs comp)
+compile_shader(equirect2cube comp)
+compile_shader(irradiance_env_map comp)
 compile_shader(pbr_fs frag)
 compile_shader(pbr_vs vert)
 compile_shader(skybox_fs frag)
