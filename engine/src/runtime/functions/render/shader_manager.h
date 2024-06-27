@@ -15,6 +15,8 @@ namespace peanut
 			return *s_Instance;
 		}
 
+		void Init();
+
 		VkPipelineShaderStageCreateInfo GetShaderStageCreateInfo(std::weak_ptr<RHI> rhi, const std::string& shader_name, VkShaderStageFlagBits stage);
 		VkShaderModule GetShaderModule(std::weak_ptr<RHI> rhi, const std::string& shader_name);
 
@@ -27,6 +29,8 @@ namespace peanut
 
 		ShaderManager(const ShaderManager&) = delete;
 		ShaderManager& operator=(const ShaderManager&) = delete;
+
+		bool CompileEngineShaders();
 
 		ShaderManager* InitSingleton()
 		{

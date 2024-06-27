@@ -60,4 +60,9 @@ namespace peanut
 
 		return shader_module;
 	}
+
+	bool ShaderManager::CompileEngineShaders()
+	{
+
+	}
 }

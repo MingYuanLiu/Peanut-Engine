@@ -36,6 +36,9 @@ target_link_libraries(${TARGET_NAME} PUBLIC stb)
 target_link_libraries(${TARGET_NAME} PUBLIC glfw)
 target_link_libraries(${TARGET_NAME} PRIVATE $<BUILD_INTERFACE:json11>)
 
+# define shader compiler program exec path
+target_compile_definitions(${TARGET_NAME} PRIVATE SHADER_COMPILER=\"${GLSLANGVALIDATOR_EXECUTABLE}\")
+
 # include third party header
 target_include_directories(
     ${TARGET_NAME}

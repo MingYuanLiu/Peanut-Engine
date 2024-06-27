@@ -41,4 +41,4 @@ add_subdirectory(src/runtime)
 add_subdirectory(src/test)
 add_subdirectory(src/reflection_parser)
 
-add_dependencies(PeanutRuntime EngineShader)
+# add_dependencies(PeanutRuntime EngineShader)
