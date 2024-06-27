@@ -149,8 +149,7 @@ public:
     virtual bool MemoryTypeNeedsStaging(uint32_t memory_type_index) = 0;
 
     // shader module
-    virtual VkShaderModule CreateShaderModule(
-        const std::string& shader_file_path) = 0;
+    virtual VkShaderModule CreateShaderModule(const std::string& shader_file_path) = 0;
 
     virtual void DestroyShaderModule(VkShaderModule shader_module) = 0;
 

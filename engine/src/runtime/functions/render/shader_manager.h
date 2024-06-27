@@ -11,11 +11,24 @@ namespace peanut
 	public:
 		static ShaderManager& Get()
 		{
-			std::call_once(s_Flag, &ShaderManager::InitSingleton);
-			return *s_Instance;
+			std::call_once(s_flag_, &ShaderManager::InitSingleton);
+			return *s_instance_;
 		}
 
 		void Init();
+		~ShaderManager()
+		{
+			if (s_instance_)
+            {
+                delete s_instance_;
+                s_instance_ = nullptr;
+            }
+		}
+
+		ShaderManager(const ShaderManager&) = delete;
+		ShaderManager& operator=(const ShaderManager&) = delete;
+		ShaderManager(ShaderManager&&) = delete;
+        ShaderManager& operator=(ShaderManager&&) = delete;
 
 		VkPipelineShaderStageCreateInfo GetShaderStageCreateInfo(std::weak_ptr<RHI> rhi, const std::string& shader_name, VkShaderStageFlagBits stage);
 		VkShaderModule GetShaderModule(std::weak_ptr<RHI> rhi, const std::string& shader_name);
@@ -25,20 +38,18 @@ namespace peanut
 		std::unordered_map<std::string, VkShaderModule> loaded_shader_modules;
 
 	private:
-		ShaderManager() {}
-
-		ShaderManager(const ShaderManager&) = delete;
-		ShaderManager& operator=(const ShaderManager&) = delete;
+		ShaderManager() = default;
 
 		bool CompileEngineShaders();
 
-		ShaderManager* InitSingleton()
+		static ShaderManager* InitSingleton()
 		{
 			return new ShaderManager();
 		}
 
-		static ShaderManager* s_Instance;
-		static std::once_flag s_Flag;
+		static ShaderManager* s_instance_;
+		static std::once_flag s_flag_;
+		static std::string s_engine_shader_path_;
 	};
 
 } // namespace peanut

@@ -2,8 +2,14 @@
 
 namespace peanut
 {
-	ShaderManager* ShaderManager::s_Instance = nullptr;
-	std::once_flag ShaderManager::s_Flag = {};
+	ShaderManager* ShaderManager::s_instance_ = nullptr;
+	std::once_flag ShaderManager::s_flag_ = {};
+	std::string s_engine_shader_path_ = "assets/engine/shaders/";
+
+	void ShaderManager::Init()
+	{
+		CompileEngineShaders();
+	}
 
 	VkPipelineShaderStageCreateInfo ShaderManager::GetShaderStageCreateInfo(std::weak_ptr<RHI> rhi, const std::string& shader_name, VkShaderStageFlagBits stage)
 	{
@@ -63,6 +69,10 @@ namespace peanut
 
 	bool ShaderManager::CompileEngineShaders()
 	{
+		// 搜寻引擎内的shader文件
 
+		// 调用glsl程序编译shader文件
+
+		// 记录编译后的shader文件路径
 	}
 }

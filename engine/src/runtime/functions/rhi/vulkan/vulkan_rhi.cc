@@ -8,6 +8,7 @@
 #include <set>
 #include <glm/glm.hpp>
 
+#include "functions/file/file_helper.h"
 #include "runtime/core/base/logger.h"
 #include "runtime/functions/render/render_utils.h"
 
@@ -613,14 +614,14 @@ VkPipelineCache VulkanRHI::CreatePipelineCache(VkPipelineCacheCreateInfo* pcreat
 VkShaderModule VulkanRHI::CreateShaderModule(const std::string& shader_file_path) 
 {
     std::vector<char> shader_code;
-    if (!RenderUtils::ReadBinaryFile(shader_file_path, shader_code)) 
+    if (!FileHelper::ReadFileBinary(shader_file_path, shader_code)) 
     {
         PEANUT_LOG_FATAL("Failed to read shader file {0}", shader_file_path.c_str());
     }
 
     VkShaderModuleCreateInfo create_info = { VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO };
     create_info.codeSize = shader_code.size();
-    create_info.pCode = reinterpret_cast<uint32_t*>(&shader_code[0]);
+    create_info.pCode = reinterpret_cast<uint32_t*>(shader_code.data());
 
     VkShaderModule shader_module = VK_NULL_HANDLE;
     if (VKFAILED(vkCreateShaderModule(vk_device_, &create_info, nullptr, &shader_module)))

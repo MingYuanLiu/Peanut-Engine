@@ -40,8 +40,7 @@ class RenderUtils {
     return std::abs(value - 0.0f) <= std::numeric_limits<float>::epsilon();
   }
 
-    static bool ReadBinaryFile(const std::string& path,
-                                std::vector<char>& output) 
+    static bool ReadBinaryFile(const std::string& path, std::vector<char>& output) 
     {
         std::ifstream file{path, std::ios::binary | std::ios::ate};
         if (!file.is_open())
