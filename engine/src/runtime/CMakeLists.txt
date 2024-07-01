@@ -38,6 +38,7 @@ target_link_libraries(${TARGET_NAME} PRIVATE $<BUILD_INTERFACE:json11>)
 
 # define shader compiler program exec path
 target_compile_definitions(${TARGET_NAME} PRIVATE SHADER_COMPILER=\"${GLSLANGVALIDATOR_EXECUTABLE}\")
+target_compile_definitions(${TARGET_NAME} PRIVATE ENGINE_SHADER_SRC_PATH=\"${ENGINE_ROOT_DIR}/src/shaders/glsl\")
 
 # include third party header
 target_include_directories(

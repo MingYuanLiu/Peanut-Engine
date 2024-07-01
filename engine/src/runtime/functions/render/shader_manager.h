@@ -50,6 +50,8 @@ namespace peanut
 		static ShaderManager* s_instance_;
 		static std::once_flag s_flag_;
 		static std::string s_engine_shader_path_;
+
+		
 	};
 
 } // namespace peanut
