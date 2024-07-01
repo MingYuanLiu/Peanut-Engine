@@ -1,6 +1,8 @@
 #include "shader_manager.h"
 
 #include "functions/file/file_helper.h"
+#include "utils/string_utils.h"
+#include "utils/process_utils.h"
 
 namespace peanut
 {
@@ -97,6 +99,7 @@ namespace peanut
 				
 				return true;
 			});
+
 		const std::string shader_include_path = FileHelper::CombinePath(ENGINE_SHADER_SRC_PATH, "include");
 		
 		auto compile_shader_code_func = [&](const std::string& shader_filepath)
@@ -108,15 +111,34 @@ namespace peanut
 			}
 
 			// 生成目标shader code文件路径
-			
-			// 调用glsl程序编译shader文件
-			const std::string compile_shader_command;
-			// 执行命令并返回结果
+			const std::string file_name_without_extension = FileHelper::GetBaseNameWithoutExtension(shader_filepath);
+			const std::string work_dir = FileHelper::GetCurrentWorkDir();
+			auto target_dir = FileHelper::CombinePath(work_dir, "assets/shaders");
+			std::string compiled_target_path = StringUtils::Format("%s/%s.spv", target_dir.c_str(), file_name_without_extension.c_str());
 
-			// 保存编译后的shader文件路径
+			// 调用glsl程序编译shader文件
+			const std::string compile_shader_command = StringUtils::Format("%s -I%s -g -o \"%s\" \"%s\" ", 
+				SHADER_COMPILER, shader_include_path.c_str(), compiled_target_path.c_str(), shader_filepath.c_str());
+			// 执行命令并返回结果
+			std::string compile_output;
+			bool exec_result = ProcessUtils::ExecProcess(compile_shader_command, compile_output);
+			if (exec_result)
+			{
+				// 保存编译后的shader文件路径
+				shader_files_name_to_path[file_name] = compiled_target_path;
+			}
+			else
+			{
+				PEANUT_LOG_ERROR("Compile shader {0} failed with output {1}", shader_filepath, compile_output);
+			}
+
 		};
 		
-
-		// 记录编译后的shader文件路径
+		// todo: 监控shader文件是否发生变化
+		
+		for (auto single_path : shader_file_paths)
+		{
+			compile_shader_code_func(single_path);
+		}
 	}
 }

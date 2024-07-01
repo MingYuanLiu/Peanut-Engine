@@ -26,6 +26,8 @@ namespace peanut
         static bool ReadFileBinary(const std::string& file_path, std::vector<char>& contents);
         static bool WriteFile(const std::string& file_path, const std::string& content);
         static std::string GetFileModifiedTime(const std::string& file_path);
+
+        static std::string GetCurrentWorkDir();
     };
 }
 

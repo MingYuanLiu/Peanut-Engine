@@ -151,4 +151,10 @@ namespace peanut
         return file_list;
     }
 
+    std::string FileHelper::GetCurrentWorkDir()
+    {
+        std::filesystem::path work_dir = std::filesystem::current_path();
+        return work_dir.generic_string();
+    }
+
 }   
