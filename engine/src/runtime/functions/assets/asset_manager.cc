@@ -8,6 +8,7 @@
 #include "runtime/core/context/runtime_context.h"
 #include "runtime/functions/assets/mesh.h"
 #include "runtime/functions/render/render_utils.h"
+#include "runtime/functions/file/file_helper.h"
 
 #include <json11.hpp>
 #include <fstream>
@@ -218,7 +219,9 @@ std::shared_ptr<TextureData> AssetsManager::LoadTextureData(const std::string& t
 
 std::shared_ptr<MeshBuffer> AssetsManager::LoadMeshBuffer(const std::string& mesh_filepath) 
 {
-    std::shared_ptr<Mesh> mesh = Mesh::ReadFromFile(mesh_filepath);
+    std::string work_dir = FileHelper::GetCurrentWorkDir();
+
+    std::shared_ptr<Mesh> mesh = Mesh::ReadFromFile(FileHelper::CombinePath(work_dir, mesh_filepath));
     if (mesh.get() == nullptr) 
     {
         // FIXME: do not crash

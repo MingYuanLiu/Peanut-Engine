@@ -84,8 +84,8 @@ namespace peanut
 		light_ubo.camera_dir = glm::vec3(0, 0, 1);
 		light_ubo.camera_pos = glm::vec3(0, 0, 0);
 		light_ubo.camera_view = glm::mat4();
-		light_ubo.directional_light.color = glm::vec3(1.0f, 1.0f, 1.0f);
-		light_ubo.directional_light.direction = glm::vec3();
+		light_ubo.directional_light.color = glm::vec3(0.0f, 0.0f, 1.0f);
+		light_ubo.directional_light.direction = glm::vec3(0.f, 0.f, 0.f);
 		light_ubo.inv_camera_view_proj = glm::mat4();
 
 		auto num_frames = vulkan_rhi->GetNumberFrames();
