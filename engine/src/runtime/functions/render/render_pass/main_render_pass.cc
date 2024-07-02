@@ -46,7 +46,7 @@ namespace peanut
 		TransformUBO mesh_transform_ubo;
 		// get transform matrix from location, rotation, scale
 		mesh_transform_ubo.model = glm::mat4(1.0f);
-		mesh_transform_ubo.model_view_projection = glm::mat4(1.0f);
+		mesh_transform_ubo.model_view_projection = glm::mat4(1.0f); // todo: calculate mvp
 		mesh_transform_ubo.normal_model = glm::mat4(1.0f);
 		mesh_render_data->transform_ubo_data = mesh_transform_ubo;
 
@@ -63,7 +63,7 @@ namespace peanut
 		skybox_render_data_->vertex_buffer = native_skybox_mesh_data->vertex_buffer;
 		TransformUBO transform_ubo;
 		transform_ubo.model = glm::mat4(1.0f);
-		transform_ubo.model_view_projection = glm::mat4(1.0f);
+		transform_ubo.model_view_projection = glm::mat4(1.0f); // todo: calculate mvp
 		transform_ubo.normal_model = glm::mat4(1.0f);
 		skybox_render_data_->transform_ubo_data = transform_ubo;
 		
@@ -81,12 +81,12 @@ namespace peanut
 		light_ubo.has_sky_light = true;
 		light_ubo.point_light_num = 0;
 		light_ubo.spot_light_num = 0;
-		light_ubo.camera_dir = glm::vec3(0, 0, 1);
-		light_ubo.camera_pos = glm::vec3(0, 0, 0);
-		light_ubo.camera_view = glm::mat4();
+		light_ubo.camera_dir = glm::vec3(0, 0, 1); // todo: set camera
+		light_ubo.camera_pos = glm::vec3(0, 0, 0); // todo: set camera
+		light_ubo.camera_view = glm::mat4(); // todo: set camera
 		light_ubo.directional_light.color = glm::vec3(0.0f, 0.0f, 1.0f);
-		light_ubo.directional_light.direction = glm::vec3(0.f, 0.f, 0.f);
-		light_ubo.inv_camera_view_proj = glm::mat4();
+		light_ubo.directional_light.direction = glm::vec3(0.f, 0.f, 1.f);
+		light_ubo.inv_camera_view_proj = glm::mat4(); // todo: set camera view
 
 		auto num_frames = vulkan_rhi->GetNumberFrames();
 		lighting_render_data_.lighting_ubo_data.resize(num_frames);
